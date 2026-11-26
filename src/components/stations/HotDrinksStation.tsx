@@ -1,12 +1,21 @@
 import { motion } from 'framer-motion';
-import React from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   HOT_INGREDIENT_LABELS,
   canDoLatteArt,
   getVisibleHotIngredients,
   hasHotIngredients,
 } from '../../data/recipes';
+import { sound } from '../../services/sound';
 import type { HotIngredientId, UnlockableRecipeId } from '../../types/game';
+import {
+  MILK_MAX_PORTIONS,
+  MILK_POUR_HOLD_THRESHOLD_MS,
+  MILK_QUICK_POUR_ANIM_MS,
+  advanceMilkPour,
+  resolveMilkPourRelease,
+  type MilkPourFrameState,
+} from '../../utils/milkPour';
 import { HotCupSvg } from '../svg/DrinkVisualSvg';
 import { BaristaCoasterSvg, IngredientIconSvg } from '../svg/UiIconsSvg';
 
@@ -16,10 +25,29 @@ interface HotDrinksStationProps {
   isTakeawayOrder?: boolean;
   unlockedRecipes?: UnlockableRecipeId[];
   onAddIngredient: (id: HotIngredientId) => void;
+  onSetWarmMilkCount: (count: number) => void;
   onRemoveIngredient: (id: HotIngredientId) => void;
   onOpenLatteArt: () => void;
   onClear: () => void;
   onPutOnTray: () => void;
+}
+
+interface ActivePointerPour {
+  pointerId: number;
+  startTime: number;
+  startCount: number;
+  holdStarted: boolean;
+  completedDuringHold: boolean;
+}
+
+function triggerGentleHaptic(pattern: number | number[]) {
+  if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+    try {
+      navigator.vibrate(pattern);
+    } catch {
+      // Haptics unavailable or blocked
+    }
+  }
 }
 
 export const HotDrinksStation: React.FC<HotDrinksStationProps> = ({
@@ -28,6 +56,7 @@ export const HotDrinksStation: React.FC<HotDrinksStationProps> = ({
   isTakeawayOrder = false,
   unlockedRecipes = [],
   onAddIngredient,
+  onSetWarmMilkCount,
   onRemoveIngredient,
   onOpenLatteArt,
   onClear,
@@ -36,9 +65,332 @@ export const HotDrinksStation: React.FC<HotDrinksStationProps> = ({
   const visibleIngredients = getVisibleHotIngredients(unlockedRecipes);
   const hasAny = hasHotIngredients(ingredients);
   const latteArtAllowed = canDoLatteArt(ingredients);
+  const warmMilkCount = ingredients.warmMilk ?? 0;
+
+  // Tactile milk pouring UI state (both hold-to-pour & quick-tap/keyboard animated pour)
+  const [isPouringMilk, setIsPouringMilk] = useState(false);
+  const [pourLevel, setPourLevel] = useState<number | null>(null);
+  const [inNotch, setInNotch] = useState(false);
+
+  const pointerRef = useRef<ActivePointerPour | null>(null);
+  const frameStateRef = useRef<MilkPourFrameState>({
+    level: 0,
+    notchRemainingMs: 0,
+    committedCount: 0,
+  });
+  const rafRef = useRef<number | null>(null);
+  const lastTsRef = useRef<number | null>(null);
+  const holdTimerRef = useRef<number | null>(null);
+  const settleTimerRef = useRef<number | null>(null);
+  const handledPointerUpRef = useRef(false);
+  const onSetWarmMilkRef = useRef(onSetWarmMilkCount);
+
+  useEffect(() => {
+    onSetWarmMilkRef.current = onSetWarmMilkCount;
+  }, [onSetWarmMilkCount]);
+
+  const stopAllPourActivity = useCallback(() => {
+    if (holdTimerRef.current !== null) {
+      window.clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+    if (settleTimerRef.current !== null) {
+      window.clearTimeout(settleTimerRef.current);
+      settleTimerRef.current = null;
+    }
+    if (rafRef.current !== null) {
+      window.cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    lastTsRef.current = null;
+    pointerRef.current = null;
+    sound.stopMilkPour();
+    setIsPouringMilk(false);
+    setPourLevel(null);
+    setInNotch(false);
+  }, []);
+
+  // Clean up timers, rAF, and continuous Web Audio stream on unmount or window blur
+  useEffect(() => {
+    const handleBlur = () => {
+      if (pointerRef.current) {
+        stopAllPourActivity();
+      }
+    };
+    window.addEventListener('blur', handleBlur);
+    return () => {
+      window.removeEventListener('blur', handleBlur);
+      stopAllPourActivity();
+    };
+  }, [stopAllPourActivity]);
+
+  /** Smooth zero-hold animated pitcher pour for quick tap or keyboard Enter/Space */
+  const runQuickTapPour = useCallback(
+    (startCount: number) => {
+      if (startCount >= MILK_MAX_PORTIONS) {
+        sound.playPop();
+        return;
+      }
+      if (settleTimerRef.current !== null) {
+        window.clearTimeout(settleTimerRef.current);
+        settleTimerRef.current = null;
+      }
+      if (rafRef.current !== null) {
+        window.cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+
+      const targetCount = Math.min(MILK_MAX_PORTIONS, startCount + 1);
+      // Commit immediately so rapid double-taps or immediate "На тацю" never drop a portion
+      onSetWarmMilkRef.current(targetCount);
+      sound.playMilkSteam();
+      triggerGentleHaptic(14);
+
+      setIsPouringMilk(true);
+      setInNotch(false);
+      setPourLevel(startCount);
+
+      const animStart = performance.now();
+      const stepQuick = (now: number) => {
+        const progress = Math.min(1, (now - animStart) / MILK_QUICK_POUR_ANIM_MS);
+        const eased = 1 - (1 - progress) * (1 - progress);
+        setPourLevel(startCount + (targetCount - startCount) * eased);
+        if (progress < 1) {
+          rafRef.current = window.requestAnimationFrame(stepQuick);
+        } else {
+          rafRef.current = null;
+          setIsPouringMilk(false);
+          setPourLevel(null);
+        }
+      };
+      rafRef.current = window.requestAnimationFrame(stepQuick);
+    },
+    []
+  );
+
+  const startContinuousHoldPour = useCallback(() => {
+    const active = pointerRef.current;
+    if (!active || active.holdStarted) return;
+    active.holdStarted = true;
+
+    if (settleTimerRef.current !== null) {
+      window.clearTimeout(settleTimerRef.current);
+      settleTimerRef.current = null;
+    }
+    if (rafRef.current !== null) {
+      window.cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+
+    frameStateRef.current = {
+      level: active.startCount,
+      notchRemainingMs: 0,
+      committedCount: active.startCount,
+    };
+    setIsPouringMilk(true);
+    setPourLevel(active.startCount);
+    setInNotch(false);
+    sound.startMilkPour(active.startCount);
+    lastTsRef.current = performance.now();
+
+    const tick = (now: number) => {
+      const currentPointer = pointerRef.current;
+      if (!currentPointer || !currentPointer.holdStarted) {
+        rafRef.current = null;
+        return;
+      }
+
+      const prevTs = lastTsRef.current ?? now;
+      lastTsRef.current = now;
+      const dtMs = Math.max(0, now - prevTs);
+
+      const { next, milestoneReached, completed } = advanceMilkPour(
+        frameStateRef.current,
+        dtMs
+      );
+      frameStateRef.current = next;
+
+      setPourLevel(next.level);
+      setInNotch(next.notchRemainingMs > 0);
+      sound.updateMilkPour(next.level);
+
+      if (milestoneReached === 1) {
+        onSetWarmMilkRef.current(1);
+        sound.playMilkMilestone(1);
+        triggerGentleHaptic(18);
+      } else if (milestoneReached === 2) {
+        onSetWarmMilkRef.current(2);
+        sound.playMilkMilestone(2);
+        triggerGentleHaptic([16, 40, 22]);
+      }
+
+      if (completed) {
+        currentPointer.completedDuringHold = true;
+        sound.stopMilkPour();
+        rafRef.current = null;
+        settleTimerRef.current = window.setTimeout(() => {
+          settleTimerRef.current = null;
+          setIsPouringMilk(false);
+          setPourLevel(null);
+          setInNotch(false);
+        }, 180);
+        return;
+      }
+
+      rafRef.current = window.requestAnimationFrame(tick);
+    };
+
+    rafRef.current = window.requestAnimationFrame(tick);
+  }, []);
+
+  const handleMilkPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    if (warmMilkCount >= MILK_MAX_PORTIONS) {
+      handledPointerUpRef.current = true;
+      window.setTimeout(() => {
+        handledPointerUpRef.current = false;
+      }, 80);
+      sound.playPop();
+      return;
+    }
+
+    if (holdTimerRef.current !== null) {
+      window.clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // Synthetic pointer events may not support capture
+    }
+
+    handledPointerUpRef.current = false;
+    pointerRef.current = {
+      pointerId: e.pointerId,
+      startTime: performance.now(),
+      startCount: warmMilkCount,
+      holdStarted: false,
+      completedDuringHold: false,
+    };
+
+    holdTimerRef.current = window.setTimeout(() => {
+      holdTimerRef.current = null;
+      startContinuousHoldPour();
+    }, MILK_POUR_HOLD_THRESHOLD_MS);
+  };
+
+  const finishMilkPointer = (
+    e: React.PointerEvent<HTMLButtonElement>,
+    cancelled: boolean
+  ) => {
+    const active = pointerRef.current;
+    if (!active || active.pointerId !== e.pointerId) return;
+    pointerRef.current = null;
+
+    if (holdTimerRef.current !== null) {
+      window.clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+    if (rafRef.current !== null) {
+      window.cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    lastTsRef.current = null;
+    sound.stopMilkPour();
+
+    try {
+      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      }
+    } catch {
+      // Ignore release errors
+    }
+
+    handledPointerUpRef.current = !cancelled;
+    if (!cancelled) {
+      window.setTimeout(() => {
+        handledPointerUpRef.current = false;
+      }, 80);
+    }
+
+    if (cancelled) {
+      setIsPouringMilk(false);
+      setPourLevel(null);
+      setInNotch(false);
+      return;
+    }
+
+    const heldMs = performance.now() - active.startTime;
+
+    if (!active.holdStarted) {
+      // Quick tap (< 140ms): zero-hold animated +1 portion pour!
+      runQuickTapPour(active.startCount);
+      return;
+    }
+
+    if (!active.completedDuringHold) {
+      const finalCount = resolveMilkPourRelease(
+        active.startCount,
+        frameStateRef.current.level,
+        heldMs
+      );
+      if (finalCount !== frameStateRef.current.committedCount) {
+        onSetWarmMilkRef.current(finalCount);
+        if (finalCount > frameStateRef.current.committedCount) {
+          sound.playMilkMilestone(finalCount as 1 | 2);
+        }
+      }
+    }
+
+    setIsPouringMilk(false);
+    setPourLevel(null);
+    setInNotch(false);
+  };
+
+  /** Keyboard (Enter / Space) & accessibility zero-hold activation */
+  const handleMilkClick = () => {
+    if (handledPointerUpRef.current) {
+      handledPointerUpRef.current = false;
+      return;
+    }
+    runQuickTapPour(warmMilkCount);
+  };
+
+  const displayMilkLevel = pourLevel !== null ? pourLevel : warmMilkCount;
+
   const activeEntries = (
     Object.entries(ingredients) as [HotIngredientId, number][]
   ).filter(([, count]) => count > 0);
+
+  const pourHintBadge = isPouringMilk
+    ? inNotch
+      ? {
+          text: '✨ ×1 готово! Тримай для Лате',
+          className:
+            'border-[#6FA883] bg-[#E3F5E8] text-[#1D5632] shadow-xs',
+        }
+      : displayMilkLevel >= 1.98
+        ? {
+            text: '✨ Молочко ×2 (Лате) готово!',
+            className:
+              'border-[#5E9C74] bg-[#DDF4E5] text-[#184E2C] shadow-xs',
+          }
+        : displayMilkLevel >= 1
+          ? {
+              text: '🥛 Доливаємо до Лате ×2…',
+              className:
+                'border-[#D49744] bg-[#FFF2CC] text-[#73450F] shadow-xs',
+            }
+          : {
+              text: '🥛 Наливаємо тепле молочко…',
+              className:
+                'border-[#D49744] bg-[#FFF5D8] text-[#73450F] shadow-xs',
+            }
+    : {
+        text: '💡 Лате = 2× Тепле молоко',
+        className: 'border-[#C89B58] bg-[#FDF1D4] text-[#7A4F1C]',
+      };
 
   return (
     <div className="flex h-full min-h-0 flex-col sm:grid sm:grid-cols-12 gap-2 sm:gap-2.5 lg:gap-3">
@@ -60,7 +412,7 @@ export const HotDrinksStation: React.FC<HotDrinksStationProps> = ({
           </span>
         </div>
 
-        {/* Tier 2: Middle Vessel Zone (Cup resting directly on ONE neat coaster + Latte Art on sm+ + chips below) */}
+        {/* Tier 2: Middle Vessel Zone (Cup resting directly on ONE neat coaster + live milk pitcher) */}
         <div className="flex shrink-0 sm:flex-1 sm:min-h-0 flex-col items-center justify-center gap-1 overflow-hidden">
           <div className="relative flex shrink-0 items-center justify-center gap-2">
             <div className="relative flex items-center justify-center">
@@ -71,6 +423,8 @@ export const HotDrinksStation: React.FC<HotDrinksStationProps> = ({
               <HotCupSvg
                 ingredients={ingredients}
                 showSaucer={false}
+                milkPourLevel={pourLevel ?? undefined}
+                isPouringMilk={isPouringMilk}
                 className="relative z-10 h-[62px] w-[62px] sm:h-[84px] sm:w-[84px] lg:h-[92px] lg:w-[92px]"
               />
             </div>
@@ -106,7 +460,9 @@ export const HotDrinksStation: React.FC<HotDrinksStationProps> = ({
           <div className="hidden sm:flex shrink-0 min-h-[20px] w-full flex-wrap items-center justify-center gap-1 px-0.5">
             {activeEntries.length === 0 ? (
               <span className="text-[11px] font-semibold text-[#8A6449]">
-                Додай інгредієнти справа →
+                {isPouringMilk
+                  ? 'Наливаємо тепле молочко…'
+                  : 'Додай інгредієнти справа →'}
               </span>
             ) : (
               activeEntries.map(([id, count]) => (
@@ -116,7 +472,10 @@ export const HotDrinksStation: React.FC<HotDrinksStationProps> = ({
                   initial={{ scale: 0.78, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   whileTap={{ scale: 0.92 }}
-                  onClick={() => onRemoveIngredient(id)}
+                  onClick={() => {
+                    if (id === 'warmMilk') stopAllPourActivity();
+                    onRemoveIngredient(id);
+                  }}
                   title="Натисни, щоб прибрати"
                   className="inline-flex items-center gap-1 rounded-full border border-[#C4986E] bg-[#FFFDF8] px-1.5 py-0.5 text-[9.5px] lg:text-[10px] font-bold text-[#5A3E32] shadow-2xs transition-colors hover:border-[#D47E96] hover:bg-[#FDF0F3]"
                 >
@@ -159,14 +518,19 @@ export const HotDrinksStation: React.FC<HotDrinksStationProps> = ({
             )}
             {activeEntries.length === 0 ? (
               <span className="text-[10.5px] font-semibold text-[#8A6449]">
-                Обери інгредієнти нижче ↓
+                {isPouringMilk
+                  ? '🥛 Наливаємо молочко…'
+                  : 'Обери інгредієнти нижче ↓'}
               </span>
             ) : (
               activeEntries.map(([id, count]) => (
                 <button
                   key={id}
                   type="button"
-                  onClick={() => onRemoveIngredient(id)}
+                  onClick={() => {
+                    if (id === 'warmMilk') stopAllPourActivity();
+                    onRemoveIngredient(id);
+                  }}
                   className="inline-flex items-center gap-1 rounded-full border border-[#C4986E] bg-[#FFFDF8] px-1.5 py-0.5 text-[9.5px] font-bold text-[#5A3E32]"
                 >
                   <span>
@@ -182,7 +546,10 @@ export const HotDrinksStation: React.FC<HotDrinksStationProps> = ({
           <div className="flex w-full gap-1.5 sm:gap-2">
             <button
               type="button"
-              onClick={onPutOnTray}
+              onClick={() => {
+                stopAllPourActivity();
+                onPutOnTray();
+              }}
               disabled={!hasAny}
               className={`min-h-[40px] sm:min-h-[36px] flex-1 rounded-2xl border-2 px-2 sm:px-2.5 py-1 text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap ${
                 hasAny
@@ -194,11 +561,14 @@ export const HotDrinksStation: React.FC<HotDrinksStationProps> = ({
             </button>
             <button
               type="button"
-              onClick={onClear}
-              disabled={!hasAny}
+              onClick={() => {
+                stopAllPourActivity();
+                onClear();
+              }}
+              disabled={!hasAny && !isPouringMilk}
               title="Вилити (почати спочатку)"
               className={`min-h-[40px] sm:min-h-[36px] rounded-2xl border-2 px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap ${
-                hasAny
+                hasAny || isPouringMilk
                   ? 'border-[#A85F73] border-b-[3px] bg-gradient-to-b from-[#FCEEF2] to-[#F4D3DD] text-[#83344A] shadow-xs hover:brightness-[0.98] active:translate-y-[2px] active:border-b-2'
                   : 'border-[#D1BFA9] border-b-[3px] bg-[#EFE5D7] text-[#B09B86] cursor-not-allowed'
               }`}
@@ -222,8 +592,10 @@ export const HotDrinksStation: React.FC<HotDrinksStationProps> = ({
           <h2 className="font-handwriting text-lg sm:text-2xl leading-none font-bold text-[#4F3323]">
             Обери інгредієнти:
           </h2>
-          <span className="rounded-full border border-[#C89B58] bg-[#FDF1D4] px-2 sm:px-2.5 py-0.5 text-[9.5px] sm:text-[11px] font-bold text-[#7A4F1C] shadow-2xs whitespace-nowrap">
-            💡 Лате = 2× Тепле молоко
+          <span
+            className={`rounded-full border px-2 sm:px-2.5 py-0.5 text-[9.5px] sm:text-[11px] font-bold shadow-2xs whitespace-nowrap transition-colors ${pourHintBadge.className}`}
+          >
+            {pourHintBadge.text}
           </span>
         </div>
 
@@ -234,6 +606,97 @@ export const HotDrinksStation: React.FC<HotDrinksStationProps> = ({
               const count = ingredients[item.id] ?? 0;
               const max = item.maxCount ?? 1;
               const isFull = count >= max;
+              const isWarmMilk = item.id === 'warmMilk';
+              const milkFillPercent = isWarmMilk
+                ? Math.round((displayMilkLevel / MILK_MAX_PORTIONS) * 100)
+                : 0;
+
+              if (isWarmMilk) {
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    data-milk-pour-btn="true"
+                    aria-label="Тепле молоко: натисни для однієї порції або затисни, щоб наливати з пітчера"
+                    title="Затисни, щоб наливати з пітчера (або просто клікни для +1 порції)"
+                    onPointerDown={handleMilkPointerDown}
+                    onPointerUp={(e) => finishMilkPointer(e, false)}
+                    onPointerCancel={(e) => finishMilkPointer(e, true)}
+                    onClick={handleMilkClick}
+                    onContextMenu={(e) => e.preventDefault()}
+                    className={`barista-tile group relative flex h-full min-h-0 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl sm:rounded-2xl px-1 sm:px-2 py-1 sm:py-1.5 text-center touch-none select-none ${
+                      isPouringMilk ? 'ring-2 ring-[#D69B46]/80' : ''
+                    }`}
+                    style={{
+                      backgroundImage: item.buttonGradient,
+                      borderColor: isPouringMilk
+                        ? '#C27D2C'
+                        : count > 0
+                          ? '#4B8B63'
+                          : item.buttonBorder,
+                    }}
+                  >
+                    {/* Live creamy tactile pour progress gauge behind label */}
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-y-0 left-0 bg-gradient-to-r from-[#F6DDA6]/65 to-[#F1C97F]/55 transition-[width] duration-75"
+                      style={{ width: `${milkFillPercent}%` }}
+                    />
+
+                    {/* Subtle center ×1 tick line while pouring */}
+                    {isPouringMilk && (
+                      <span
+                        aria-hidden="true"
+                        className={`pointer-events-none absolute inset-y-1.5 left-1/2 w-[1.5px] -translate-x-1/2 rounded-full ${
+                          displayMilkLevel >= 0.98
+                            ? 'bg-[#4B8B63]/75'
+                            : 'bg-[#B98746]/45'
+                        }`}
+                      />
+                    )}
+
+                    {count > 0 && (
+                      <span className="absolute right-1 top-0.5 sm:right-1.5 sm:top-1 z-10 rounded-full border border-[#4B8B63]/40 bg-[#A7DCB8] px-1 sm:px-1.5 py-0.2 text-[8.5px] sm:text-[9.5px] font-bold text-[#174A2C]">
+                        ×{count}
+                      </span>
+                    )}
+
+                    <IngredientIconSvg
+                      type={item.id}
+                      className={`relative z-10 h-5 w-5 sm:h-6 sm:w-6 shrink-0 drop-shadow-[0_1px_1px_rgba(90,62,50,0.16)] transition-transform ${
+                        isPouringMilk ? '-rotate-12 scale-105' : ''
+                      }`}
+                    />
+                    <span className="relative z-10 text-[9.5px] min-[420px]:text-[11px] sm:text-xs font-bold leading-[1.12] text-[#4D3224]">
+                      {item.label}
+                    </span>
+
+                    <div className="relative z-10 flex items-center gap-0.5 sm:gap-1 text-[8px] sm:text-[9px] font-bold text-[#7E522B]">
+                      <span
+                        className={`h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full border border-[#8E6138] transition-colors ${
+                          displayMilkLevel >= 0.98 ? 'bg-[#B97B42]' : 'bg-[#FFFDF8]'
+                        }`}
+                      />
+                      <span
+                        className={`h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full border border-[#8E6138] transition-colors ${
+                          displayMilkLevel >= 1.98 ? 'bg-[#B97B42]' : 'bg-[#FFFDF8]'
+                        }`}
+                      />
+                      <span className="whitespace-nowrap">
+                        {isPouringMilk
+                          ? inNotch
+                            ? '×1 ✨'
+                            : 'ллється…'
+                          : count === 1
+                            ? 'ще ×2'
+                            : count === 2
+                              ? '×2 ✓'
+                              : 'тримай'}
+                      </span>
+                    </div>
+                  </button>
+                );
+              }
 
               return (
                 <button
@@ -260,25 +723,7 @@ export const HotDrinksStation: React.FC<HotDrinksStationProps> = ({
                     {item.label}
                   </span>
 
-                  {item.id === 'warmMilk' && (
-                    <div className="flex items-center gap-0.5 sm:gap-1 text-[8px] sm:text-[9px] font-bold text-[#7E522B]">
-                      <span
-                        className={`h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full border border-[#8E6138] ${
-                          count >= 1 ? 'bg-[#B97B42]' : 'bg-[#FFFDF8]'
-                        }`}
-                      />
-                      <span
-                        className={`h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full border border-[#8E6138] ${
-                          count >= 2 ? 'bg-[#B97B42]' : 'bg-[#FFFDF8]'
-                        }`}
-                      />
-                      <span>
-                        {count === 1 ? 'ще' : count === 2 ? '×2' : 'до ×2'}
-                      </span>
-                    </div>
-                  )}
-
-                  {item.id !== 'warmMilk' && isFull && (
+                  {isFull && (
                     <span className="text-[8.5px] sm:text-[9px] font-bold text-[#2B6E44] leading-none">
                       У чашці
                     </span>

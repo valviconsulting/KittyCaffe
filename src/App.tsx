@@ -584,6 +584,19 @@ export function App() {
     }
   };
 
+  const handleSetWarmMilkCount = (count: number) => {
+    const clamped = Math.max(0, Math.min(2, Math.round(count)));
+    setHotIngredients((prev) => {
+      if ((prev.warmMilk ?? 0) === clamped) return prev;
+      if (clamped <= 0) {
+        const next = { ...prev };
+        delete next.warmMilk;
+        return next;
+      }
+      return { ...prev, warmMilk: clamped };
+    });
+  };
+
   const handleRemoveHotIngredient = (id: HotIngredientId) => {
     const current = hotIngredients[id] ?? 0;
     const next = { ...hotIngredients };
@@ -1100,6 +1113,7 @@ export function App() {
                   }
                   unlockedRecipes={saveState.unlockedRecipes}
                   onAddIngredient={handleAddHotIngredient}
+                  onSetWarmMilkCount={handleSetWarmMilkCount}
                   onRemoveIngredient={handleRemoveHotIngredient}
                   onOpenLatteArt={() => {
                     sound.playPop();

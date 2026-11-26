@@ -13,6 +13,10 @@ interface HotCupSvgProps {
   className?: string;
   showSteam?: boolean;
   showSaucer?: boolean;
+  /** Continuous warm milk level (0..2) for smooth real-time tactile pouring. */
+  milkPourLevel?: number;
+  /** Shows the tilted watercolor ceramic milk pitcher and creamy stream into the cup. */
+  isPouringMilk?: boolean;
 }
 
 export const HotCupSvg: React.FC<HotCupSvgProps> = ({
@@ -20,12 +24,17 @@ export const HotCupSvg: React.FC<HotCupSvgProps> = ({
   className = 'w-32 h-32',
   showSteam = true,
   showSaucer = true,
+  milkPourLevel,
+  isPouringMilk = false,
 }) => {
   const uid = useId().replace(/:/g, '');
   const espresso = ingredients.espresso ?? 0;
   const cocoa = ingredients.cocoa ?? 0;
   const hotWater = ingredients.hotWater ?? 0;
-  const warmMilk = ingredients.warmMilk ?? 0;
+  const warmMilk =
+    milkPourLevel !== undefined
+      ? Math.max(0, Math.min(2, milkPourLevel))
+      : (ingredients.warmMilk ?? 0);
   const foam = ingredients.foam ?? 0;
   const cinnamon = ingredients.cinnamon ?? 0;
   const marshmallow = ingredients.marshmallow ?? 0;
@@ -44,13 +53,15 @@ export const HotCupSvg: React.FC<HotCupSvgProps> = ({
   if (hotWater > 0) {
     layers.push({ color: '#AE7B56', height: 30, key: 'hotWater' });
   }
-  if (warmMilk >= 1) {
-    layers.push({ color: '#FDF1DC', height: 24, key: 'warmMilk1' });
+  if (warmMilk > 0.02) {
+    const milk1 = Math.min(1, warmMilk);
+    layers.push({ color: '#FDF1DC', height: 24 * milk1, key: 'warmMilk1' });
   }
-  if (warmMilk >= 2) {
+  if (warmMilk > 1.02) {
+    const milk2 = Math.min(1, warmMilk - 1);
     layers.push({
       color: '#FFF9EF',
-      height: 24,
+      height: 24 * milk2,
       key: 'warmMilk2',
       stripe: '#ECD4B2',
     });
@@ -70,6 +81,7 @@ export const HotCupSvg: React.FC<HotCupSvgProps> = ({
   const topLiquidY = layers.length > 0 ? currentY : cupBottom - 8;
   const hasAnyLiquid = layers.length > 0 || foam > 0;
   const foamY = Math.max(44, topLiquidY - 12);
+  const streamEndY = Math.min(118, Math.max(46, topLiquidY + 2));
 
   return (
     <svg viewBox="0 0 150 150" className={className} aria-label="Прозора акварельна чашка">
@@ -79,8 +91,8 @@ export const HotCupSvg: React.FC<HotCupSvgProps> = ({
         </clipPath>
       </defs>
 
-      {/* Animated steam wisps */}
-      {showSteam && hasAnyLiquid && (
+      {/* Animated steam wisps (softly tucked away while pouring so pitcher shines) */}
+      {showSteam && hasAnyLiquid && !isPouringMilk && (
         <g fill="none" stroke="#D8B69A" strokeWidth="2.8" strokeLinecap="round">
           <path className="animate-steam-1" d="M52 34 Q46 24 53 15 Q59 8 53 2" />
           <path className="animate-steam-2" d="M68 32 Q74 22 67 13 Q61 6 68 0" />
@@ -123,29 +135,76 @@ export const HotCupSvg: React.FC<HotCupSvgProps> = ({
 
       {/* Clipped smoothly animated liquid layers */}
       <g clipPath={`url(#hot-clip-${uid})`}>
-        {positionedLayers.map((layer) => (
-          <g key={layer.key}>
-            <motion.rect
-              x="25"
-              width="86"
-              fill={layer.color}
-              initial={{ y: cupBottom, height: 0 }}
-              animate={{ y: layer.y, height: layer.h + 2 }}
-              transition={{ type: 'spring', stiffness: 180, damping: 20 }}
+        {positionedLayers.map((layer) => {
+          const isContinuousMilk =
+            isPouringMilk &&
+            (layer.key === 'warmMilk1' || layer.key === 'warmMilk2');
+          return (
+            <g key={layer.key}>
+              {isContinuousMilk ? (
+                <rect
+                  x="25"
+                  y={layer.y}
+                  width="86"
+                  height={layer.h + 2}
+                  fill={layer.color}
+                />
+              ) : (
+                <motion.rect
+                  x="25"
+                  width="86"
+                  fill={layer.color}
+                  initial={{ y: cupBottom, height: 0 }}
+                  animate={{ y: layer.y, height: layer.h + 2 }}
+                  transition={{ type: 'spring', stiffness: 180, damping: 20 }}
+                />
+              )}
+              {layer.stripe && (
+                <line
+                  x1="28"
+                  y1={layer.y + layer.h}
+                  x2="108"
+                  y2={layer.y + layer.h}
+                  stroke={layer.stripe}
+                  strokeWidth="1.5"
+                  strokeDasharray="4 3"
+                />
+              )}
+            </g>
+          );
+        })}
+
+        {/* Silky cream splash & ripple where the pouring stream meets the liquid */}
+        {isPouringMilk && (
+          <g>
+            <motion.ellipse
+              cx="74"
+              cy={streamEndY}
+              rx="14"
+              ry="3.6"
+              fill="#FFFDF8"
+              fillOpacity="0.88"
+              animate={{ rx: [11, 17, 11], opacity: [0.95, 0.55, 0.95] }}
+              transition={{ duration: 0.42, repeat: Infinity, ease: 'easeInOut' }}
             />
-            {layer.stripe && (
-              <line
-                x1="28"
-                y1={layer.y + layer.h}
-                x2="108"
-                y2={layer.y + layer.h}
-                stroke={layer.stripe}
-                strokeWidth="1.5"
-                strokeDasharray="4 3"
-              />
-            )}
+            <motion.circle
+              cx="63"
+              cy={Math.max(46, streamEndY - 5)}
+              r="2.4"
+              fill="#FFF9EC"
+              animate={{ y: [0, -5, 0], opacity: [0.9, 0.35, 0.9] }}
+              transition={{ duration: 0.36, repeat: Infinity }}
+            />
+            <motion.circle
+              cx="84"
+              cy={Math.max(46, streamEndY - 4)}
+              r="2"
+              fill="#FFF9EC"
+              animate={{ y: [0, -6, 0], opacity: [0.85, 0.3, 0.85] }}
+              transition={{ duration: 0.44, repeat: Infinity, delay: 0.12 }}
+            />
           </g>
-        ))}
+        )}
 
         {/* Fluffy Milk Foam layer */}
         {foam > 0 && (
@@ -252,11 +311,105 @@ export const HotCupSvg: React.FC<HotCupSvgProps> = ({
       {/* Glass Rim & Front Reflection */}
       <ellipse cx="68" cy="41" rx="40" ry="5.5" fill="none" stroke="#B69278" strokeWidth="2.5" />
       <path d="M38 52 L42 112" stroke="#FFFFFF" strokeWidth="4" strokeLinecap="round" opacity="0.65" />
+
+      {/* Subtle cozy ×1 / ×2 milk gauge marks on glass wall while pouring */}
+      {isPouringMilk && (
+        <g>
+          <line
+            x1="92"
+            y1="86"
+            x2="100"
+            y2="86"
+            stroke={warmMilk >= 0.98 ? '#4B8B63' : '#B68A60'}
+            strokeWidth={warmMilk >= 0.98 ? '2.6' : '1.8'}
+            strokeLinecap="round"
+          />
+          <line
+            x1="93"
+            y1="62"
+            x2="101"
+            y2="62"
+            stroke={warmMilk >= 1.98 ? '#4B8B63' : '#B68A60'}
+            strokeWidth={warmMilk >= 1.98 ? '2.6' : '1.8'}
+            strokeLinecap="round"
+          />
+        </g>
+      )}
+
       <g opacity="0.28" transform="translate(68, 92)">
         <circle cx="-7" cy="-2" r="1.8" fill="#5A3E32" />
         <circle cx="7" cy="-2" r="1.8" fill="#5A3E32" />
         <path d="M-4 3 Q0 6 4 3" fill="none" stroke="#5A3E32" strokeWidth="1.6" strokeLinecap="round" />
       </g>
+
+      {/* Tilted watercolor ceramic milk pitcher & silky pouring stream */}
+      {isPouringMilk && (
+        <motion.g
+          initial={{ opacity: 0, x: 10, y: -6, rotate: 14 }}
+          animate={{ opacity: 1, x: 0, y: 0, rotate: 0 }}
+          transition={{ duration: 0.16, ease: 'easeOut' }}
+          style={{ transformOrigin: '112px 24px' }}
+        >
+          {/* Creamy flowing stream from spout directly into liquid */}
+          <path
+            d={`M93 24 Q79 ${Math.round((24 + streamEndY) * 0.45)} 74 ${streamEndY}`}
+            fill="none"
+            stroke="#EAD1AF"
+            strokeWidth="7.5"
+            strokeLinecap="round"
+          />
+          <motion.path
+            d={`M93 24 Q79 ${Math.round((24 + streamEndY) * 0.45)} 74 ${streamEndY}`}
+            fill="none"
+            stroke="#FFFBF2"
+            strokeWidth="4.6"
+            strokeLinecap="round"
+            animate={{ strokeWidth: [4.2, 5.2, 4.2] }}
+            transition={{ duration: 0.38, repeat: Infinity, ease: 'easeInOut' }}
+          />
+
+          {/* Watercolor ceramic pitcher tilted warmly above top-right rim */}
+          <g transform="translate(115, 22) rotate(-36)">
+            {/* Ceramic handle */}
+            <path
+              d="M12 -5 C23 -5 23 11 11 11"
+              fill="none"
+              stroke="#6B4837"
+              strokeWidth="4.4"
+              strokeLinecap="round"
+            />
+            <path
+              d="M12 -5 C23 -5 23 11 11 11"
+              fill="none"
+              stroke="#FFF7E8"
+              strokeWidth="2.1"
+              strokeLinecap="round"
+            />
+            {/* Pitcher body with pouring spout */}
+            <path
+              d="M-21 -11 L-11 -9 L10 -9 Q14 -9 13 -4 L11 13 Q10 17 5 17 L-8 17 Q-13 17 -14 12 L-15 -3 Z"
+              fill="#FFF7E8"
+              stroke="#6B4837"
+              strokeWidth="2.1"
+              strokeLinejoin="round"
+            />
+            {/* Cozy blush watercolor stripe on pitcher */}
+            <path
+              d="M-13 2 L12 2 L11 7 L-13 7 Z"
+              fill="#F2B8C6"
+              opacity="0.85"
+            />
+            {/* Warm milk peeking near spout */}
+            <path
+              d="M-19 -9.5 Q-14 -7 -10 -8"
+              fill="none"
+              stroke="#FFFDF9"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+            />
+          </g>
+        </motion.g>
+      )}
     </svg>
   );
 };

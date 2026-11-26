@@ -6,6 +6,14 @@ class SoundEngine {
   private musicBoxTimer: number | null = null;
   private musicBoxStep = 0;
   private musicBoxActive = false;
+  private activeMilkPour: {
+    noise: AudioBufferSourceNode;
+    osc: OscillatorNode;
+    lfo: OscillatorNode;
+    bandpass: BiquadFilterNode;
+    gain: GainNode;
+    ctx: AudioContext;
+  } | null = null;
 
   private ensureContext(): AudioContext | null {
     if (this.muted) return null;
@@ -28,6 +36,7 @@ class SoundEngine {
     this.muted = muted;
     if (muted) {
       this.stopMusicBoxInterval();
+      this.stopMilkPour();
     } else if (this.musicBoxActive) {
       this.startMusicBoxInterval();
     }
@@ -283,6 +292,128 @@ class SoundEngine {
     gain.connect(ctx.destination);
     noise.start(now);
     noise.stop(now + duration + 0.02);
+  }
+
+  /** Cozy continuous tactile milk pouring stream (pitch rises gently as cup fills 0..2) */
+  startMilkPour(initialLevel = 0) {
+    this.stopMilkPour();
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    // 1.5s seamless soft noise loop for warm silky liquid stream
+    const bufferSize = Math.floor(ctx.sampleRate * 1.5);
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    let last = 0;
+    for (let i = 0; i < bufferSize; i++) {
+      const white = Math.random() * 2 - 1;
+      last = (last + 0.06 * white) / 1.06;
+      data[i] = last * 2.6;
+    }
+
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    noise.loop = true;
+
+    const clamped = Math.max(0, Math.min(2, initialLevel));
+    const bandpass = ctx.createBiquadFilter();
+    bandpass.type = 'bandpass';
+    bandpass.frequency.setValueAtTime(680 + clamped * 440, now);
+    bandpass.Q.setValueAtTime(2.2, now);
+
+    // Warm bubbling liquid undertone
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(235 + clamped * 95, now);
+
+    const oscGain = ctx.createGain();
+    oscGain.gain.setValueAtTime(0.28, now);
+
+    const lfo = ctx.createOscillator();
+    lfo.type = 'sine';
+    lfo.frequency.setValueAtTime(9.5, now);
+    const lfoGain = ctx.createGain();
+    lfoGain.gain.setValueAtTime(22, now);
+
+    const masterGain = ctx.createGain();
+    masterGain.gain.setValueAtTime(0.0001, now);
+    masterGain.gain.linearRampToValueAtTime(0.065, now + 0.06);
+
+    lfo.connect(lfoGain);
+    lfoGain.connect(osc.frequency);
+    noise.connect(bandpass);
+    bandpass.connect(masterGain);
+    osc.connect(oscGain);
+    oscGain.connect(masterGain);
+    masterGain.connect(ctx.destination);
+
+    noise.start(now);
+    osc.start(now);
+    lfo.start(now);
+
+    this.activeMilkPour = {
+      noise,
+      osc,
+      lfo,
+      bandpass,
+      gain: masterGain,
+      ctx,
+    };
+  }
+
+  /** Smoothly raises the acoustic resonance pitch of the active milk pour (level in 0..2) */
+  updateMilkPour(level: number) {
+    const active = this.activeMilkPour;
+    if (!active) return;
+    const clamped = Math.max(0, Math.min(2, level));
+    const now = active.ctx.currentTime;
+    active.bandpass.frequency.setTargetAtTime(680 + clamped * 460, now, 0.04);
+    active.osc.frequency.setTargetAtTime(235 + clamped * 105, now, 0.04);
+  }
+
+  /** Softly fades out and cleans up the continuous milk pour stream */
+  stopMilkPour() {
+    const active = this.activeMilkPour;
+    if (!active) return;
+    this.activeMilkPour = null;
+    try {
+      const now = active.ctx.currentTime;
+      active.gain.gain.cancelScheduledValues(now);
+      active.gain.gain.setValueAtTime(
+        Math.max(0.0001, active.gain.gain.value),
+        now
+      );
+      active.gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.075);
+      const stopAt = now + 0.095;
+      active.noise.stop(stopAt);
+      active.osc.stop(stopAt);
+      active.lfo.stop(stopAt);
+    } catch {
+      // Ignore if AudioContext is already closed
+    }
+  }
+
+  /** Soft creamy chime when warm milk reaches ×1 or ×2 (Latte!) */
+  playMilkMilestone(step: 1 | 2) {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const notes = step === 1 ? [659.25, 880.0] : [659.25, 880.0, 1174.66];
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const t = now + idx * 0.055;
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.075, t + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.3);
+    });
   }
 
   /** Soft liquid pour */

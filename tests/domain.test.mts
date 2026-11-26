@@ -32,6 +32,13 @@ import {
   parseAndSanitizeSave,
   sanitizeSecretDrink,
 } from '../src/services/storage.ts';
+import {
+  MILK_POUR_DURATION_PER_PORTION_MS,
+  MILK_POUR_HOLD_THRESHOLD_MS,
+  MILK_POUR_NOTCH_MS,
+  advanceMilkPour,
+  resolveMilkPourRelease,
+} from '../src/utils/milkPour.ts';
 import type { SecretDrinkRecipe } from '../src/types/game.ts';
 
 // 1. Hot ingredients: 7 base slots, 8th slot unlocks Matcha without adding a 3rd row
@@ -223,5 +230,46 @@ const importedBadJson = importSaveJson('{not valid json');
 assert.equal(importedBadJson.ok, false);
 const importedWrongObj = importSaveJson(JSON.stringify({ hello: 'world' }));
 assert.equal(importedWrongObj.ok, false);
+
+// 10. Step 03: Tactile milk-pouring physics (hold with ×1 notch + zero-hold quick tap)
+// Quick tap (< 140ms) always adds +1 portion cleanly, clamped to 2
+assert.equal(resolveMilkPourRelease(0, 0, MILK_POUR_HOLD_THRESHOLD_MS - 20), 1);
+assert.equal(resolveMilkPourRelease(1, 1, 50), 2);
+assert.equal(resolveMilkPourRelease(2, 2, 50), 2);
+
+// Continuous hold from 0 crosses ×1, triggers milestone 1 and engages magnetic notch
+let pourState = { level: 0, notchRemainingMs: 0, committedCount: 0 };
+let hit1 = false;
+let hit2 = false;
+let elapsed = 0;
+while (elapsed < MILK_POUR_DURATION_PER_PORTION_MS + 80 && !hit1) {
+  const step = advanceMilkPour(pourState, 50);
+  pourState = step.next;
+  elapsed += 50;
+  if (step.milestoneReached === 1) hit1 = true;
+}
+assert.equal(hit1, true);
+assert.equal(pourState.level, 1);
+assert.equal(pourState.committedCount, 1);
+assert.equal(pourState.notchRemainingMs, MILK_POUR_NOTCH_MS);
+
+// Holding during notch stays gracefully right at 1.0 (easy to release for Cappuccino!)
+const duringNotch = advanceMilkPour(pourState, 100);
+assert.equal(duringNotch.next.level, 1);
+assert.equal(resolveMilkPourRelease(0, 1.15, 950), 1);
+assert.equal(resolveMilkPourRelease(0, 1.35, 1100), 2);
+
+// Continuing hold past notch reaches ×2 cleanly without overflowing
+let completed = false;
+for (let i = 0; i < 40 && !completed; i++) {
+  const step = advanceMilkPour(pourState, 50);
+  pourState = step.next;
+  if (step.milestoneReached === 2) hit2 = true;
+  completed = step.completed;
+}
+assert.equal(hit2, true);
+assert.equal(completed, true);
+assert.equal(pourState.level, 2);
+assert.equal(pourState.committedCount, 2);
 
 console.log('ALL_DOMAIN_TESTS_PASSED');
