@@ -1,16 +1,17 @@
 import { MotionConfig } from 'framer-motion';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  Suspense,
+  lazy,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import {
   CafeHallScene,
   type CelebrationBanner,
 } from './components/cafe/CafeHallScene';
 import { TopBar } from './components/cafe/TopBar';
-import { FriendshipAlbumModal } from './components/modals/FriendshipAlbumModal';
-import { LatteArtModal } from './components/modals/LatteArtModal';
-import { RecipeBookModal } from './components/modals/RecipeBookModal';
-import { SecretDrinkModal } from './components/modals/SecretDrinkModal';
-import { ShopModal } from './components/modals/ShopModal';
-import { TakeawayCupModal } from './components/modals/TakeawayCupModal';
 import { ColdDrinksStation } from './components/stations/ColdDrinksStation';
 import { HotDrinksStation } from './components/stations/HotDrinksStation';
 import { PastryStation } from './components/stations/PastryStation';
@@ -37,7 +38,11 @@ import { MARZIPAN_WARDROBE } from './data/shop';
 import { RARE_STICKER_CATALOG, RARE_STICKER_ORDER } from './data/stickers';
 import { getNextWeather } from './data/weather';
 import { sound } from './services/sound';
-import { loadCafeSave, saveCafeProgress } from './services/storage';
+import {
+  DEFAULT_SAVE_STATE,
+  loadCafeSaveWithStatus,
+  saveCafeProgress,
+} from './services/storage';
 import type {
   BlenderIngredientId,
   CafeDecorId,
@@ -57,24 +62,82 @@ import type {
   WeatherType,
 } from './types/game';
 
+// Lazy-loaded modal flows so initial mobile bundle stays light & fast
+const RecipeBookModal = lazy(() =>
+  import('./components/modals/RecipeBookModal').then((m) => ({
+    default: m.RecipeBookModal,
+  }))
+);
+const LatteArtModal = lazy(() =>
+  import('./components/modals/LatteArtModal').then((m) => ({
+    default: m.LatteArtModal,
+  }))
+);
+const TakeawayCupModal = lazy(() =>
+  import('./components/modals/TakeawayCupModal').then((m) => ({
+    default: m.TakeawayCupModal,
+  }))
+);
+const SecretDrinkModal = lazy(() =>
+  import('./components/modals/SecretDrinkModal').then((m) => ({
+    default: m.SecretDrinkModal,
+  }))
+);
+const ShopModal = lazy(() =>
+  import('./components/modals/ShopModal').then((m) => ({
+    default: m.ShopModal,
+  }))
+);
+const FriendshipAlbumModal = lazy(() =>
+  import('./components/modals/FriendshipAlbumModal').then((m) => ({
+    default: m.FriendshipAlbumModal,
+  }))
+);
+const BackupModal = lazy(() =>
+  import('./components/modals/BackupModal').then((m) => ({
+    default: m.BackupModal,
+  }))
+);
+
 export function App() {
-  // Persisted progress (localStorage v3: Phases 1–3)
-  const [saveState, setSaveState] = useState<CafeSaveState>(() => {
-    const loaded = loadCafeSave();
-    sound.setMuted(loaded.muted);
+  // Safe initial load from localStorage (never silently overwrites corrupted or future-version saves!)
+  const [initialLoad] = useState(() => {
+    const loaded = loadCafeSaveWithStatus();
+    sound.setMuted(loaded.state.muted);
     return loaded;
+  });
+
+  const [saveState, setSaveState] = useState<CafeSaveState>(initialLoad.state);
+  const canAutoSaveRef = useRef<boolean>(initialLoad.canAutoSave);
+  const [storageWarning, setStorageWarning] = useState<string | null>(() => {
+    if (initialLoad.status === 'newer_version') {
+      return 'Знайдено збереження з новішої версії гри. Його резервну копію збережено — автозапис призупинено, доки ти не відновиш або не скинеш прогрес у «💾 Сейв».';
+    }
+    if (initialLoad.status === 'corrupted') {
+      return 'Попереднє збереження було пошкоджене (оригінал збережено в резервному ключі). Можеш завантажити резервний файл у «💾 Сейв».';
+    }
+    return null;
   });
 
   // Current order & guest mood
   const [order, setOrder] = useState<Order>(() =>
-    generateOrder(saveState.servedCount + 1, saveState.weather, undefined, {
-      secretDrink: saveState.secretDrink,
-      unlockedRecipes: saveState.unlockedRecipes,
-    })
+    generateOrder(
+      initialLoad.state.servedCount + 1,
+      initialLoad.state.weather,
+      undefined,
+      {
+        secretDrink: initialLoad.state.secretDrink,
+        unlockedRecipes: initialLoad.state.unlockedRecipes,
+      }
+    )
   );
   const [emotion, setEmotion] = useState<GuestEmotion>('waiting');
   const [speechText, setSpeechText] = useState<string>(() =>
-    buildOrderGreeting(order, getOrderDrinkName(order), saveState.weather)
+    buildOrderGreeting(
+      order,
+      getOrderDrinkName(order),
+      initialLoad.state.weather
+    )
   );
   const [lastReward, setLastReward] = useState<number | null>(null);
   const [celebration, setCelebration] = useState<CelebrationBanner | null>(null);
@@ -87,6 +150,7 @@ export function App() {
   const [isShopOpen, setIsShopOpen] = useState<boolean>(false);
   const [isFriendshipAlbumOpen, setIsFriendshipAlbumOpen] =
     useState<boolean>(false);
+  const [isBackupOpen, setIsBackupOpen] = useState<boolean>(false);
   const [pendingTakeawayDrink, setPendingTakeawayDrink] =
     useState<PreparedDrink | null>(null);
   const [pendingTakeawaySource, setPendingTakeawaySource] = useState<
@@ -131,8 +195,9 @@ export function App() {
   const [isOvenWarming, setIsOvenWarming] = useState<boolean>(false);
   const [ovenProgress, setOvenProgress] = useState<number>(0);
 
-  // Refs synced with latest state for timers & pure StrictMode-safe transitions
+  // Refs synced with latest state for timers & StrictMode-pure atomic transitions
   const orderRef = useRef<Order>(order);
+  const servedOrderIdRef = useRef<number | null>(null);
   const weatherRef = useRef<WeatherType>(saveState.weather);
   const secretDrinkRef = useRef<SecretDrinkRecipe | null>(saveState.secretDrink);
   const unlockedRecipesRef = useRef<UnlockableRecipeId[]>(
@@ -140,6 +205,7 @@ export function App() {
   );
   const forceNextSecretRef = useRef<boolean>(false);
   const forceNextRecipeRef = useRef<UnlockableRecipeId | null>(null);
+  const isFirstSaveEffectRef = useRef<boolean>(true);
 
   useEffect(() => {
     orderRef.current = order;
@@ -151,10 +217,15 @@ export function App() {
     unlockedRecipesRef.current = saveState.unlockedRecipes;
   }, [saveState.weather, saveState.secretDrink, saveState.unlockedRecipes]);
 
-  // Persist saveState cleanly whenever progress changes
+  // Persist saveState cleanly whenever progress changes (never clobbering unreadable saves on mount!)
   useEffect(() => {
+    if (isFirstSaveEffectRef.current) {
+      isFirstSaveEffectRef.current = false;
+      if (initialLoad.status !== 'migrated') return;
+    }
+    if (!canAutoSaveRef.current) return;
     saveCafeProgress(saveState);
-  }, [saveState]);
+  }, [saveState, initialLoad.status]);
 
   // Sync Cozy Web Audio Music Box with decor + mute state
   useEffect(() => {
@@ -207,6 +278,7 @@ export function App() {
     isSecretCreatorOpen ||
     isShopOpen ||
     isFriendshipAlbumOpen ||
+    isBackupOpen ||
     Boolean(pendingTakeawayDrink);
 
   // Advance to next guest using current weather, secret drink, unlocked recipes & traveler schedule
@@ -225,7 +297,6 @@ export function App() {
     const forceRecipe = forceNextRecipeRef.current;
     forceNextRecipeRef.current = null;
 
-    // Compute next order ONCE outside state updater so React StrictMode never double-rolls Math.random()
     const next = generateOrder(
       prevOrder.id + 1,
       currentWeather,
@@ -238,6 +309,7 @@ export function App() {
       }
     );
     orderRef.current = next;
+    servedOrderIdRef.current = null;
     setOrder(next);
     setSpeechText(
       buildOrderGreeting(next, getOrderDrinkName(next), currentWeather)
@@ -275,27 +347,31 @@ export function App() {
     };
   }, [emotion, anyModalOpen, goToNextGuest]);
 
+  // StrictMode-pure handlers (zero side effects inside state updaters!)
   const handleCycleWeather = () => {
     sound.playPop();
-    setSaveState((prev) => {
-      const nextWeather = getNextWeather(prev.weather);
-      weatherRef.current = nextWeather;
-      if (emotion === 'waiting') {
-        setSpeechText(
-          buildOrderGreeting(order, getOrderDrinkName(order), nextWeather)
-        );
-      }
-      return { ...prev, weather: nextWeather };
-    });
+    const nextWeather = getNextWeather(weatherRef.current);
+    weatherRef.current = nextWeather;
+    canAutoSaveRef.current = true;
+    setSaveState((prev) => ({ ...prev, weather: nextWeather }));
+    if (emotion === 'waiting') {
+      const currentOrder = orderRef.current;
+      setSpeechText(
+        buildOrderGreeting(
+          currentOrder,
+          getOrderDrinkName(currentOrder),
+          nextWeather
+        )
+      );
+    }
   };
 
   const handleToggleMute = () => {
-    setSaveState((prev) => {
-      const nextMuted = !prev.muted;
-      sound.setMuted(nextMuted);
-      if (!nextMuted) sound.playPop();
-      return { ...prev, muted: nextMuted };
-    });
+    const nextMuted = !saveState.muted;
+    sound.setMuted(nextMuted);
+    if (!nextMuted) sound.playPop();
+    canAutoSaveRef.current = true;
+    setSaveState((prev) => ({ ...prev, muted: nextMuted }));
   };
 
   const handlePetMarzipan = () => {
@@ -310,6 +386,7 @@ export function App() {
   const handleSaveSecretDrink = (recipe: SecretDrinkRecipe) => {
     secretDrinkRef.current = recipe;
     forceNextSecretRef.current = true;
+    canAutoSaveRef.current = true;
     setSaveState((prev) => ({
       ...prev,
       secretDrink: recipe,
@@ -317,11 +394,60 @@ export function App() {
     setIsSecretCreatorOpen(false);
   };
 
-  // --- Phase 3: Shop & Marzipan Wardrobe Handlers ---
+  const handleImportSave = (imported: CafeSaveState) => {
+    canAutoSaveRef.current = true;
+    setStorageWarning(null);
+    sound.setMuted(imported.muted);
+    weatherRef.current = imported.weather;
+    secretDrinkRef.current = imported.secretDrink;
+    unlockedRecipesRef.current = imported.unlockedRecipes;
+    setSaveState(imported);
+    saveCafeProgress(imported);
+
+    const freshOrder = generateOrder(
+      imported.servedCount + 1,
+      imported.weather,
+      undefined,
+      {
+        secretDrink: imported.secretDrink,
+        unlockedRecipes: imported.unlockedRecipes,
+      }
+    );
+    orderRef.current = freshOrder;
+    servedOrderIdRef.current = null;
+    setOrder(freshOrder);
+    setEmotion('waiting');
+    setLastReward(null);
+    setTrayDrink(null);
+    setTrayPastry(null);
+    setSpeechText(
+      buildOrderGreeting(
+        freshOrder,
+        getOrderDrinkName(freshOrder),
+        imported.weather
+      )
+    );
+  };
+
+  const handleResetSave = () => {
+    handleImportSave({
+      ...DEFAULT_SAVE_STATE,
+      equippedAccessories: { ...DEFAULT_SAVE_STATE.equippedAccessories },
+      friendship: {},
+    });
+  };
+
+  // --- Phase 3: Shop & Marzipan Wardrobe Handlers (StrictMode-pure) ---
   const handleBuyAccessory = (id: MarzipanAccessoryId, price: number) => {
     const itemMeta = MARZIPAN_WARDROBE.find((w) => w.id === id);
-    if (!itemMeta) return;
-
+    if (
+      !itemMeta ||
+      saveState.ownedAccessories.includes(id) ||
+      saveState.coins < price
+    ) {
+      return;
+    }
+    canAutoSaveRef.current = true;
     setSaveState((prev) => {
       if (prev.ownedAccessories.includes(id) || prev.coins < price) return prev;
       const nextEquipped = { ...prev.equippedAccessories };
@@ -344,8 +470,8 @@ export function App() {
 
   const handleToggleEquipAccessory = (id: MarzipanAccessoryId) => {
     const itemMeta = MARZIPAN_WARDROBE.find((w) => w.id === id);
-    if (!itemMeta) return;
-
+    if (!itemMeta || !saveState.ownedAccessories.includes(id)) return;
+    canAutoSaveRef.current = true;
     setSaveState((prev) => {
       if (!prev.ownedAccessories.includes(id)) return prev;
       const nextEquipped = { ...prev.equippedAccessories };
@@ -365,6 +491,8 @@ export function App() {
   };
 
   const handleBuyDecor = (id: CafeDecorId, price: number) => {
+    if (saveState.ownedDecor.includes(id) || saveState.coins < price) return;
+    canAutoSaveRef.current = true;
     setSaveState((prev) => {
       if (prev.ownedDecor.includes(id) || prev.coins < price) return prev;
       return {
@@ -379,6 +507,8 @@ export function App() {
   };
 
   const handleToggleDecor = (id: CafeDecorId) => {
+    if (!saveState.ownedDecor.includes(id)) return;
+    canAutoSaveRef.current = true;
     setSaveState((prev) => {
       if (!prev.ownedDecor.includes(id)) return prev;
       const isCurrentlyOn = prev.enabledDecor.includes(id);
@@ -396,6 +526,8 @@ export function App() {
   };
 
   const handleToggleMusicBox = () => {
+    if (!saveState.enabledDecor.includes('music_box')) return;
+    canAutoSaveRef.current = true;
     setSaveState((prev) => {
       if (!prev.enabledDecor.includes('music_box')) return prev;
       return { ...prev, musicBoxPlaying: !prev.musicBoxPlaying };
@@ -404,15 +536,19 @@ export function App() {
   };
 
   const handleBuyRecipe = (id: UnlockableRecipeId, price: number) => {
+    if (saveState.unlockedRecipes.includes(id) || saveState.coins < price) {
+      return;
+    }
+    const nextUnlocked = [...saveState.unlockedRecipes, id];
+    unlockedRecipesRef.current = nextUnlocked;
+    forceNextRecipeRef.current = id;
+    canAutoSaveRef.current = true;
     setSaveState((prev) => {
       if (prev.unlockedRecipes.includes(id) || prev.coins < price) return prev;
-      const nextUnlocked = [...prev.unlockedRecipes, id];
-      unlockedRecipesRef.current = nextUnlocked;
-      forceNextRecipeRef.current = id;
       return {
         ...prev,
         coins: prev.coins - price,
-        unlockedRecipes: nextUnlocked,
+        unlockedRecipes: [...prev.unlockedRecipes, id],
       };
     });
     sound.playSecretSaved();
@@ -449,19 +585,17 @@ export function App() {
   };
 
   const handleRemoveHotIngredient = (id: HotIngredientId) => {
-    setHotIngredients((prev) => {
-      const current = prev[id] ?? 0;
-      const next = { ...prev };
-      if (current <= 1) {
-        delete next[id];
-      } else {
-        next[id] = current - 1;
-      }
-      if (!canDoLatteArt(next)) {
-        setHotLatteArtUrl(undefined);
-      }
-      return next;
-    });
+    const current = hotIngredients[id] ?? 0;
+    const next = { ...hotIngredients };
+    if (current <= 1) {
+      delete next[id];
+    } else {
+      next[id] = current - 1;
+    }
+    setHotIngredients(next);
+    if (!canDoLatteArt(next)) {
+      setHotLatteArtUrl(undefined);
+    }
     sound.playPop();
   };
 
@@ -509,14 +643,12 @@ export function App() {
   };
 
   const handleRemoveCocktailIngredient = (id: TallGlassIngredientId) => {
-    setCocktailIngredients((prev) => {
-      const next = { ...prev };
-      delete next[id];
-      if (!hasTallIngredients(next)) {
-        setColdGlassMode('empty');
-      }
-      return next;
-    });
+    const next = { ...cocktailIngredients };
+    delete next[id];
+    setCocktailIngredients(next);
+    if (!hasTallIngredients(next)) {
+      setColdGlassMode('empty');
+    }
     sound.playPop();
   };
 
@@ -707,9 +839,9 @@ export function App() {
     sound.playTrayPlace();
   };
 
-  // --- Serve Order (Phases 1 + 2 + 3: Traveler Cat Kindness, Best Friends +5 🐟, Souvenirs!) ---
+  // --- Serve Order (Atomic single-reward guard + StrictMode-pure) ---
   const handleServe = () => {
-    if (emotion === 'happy') return;
+    if (emotion === 'happy' || servedOrderIdRef.current === order.id) return;
 
     const result = validateOrder(order, trayDrink, trayPastry);
     if (!result.ok) {
@@ -718,6 +850,15 @@ export function App() {
       sound.playGentleOops();
       return;
     }
+
+    servedOrderIdRef.current = order.id;
+    canAutoSaveRef.current = true;
+    const nextServedCount = saveState.servedCount + 1;
+    const nextWeather =
+      nextServedCount % 4 === 0
+        ? getNextWeather(saveState.weather)
+        : saveState.weather;
+    weatherRef.current = nextWeather;
 
     // Special Kindness Reward for «Котик-мандрівник»!
     if (order.isTravelerGuest) {
@@ -744,10 +885,6 @@ export function App() {
       );
 
       setSaveState((prev) => {
-        const nextServed = prev.servedCount + 1;
-        const nextWeather =
-          nextServed % 4 === 0 ? getNextWeather(prev.weather) : prev.weather;
-        weatherRef.current = nextWeather;
         const nextRare =
           nextStickerId && !prev.unlockedRareStickers.includes(nextStickerId)
             ? [...prev.unlockedRareStickers, nextStickerId]
@@ -756,7 +893,7 @@ export function App() {
         return {
           ...prev,
           coins: prev.coins + riverCoins,
-          servedCount: nextServed,
+          servedCount: prev.servedCount + 1,
           weather: nextWeather,
           unlockedRareStickers: nextRare,
           travelerVisits: prev.travelerVisits + 1,
@@ -789,7 +926,7 @@ export function App() {
       return;
     }
 
-    // Regular Guests (with Secret Drink, Combo, Latte Art, Take-away & Best Friend +5 🐟 tips!)
+    // Regular Guests (Secret Drink, Combo, Latte Art, Take-away & Best Friend +5 🐟 tips)
     const isSecretDrink = order.drinkId === 'secret_daily';
     const hasLatteArt = Boolean(
       trayDrink?.category === 'hot' && trayDrink.latteArtDataUrl
@@ -822,23 +959,16 @@ export function App() {
     );
     setLastReward(reward);
 
-    setSaveState((prev) => {
-      const nextServed = prev.servedCount + 1;
-      const nextWeather =
-        nextServed % 4 === 0 ? getNextWeather(prev.weather) : prev.weather;
-      weatherRef.current = nextWeather;
-
-      return {
-        ...prev,
-        coins: prev.coins + reward,
-        servedCount: nextServed,
-        weather: nextWeather,
-        friendship: {
-          ...prev.friendship,
-          [order.guestId]: (prev.friendship[order.guestId] ?? 0) + 1,
-        },
-      };
-    });
+    setSaveState((prev) => ({
+      ...prev,
+      coins: prev.coins + reward,
+      servedCount: prev.servedCount + 1,
+      weather: nextWeather,
+      friendship: {
+        ...prev.friendship,
+        [order.guestId]: (prev.friendship[order.guestId] ?? 0) + 1,
+      },
+    }));
 
     if (justBecameBestFriend) {
       const guest = GUESTS[order.guestId];
@@ -1019,93 +1149,117 @@ export function App() {
             </div>
           </main>
 
-          {/* Watercolor Notebook Recipe Book Modal */}
-          <RecipeBookModal
-            isOpen={isRecipeBookOpen}
-            initialTab={activeTab}
-            secretDrink={saveState.secretDrink}
-            unlockedRecipes={saveState.unlockedRecipes}
-            onClose={() => {
-              sound.playPop();
-              setIsRecipeBookOpen(false);
-            }}
-            onOpenSecretCreator={() => {
-              sound.playPop();
-              setIsSecretCreatorOpen(true);
-            }}
-          />
+          {/* Lazy-Loaded Modals — chunks load only on demand for snappy mobile startup */}
+          <Suspense fallback={null}>
+            {isRecipeBookOpen && (
+              <RecipeBookModal
+                isOpen={isRecipeBookOpen}
+                initialTab={activeTab}
+                secretDrink={saveState.secretDrink}
+                unlockedRecipes={saveState.unlockedRecipes}
+                onClose={() => {
+                  sound.playPop();
+                  setIsRecipeBookOpen(false);
+                }}
+                onOpenSecretCreator={() => {
+                  sound.playPop();
+                  setIsSecretCreatorOpen(true);
+                }}
+              />
+            )}
 
-          {/* Phase 2 Modal 1: Latte Art Foam Canvas */}
-          <LatteArtModal
-            isOpen={isLatteArtOpen}
-            initialDataUrl={hotLatteArtUrl}
-            onClose={() => {
-              sound.playPop();
-              setIsLatteArtOpen(false);
-            }}
-            onSave={(dataUrl) => {
-              setHotLatteArtUrl(dataUrl);
-              setIsLatteArtOpen(false);
-            }}
-          />
+            {isLatteArtOpen && (
+              <LatteArtModal
+                isOpen={isLatteArtOpen}
+                initialDataUrl={hotLatteArtUrl}
+                onClose={() => {
+                  sound.playPop();
+                  setIsLatteArtOpen(false);
+                }}
+                onSave={(dataUrl) => {
+                  setHotLatteArtUrl(dataUrl);
+                  setIsLatteArtOpen(false);
+                }}
+              />
+            )}
 
-          {/* Phase 2 Modal 2: Take-away Cup Sticker Decorator (with Rare Golden Stickers!) */}
-          <TakeawayCupModal
-            drink={pendingTakeawayDrink}
-            unlockedRareStickers={saveState.unlockedRareStickers}
-            onCancel={() => {
-              sound.playPop();
-              setPendingTakeawayDrink(null);
-              setPendingTakeawaySource(null);
-            }}
-            onConfirm={handleConfirmTakeaway}
-          />
+            {pendingTakeawayDrink && (
+              <TakeawayCupModal
+                drink={pendingTakeawayDrink}
+                unlockedRareStickers={saveState.unlockedRareStickers}
+                onCancel={() => {
+                  sound.playPop();
+                  setPendingTakeawayDrink(null);
+                  setPendingTakeawaySource(null);
+                }}
+                onConfirm={handleConfirmTakeaway}
+              />
+            )}
 
-          {/* Phase 2 Modal 3: Secret Drink of the Day Creator */}
-          <SecretDrinkModal
-            isOpen={isSecretCreatorOpen}
-            existingDrink={saveState.secretDrink}
-            unlockedRecipes={saveState.unlockedRecipes}
-            onClose={() => {
-              sound.playPop();
-              setIsSecretCreatorOpen(false);
-            }}
-            onSave={handleSaveSecretDrink}
-          />
+            {isSecretCreatorOpen && (
+              <SecretDrinkModal
+                isOpen={isSecretCreatorOpen}
+                existingDrink={saveState.secretDrink}
+                unlockedRecipes={saveState.unlockedRecipes}
+                onClose={() => {
+                  sound.playPop();
+                  setIsSecretCreatorOpen(false);
+                }}
+                onSave={handleSaveSecretDrink}
+              />
+            )}
 
-          {/* Phase 3 Modal 1: Shop & Marzipan Wardrobe */}
-          <ShopModal
-            isOpen={isShopOpen}
-            coins={saveState.coins}
-            ownedAccessories={saveState.ownedAccessories}
-            equippedAccessories={saveState.equippedAccessories}
-            ownedDecor={saveState.ownedDecor}
-            enabledDecor={saveState.enabledDecor}
-            unlockedRecipes={saveState.unlockedRecipes}
-            musicBoxPlaying={saveState.musicBoxPlaying}
-            onClose={() => {
-              sound.playPop();
-              setIsShopOpen(false);
-            }}
-            onBuyAccessory={handleBuyAccessory}
-            onToggleEquipAccessory={handleToggleEquipAccessory}
-            onBuyDecor={handleBuyDecor}
-            onToggleDecor={handleToggleDecor}
-            onToggleMusicBox={handleToggleMusicBox}
-            onBuyRecipe={handleBuyRecipe}
-          />
+            {isShopOpen && (
+              <ShopModal
+                isOpen={isShopOpen}
+                coins={saveState.coins}
+                ownedAccessories={saveState.ownedAccessories}
+                equippedAccessories={saveState.equippedAccessories}
+                ownedDecor={saveState.ownedDecor}
+                enabledDecor={saveState.enabledDecor}
+                unlockedRecipes={saveState.unlockedRecipes}
+                musicBoxPlaying={saveState.musicBoxPlaying}
+                onClose={() => {
+                  sound.playPop();
+                  setIsShopOpen(false);
+                }}
+                onBuyAccessory={handleBuyAccessory}
+                onToggleEquipAccessory={handleToggleEquipAccessory}
+                onBuyDecor={handleBuyDecor}
+                onToggleDecor={handleToggleDecor}
+                onToggleMusicBox={handleToggleMusicBox}
+                onBuyRecipe={handleBuyRecipe}
+                onOpenBackup={() => setIsBackupOpen(true)}
+              />
+            )}
 
-          {/* Phase 3 Modal 2: Friendship Album */}
-          <FriendshipAlbumModal
-            isOpen={isFriendshipAlbumOpen}
-            friendship={saveState.friendship}
-            unlockedRareStickers={saveState.unlockedRareStickers}
-            travelerVisits={saveState.travelerVisits}
-            onClose={() => {
-              sound.playPop();
-              setIsFriendshipAlbumOpen(false);
-            }}
-          />
+            {isFriendshipAlbumOpen && (
+              <FriendshipAlbumModal
+                isOpen={isFriendshipAlbumOpen}
+                friendship={saveState.friendship}
+                unlockedRareStickers={saveState.unlockedRareStickers}
+                travelerVisits={saveState.travelerVisits}
+                onClose={() => {
+                  sound.playPop();
+                  setIsFriendshipAlbumOpen(false);
+                }}
+              />
+            )}
+
+            {isBackupOpen && (
+              <BackupModal
+                isOpen={isBackupOpen}
+                saveState={saveState}
+                storageWarning={storageWarning}
+                onClose={() => {
+                  sound.playPop();
+                  setIsBackupOpen(false);
+                }}
+                onImportSave={handleImportSave}
+                onResetSave={handleResetSave}
+              />
+            )}
+          </Suspense>
         </div>
       </div>
     </MotionConfig>

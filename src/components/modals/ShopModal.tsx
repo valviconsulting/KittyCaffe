@@ -43,6 +43,7 @@ interface ShopModalProps {
   onToggleDecor: (id: CafeDecorId) => void;
   onToggleMusicBox: () => void;
   onBuyRecipe: (id: UnlockableRecipeId, price: number) => void;
+  onOpenBackup?: () => void;
 }
 
 export const ShopModal: React.FC<ShopModalProps> = (props) => {
@@ -68,6 +69,7 @@ const ShopModalInner: React.FC<ShopModalProps> = ({
   onToggleDecor,
   onToggleMusicBox,
   onBuyRecipe,
+  onOpenBackup,
 }) => {
   const [tab, setTab] = useState<ShopTab>('wardrobe');
 
@@ -120,7 +122,23 @@ const ShopModalInner: React.FC<ShopModalProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {onOpenBackup && (
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playPop();
+                  onClose();
+                  onOpenBackup();
+                }}
+                title="Зберегти або завантажити файл прогресу (.json)"
+                aria-label="Збереження прогресу"
+                className="flex h-10 items-center gap-1 rounded-full border-2 border-[#C8A67D] bg-[#FFFDF8] px-2.5 text-xs font-bold text-[#6A4528] hover:bg-[#FAF0DF]"
+              >
+                <span aria-hidden="true">💾</span>
+                <span className="hidden sm:inline">Сейв</span>
+              </button>
+            )}
             <div className="flex items-center gap-1 rounded-full border-2 border-[#E3BE73] bg-[#FDF5DC] px-2.5 py-1 shadow-xs">
               <FishCoinSvg className="h-4.5 w-4.5" />
               <span className="text-xs sm:text-sm font-bold text-[#7B5218] tabular-nums">

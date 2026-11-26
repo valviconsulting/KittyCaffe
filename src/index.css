@@ -299,6 +299,21 @@
   50% { transform: rotate(12deg); }
 }
 
+@keyframes mote-drift {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(0.8);
+    opacity: 0.15;
+  }
+  45% {
+    transform: translate(2.2px, -3.5px) scale(1.15);
+    opacity: 0.78;
+  }
+  75% {
+    transform: translate(-1.2px, -5.5px) scale(0.95);
+    opacity: 0.48;
+  }
+}
+
 .animate-steam-1 { animation: steam-rise 2.4s ease-in-out infinite; }
 .animate-steam-2 { animation: steam-rise 2.4s ease-in-out 0.8s infinite; }
 .animate-steam-3 { animation: steam-rise 2.4s ease-in-out 1.6s infinite; }
@@ -314,6 +329,7 @@
 .animate-snow { animation: snow-drift 4.2s ease-in-out infinite; }
 .animate-sun-shimmer { animation: sun-shimmer 3.8s ease-in-out infinite; }
 .animate-clock-pendulum { animation: clock-pendulum 2.4s ease-in-out infinite; }
+.animate-mote { animation: mote-drift 5.5s ease-in-out infinite; }
 .animate-whirl {
   transform-origin: 65px 72px;
   animation: whirl-spin 0.45s linear infinite;

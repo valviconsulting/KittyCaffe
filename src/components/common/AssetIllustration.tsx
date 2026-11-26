@@ -9,8 +9,8 @@ interface AssetIllustrationProps {
 }
 
 /**
- * Renders the external watercolor PNG illustration directly as an <img>.
- * Automatically falls back to the built-in watercolor SVG only if the file fails to load.
+ * Renders the external watercolor illustration via `<picture>` (WebP first for fast mobile loads,
+ * PNG fallback automatically). Falls back to built-in watercolor SVG if loading fails.
  */
 export const AssetIllustration: React.FC<AssetIllustrationProps> = ({
   src,
@@ -26,15 +26,21 @@ export const AssetIllustration: React.FC<AssetIllustrationProps> = ({
     return <div className={className}>{fallback}</div>;
   }
 
+  const webpSrc = src.endsWith('.png') ? src.replace(/\.png$/, '.webp') : null;
+
   return (
     <div className={className}>
-      <img
-        src={src}
-        alt={alt}
-        className={imgClassName}
-        draggable={false}
-        onError={() => setFailedSrc(src)}
-      />
+      <picture className="block h-full w-full">
+        {webpSrc && <source srcSet={webpSrc} type="image/webp" />}
+        <img
+          src={src}
+          alt={alt}
+          className={imgClassName}
+          draggable={false}
+          decoding="async"
+          onError={() => setFailedSrc(src)}
+        />
+      </picture>
     </div>
   );
 };

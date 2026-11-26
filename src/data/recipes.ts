@@ -616,6 +616,15 @@ export function secretDrinkHasEspresso(secret: SecretDrinkRecipe): boolean {
   );
 }
 
+/** Checks any caffeinated hot ingredient (espresso OR matcha) — cocoa stays kid-friendly */
+export function secretDrinkHasCaffeine(secret: SecretDrinkRecipe): boolean {
+  return (
+    secret.category === 'hot' &&
+    ((secret.hotIngredients?.espresso ?? 0) > 0 ||
+      (secret.hotIngredients?.matcha ?? 0) > 0)
+  );
+}
+
 export function secretDrinkToBadges(secret: SecretDrinkRecipe): string[] {
   if (secret.category === 'hot') {
     const badges: string[] = [];
@@ -727,16 +736,20 @@ function validateAgainstSpec(
   },
   guestId: Order['guestId']
 ): ValidationResult {
-  // Special Puff rule: if given ANY drink containing espresso!
+  // Special Puff rule: if given ANY drink containing espresso or matcha!
   if (
     guestId === 'puh' &&
     prepared?.category === 'hot' &&
-    (prepared.ingredients.espresso ?? 0) > 0
+    ((prepared.ingredients.espresso ?? 0) > 0 ||
+      (prepared.ingredients.matcha ?? 0) > 0)
   ) {
+    const isMatcha = (prepared.ingredients.matcha ?? 0) > 0 && !(prepared.ingredients.espresso ?? 0);
     return {
       ok: false,
       isPuhCoffeeReject: true,
-      feedback: 'Няв! Мені мама каву ще не дозволяє!',
+      feedback: isMatcha
+        ? 'Няв! Мені мама міцний зелений чай матча ще не дозволяє!'
+        : 'Няв! Мені мама каву ще не дозволяє!',
     };
   }
 
@@ -1012,16 +1025,22 @@ export function validateOrder(
     return { ok: true, feedback: '' };
   }
 
-  // Check Puff's espresso Easter Egg immediately even if pastry is missing
+  // Check Puff's caffeine Easter Egg (espresso or matcha) immediately even if pastry is missing
   if (
     order.guestId === 'puh' &&
     trayDrink?.category === 'hot' &&
-    (trayDrink.ingredients.espresso ?? 0) > 0
+    ((trayDrink.ingredients.espresso ?? 0) > 0 ||
+      (trayDrink.ingredients.matcha ?? 0) > 0)
   ) {
+    const isMatcha =
+      (trayDrink.ingredients.matcha ?? 0) > 0 &&
+      !(trayDrink.ingredients.espresso ?? 0);
     return {
       ok: false,
       isPuhCoffeeReject: true,
-      feedback: 'Няв! Мені мама каву ще не дозволяє!',
+      feedback: isMatcha
+        ? 'Няв! Мені мама міцний зелений чай матча ще не дозволяє!'
+        : 'Няв! Мені мама каву ще не дозволяє!',
     };
   }
 

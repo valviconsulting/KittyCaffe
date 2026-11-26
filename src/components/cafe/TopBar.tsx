@@ -38,12 +38,12 @@ export const TopBar: React.FC<TopBarProps> = ({
   const weatherMeta = WEATHER_CONFIG[weather];
 
   return (
-    <header className="landscape-compact-topbar relative z-30 flex min-h-[48px] sm:min-h-[52px] shrink-0 items-center justify-between gap-1 sm:gap-1.5 border-b-2 border-[#E2CEB4] bg-[#FCF7EC] px-1.5 sm:px-3.5 md:px-4 py-1 shadow-[0_2px_10px_rgba(90,62,50,0.08)]">
+    <header className="landscape-compact-topbar relative z-30 flex min-h-[50px] sm:min-h-[52px] shrink-0 items-center justify-between gap-1 sm:gap-1.5 border-b-2 border-[#E2CEB4] bg-[#FCF7EC] px-1.5 sm:px-3.5 md:px-4 py-1 shadow-[0_2px_10px_rgba(90,62,50,0.08)]">
       {/* Brand Logo */}
-      <div className="flex items-center gap-1 sm:gap-2 min-w-0 shrink-0">
-        <LogoCatCupSvg className="h-7 w-7 sm:h-8.5 sm:w-8.5 shrink-0 drop-shadow-xs" />
+      <div className="flex items-center gap-0.5 min-[390px]:gap-1 sm:gap-2 min-w-0 shrink-0">
+        <LogoCatCupSvg className="h-6 w-6 min-[420px]:h-7 min-[420px]:w-7 sm:h-8.5 sm:w-8.5 shrink-0 drop-shadow-xs" />
         <div className="leading-none">
-          <h1 className="font-handwriting text-[18px] sm:text-[24px] md:text-[26px] font-bold tracking-wide text-[#5A3E32] whitespace-nowrap">
+          <h1 className="font-handwriting text-[15.5px] min-[400px]:text-[18px] sm:text-[24px] md:text-[26px] font-bold tracking-wide text-[#5A3E32] whitespace-nowrap">
             Мур-Лате
           </h1>
           <p className="hidden xl:block text-[9.5px] font-semibold text-[#8F6B56] -mt-0.5">
@@ -52,8 +52,8 @@ export const TopBar: React.FC<TopBarProps> = ({
         </div>
       </div>
 
-      {/* Right Counters & Controls — strictly 1 clean compact row across 390px..1920px */}
-      <div className="flex items-center gap-1 sm:gap-1.5 min-w-0 shrink-0">
+      {/* Right Counters & Controls — strictly 1 clean compact row across 375px..1920px with comfortable mobile tap targets */}
+      <div className="flex items-center gap-[2px] min-[390px]:gap-[3px] min-[420px]:gap-1 sm:gap-1.5 min-w-0 shrink-0">
         {/* Live Weather Switcher */}
         <motion.button
           type="button"
@@ -62,14 +62,14 @@ export const TopBar: React.FC<TopBarProps> = ({
           onClick={onCycleWeather}
           title={`${weatherMeta.label}: ${weatherMeta.shortHint}. Натисни, щоб змінити погоду!`}
           aria-label={`Поточна погода: ${weatherMeta.label}. Натисни, щоб перемкнути погоду.`}
-          className="flex h-8 w-8 sm:h-9 sm:w-auto sm:min-w-[36px] items-center justify-center gap-1 rounded-full border-2 px-1 sm:px-2.5 py-0.5 text-[11px] font-bold shadow-xs transition-colors whitespace-nowrap"
+          className="flex h-10 w-[31px] min-[390px]:w-[33px] min-[420px]:w-9 sm:h-9 sm:w-auto sm:min-w-[36px] items-center justify-center gap-1 rounded-full border-2 px-0.5 sm:px-2.5 py-0.5 text-[11px] font-bold shadow-xs transition-colors whitespace-nowrap"
           style={{
             backgroundColor: weatherMeta.pillBg,
             borderColor: weatherMeta.pillBorder,
             color: weatherMeta.pillText,
           }}
         >
-          <span aria-hidden="true" className="text-sm leading-none">
+          <span aria-hidden="true" className="text-[13px] sm:text-sm leading-none">
             {weatherMeta.icon}
           </span>
           <span className="hidden lg:inline">{weatherMeta.label}</span>
@@ -82,7 +82,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           initial={{ scale: 1.1 }}
           animate={{ scale: 1 }}
           transition={{ type: 'spring', stiffness: 360, damping: 18 }}
-          className="flex h-8 sm:h-9 items-center gap-1 rounded-full border-2 border-[#E3BE73] bg-[#FDF5DC] px-1.5 sm:px-2.5 py-0.5 shadow-xs whitespace-nowrap"
+          className="flex h-10 sm:h-9 items-center gap-0.5 sm:gap-1 rounded-full border-2 border-[#E3BE73] bg-[#FDF5DC] px-1.5 sm:px-2.5 py-0.5 shadow-xs whitespace-nowrap"
           title="Монетки-рибки"
         >
           <FishCoinSvg className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
@@ -120,7 +120,7 @@ export const TopBar: React.FC<TopBarProps> = ({
               ? `Напій дня: ${secretDrink.name}`
               : 'Створити «Напій дня»!'
           }
-          className={`flex h-8 w-8 sm:h-9 sm:w-auto sm:min-w-[36px] items-center justify-center gap-1 rounded-full border-2 px-1 sm:px-2.5 py-0.5 text-[11px] font-bold transition-all whitespace-nowrap ${
+          className={`flex h-10 w-[31px] min-[390px]:w-[33px] min-[420px]:w-9 sm:h-9 sm:w-auto sm:min-w-[36px] items-center justify-center gap-1 rounded-full border-2 px-0.5 sm:px-2.5 py-0.5 text-[11px] font-bold transition-all whitespace-nowrap ${
             secretDrink
               ? 'border-[#D49D43] bg-gradient-to-b from-[#FFF6D6] to-[#FAE2A3] text-[#6A410E] shadow-xs hover:brightness-105'
               : 'border-[#E0A33F] bg-gradient-to-b from-[#FFF7D9] to-[#F7D782] text-[#6B400B] shadow-[0_0_10px_rgba(235,180,68,0.55)] hover:brightness-105'
@@ -128,7 +128,7 @@ export const TopBar: React.FC<TopBarProps> = ({
         >
           <span
             aria-hidden="true"
-            className={!secretDrink ? 'animate-pulse text-sm leading-none' : 'text-sm leading-none'}
+            className={!secretDrink ? 'animate-pulse text-[13px] sm:text-sm leading-none' : 'text-[13px] sm:text-sm leading-none'}
           >
             {secretDrink ? secretDrink.icon : '✨'}
           </span>
@@ -143,9 +143,9 @@ export const TopBar: React.FC<TopBarProps> = ({
           onClick={onOpenShop}
           aria-label="Відкрити Магазин і Гардероб Марципана"
           title="Магазин і Гардероб Марципана"
-          className="flex h-8 w-8 sm:h-9 sm:w-auto sm:min-w-[36px] items-center justify-center gap-1 rounded-full border-2 border-[#C88EA4] bg-gradient-to-b from-[#FFF1F5] to-[#F8D6E1] px-1 sm:px-2.5 py-0.5 text-[11px] font-bold text-[#7C324B] shadow-xs hover:brightness-98 whitespace-nowrap"
+          className="flex h-10 w-[31px] min-[390px]:w-[33px] min-[420px]:w-9 sm:h-9 sm:w-auto sm:min-w-[36px] items-center justify-center gap-1 rounded-full border-2 border-[#C88EA4] bg-gradient-to-b from-[#FFF1F5] to-[#F8D6E1] px-0.5 sm:px-2.5 py-0.5 text-[11px] font-bold text-[#7C324B] shadow-xs hover:brightness-98 whitespace-nowrap"
         >
-          <span aria-hidden="true" className="text-sm leading-none">
+          <span aria-hidden="true" className="text-[13px] sm:text-sm leading-none">
             🛍️
           </span>
           <span className="hidden md:inline">Магазин</span>
@@ -159,9 +159,9 @@ export const TopBar: React.FC<TopBarProps> = ({
           onClick={onOpenFriendshipAlbum}
           aria-label="Відкрити Альбом дружби"
           title={`Альбом дружби (${bestFriendsCount}/6 найкращих друзів)`}
-          className="relative flex h-8 w-8 sm:h-9 sm:w-auto sm:min-w-[36px] items-center justify-center gap-1 rounded-full border-2 border-[#94BE9F] bg-gradient-to-b from-[#EFF9F2] to-[#D4ECDC] px-1 sm:px-2.5 py-0.5 text-[11px] font-bold text-[#245A38] shadow-xs hover:brightness-98 whitespace-nowrap"
+          className="relative flex h-10 w-[31px] min-[390px]:w-[33px] min-[420px]:w-9 sm:h-9 sm:w-auto sm:min-w-[36px] items-center justify-center gap-1 rounded-full border-2 border-[#94BE9F] bg-gradient-to-b from-[#EFF9F2] to-[#D4ECDC] px-0.5 sm:px-2.5 py-0.5 text-[11px] font-bold text-[#245A38] shadow-xs hover:brightness-98 whitespace-nowrap"
         >
-          <span aria-hidden="true" className="text-sm leading-none">
+          <span aria-hidden="true" className="text-[13px] sm:text-sm leading-none">
             📸
           </span>
           <span className="hidden md:inline">Друзі</span>
@@ -183,9 +183,9 @@ export const TopBar: React.FC<TopBarProps> = ({
           onClick={onOpenRecipeBook}
           aria-label="Відкрити Книгу рецептів"
           title="Книга рецептів"
-          className="flex h-8 w-8 sm:h-9 sm:w-auto sm:min-w-[36px] items-center justify-center gap-1 rounded-full border-2 border-[#D4A36C] bg-[#FBEBD4] px-1 sm:px-2.5 py-0.5 text-[11px] font-bold text-[#5A3E32] shadow-xs hover:bg-[#F7DFBE] whitespace-nowrap"
+          className="flex h-10 w-[31px] min-[390px]:w-[33px] min-[420px]:w-9 sm:h-9 sm:w-auto sm:min-w-[36px] items-center justify-center gap-1 rounded-full border-2 border-[#D4A36C] bg-[#FBEBD4] px-0.5 sm:px-2.5 py-0.5 text-[11px] font-bold text-[#5A3E32] shadow-xs hover:bg-[#F7DFBE] whitespace-nowrap"
         >
-          <span aria-hidden="true" className="text-sm leading-none">
+          <span aria-hidden="true" className="text-[13px] sm:text-sm leading-none">
             📖
           </span>
           <span className="hidden md:inline">Рецепти</span>
@@ -199,7 +199,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           onClick={onToggleMute}
           aria-label={muted ? 'Увімкнути звук' : 'Вимкнути звук'}
           title={muted ? 'Увімкнути звук' : 'Вимкнути звук'}
-          className={`flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+          className={`flex h-10 w-[31px] min-[390px]:w-[33px] min-[420px]:w-9 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
             muted
               ? 'border-[#D4C3B4] bg-[#F2EAE1] text-[#8E7767]'
               : 'border-[#96C3A4] bg-[#E5F2E8] text-[#356947]'

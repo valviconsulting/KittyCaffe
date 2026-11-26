@@ -75,8 +75,8 @@ export const MarzipanHelper: React.FC<MarzipanHelperProps> = ({
         </div>
       )}
 
-      {/* Warm natural contact shadow on wooden counter beneath sleeping Marzipan */}
-      <div className="pointer-events-none absolute bottom-3 h-3.5 w-18 sm:h-4.5 sm:w-28 rounded-full bg-[#472A14]/42 blur-[5px]" />
+      {/* Warm natural contact shadow + soft honey sunlight cushion beneath sleeping Marzipan */}
+      <div className="pointer-events-none absolute bottom-3 h-4 w-20 sm:h-5 sm:w-30 rounded-full bg-[#5B3214]/45 blur-[5px]" />
 
       {/* Breathing / happy purr wiggle with EXACT 8:7 aspect lock so wardrobe accessories NEVER drift */}
       <motion.div
@@ -96,8 +96,8 @@ export const MarzipanHelper: React.FC<MarzipanHelperProps> = ({
         <AssetIllustration
           src={CAFE_ASSETS.marzipan}
           alt="Кіт-помічник Марципан"
-          className="h-full w-full drop-shadow-[0_6px_8px_rgba(71,42,20,0.34)]"
-          imgClassName="h-full w-full object-fill"
+          className="h-full w-full drop-shadow-[0_6px_9px_rgba(92,48,18,0.38)]"
+          imgClassName="h-full w-full object-fill saturate-[1.13] contrast-[1.03] sepia-[0.04]"
           fallback={<MarzipanCatSvg isPurring={isPurring} className="h-full w-full" />}
         />
         <MarzipanAccessoriesOverlaySvg equipped={equippedAccessories} />

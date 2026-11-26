@@ -194,8 +194,8 @@ const SecretDrinkModalInner: React.FC<{
     needsWhippedCream: category === 'milkshake' ? needsWhippedCream : false,
   };
 
-  const hasEspressoWarning =
-    category === 'hot' && (hotMap.espresso ?? 0) > 0;
+  const hasCaffeineWarning =
+    category === 'hot' && ((hotMap.espresso ?? 0) > 0 || (hotMap.matcha ?? 0) > 0);
 
   const handleSaveClick = () => {
     if (!canSave) return;
@@ -423,9 +423,9 @@ const SecretDrinkModalInner: React.FC<{
                   </div>
                 )}
 
-                {hasEspressoWarning && (
+                {hasCaffeineWarning && (
                   <p className="mt-1.5 text-[10px] font-semibold text-[#8C5B36]">
-                    ℹ️ У рецепті є Еспресо — його замовлятимуть дорослі гості (Кошеня Пух каву не п’є!).
+                    ℹ️ У рецепті є Еспресо або Матча — його замовлятимуть дорослі гості (Кошеня Пух каву й міцний чай не п’є!).
                   </p>
                 )}
               </div>

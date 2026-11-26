@@ -318,11 +318,12 @@ export function generateOrder(
 
   // 1. Immediate showcase when player creates a brand-new Secret Drink!
   if (secretDrink && forceSecretDrink) {
-    const hasEspresso =
+    const hasCaffeine =
       secretDrink.category === 'hot' &&
-      (secretDrink.hotIngredients?.espresso ?? 0) > 0;
+      ((secretDrink.hotIngredients?.espresso ?? 0) > 0 ||
+        (secretDrink.hotIngredients?.matcha ?? 0) > 0);
     const pool = REGULAR_GUEST_IDS.filter(
-      (id) => id !== previousGuestId && (!hasEspresso || id !== 'puh')
+      (id) => id !== previousGuestId && (!hasCaffeine || id !== 'puh')
     );
     const guestId = pickRandom(pool);
     const wantsLatteArt =
@@ -468,11 +469,12 @@ export function generateOrder(
 
   // ~25% chance to request the player's Secret Drink of the Day (if created)
   if (secretDrink && Math.random() < 0.25) {
-    const hasEspresso =
+    const hasCaffeine =
       secretDrink.category === 'hot' &&
-      (secretDrink.hotIngredients?.espresso ?? 0) > 0;
+      ((secretDrink.hotIngredients?.espresso ?? 0) > 0 ||
+        (secretDrink.hotIngredients?.matcha ?? 0) > 0);
     const pool = REGULAR_GUEST_IDS.filter(
-      (id) => id !== previousGuestId && (!hasEspresso || id !== 'puh')
+      (id) => id !== previousGuestId && (!hasCaffeine || id !== 'puh')
     );
     const guestId = pickRandom(pool);
     const guest = GUESTS[guestId];
@@ -627,7 +629,9 @@ export function buildOrderGreeting(
       : guest.greetings[order.id % guest.greetings.length];
 
   if (order.wantsLatteArt) {
-    return `${base} І намалюй, будь ласка, щось гарненьке на пінці!`;
+    return order.drinkId === 'latte'
+      ? `${base} І намалюй, будь ласка, щось гарненьке на молочній шапочці!`
+      : `${base} І намалюй, будь ласка, щось гарненьке на пінці!`;
   }
   return base;
 }

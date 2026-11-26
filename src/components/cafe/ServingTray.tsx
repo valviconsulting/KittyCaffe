@@ -74,7 +74,7 @@ export const ServingTray: React.FC<ServingTrayProps> = ({
                     onClick={onClearTrayDrink}
                     title="Прибрати напій із таці"
                     aria-label="Прибрати напій із таці"
-                    className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-[#DF99AC] bg-[#FDF0F3] text-[10px] font-bold text-[#9A4058] shadow-xs hover:bg-[#F7D7DF]"
+                    className="absolute -right-1.5 -top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-[#DF99AC] bg-[#FDF0F3] text-[10px] font-bold text-[#9A4058] shadow-xs hover:bg-[#F7D7DF] after:content-[''] after:absolute after:-inset-2"
                   >
                     ✕
                   </button>
@@ -132,7 +132,7 @@ export const ServingTray: React.FC<ServingTrayProps> = ({
                     onClick={onClearTrayPastry}
                     title="Прибрати випічку з таці"
                     aria-label="Прибрати випічку з таці"
-                    className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-[#DF99AC] bg-[#FDF0F3] text-[10px] font-bold text-[#9A4058] shadow-xs hover:bg-[#F7D7DF]"
+                    className="absolute -right-1.5 -top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-[#DF99AC] bg-[#FDF0F3] text-[10px] font-bold text-[#9A4058] shadow-xs hover:bg-[#F7D7DF] after:content-[''] after:absolute after:-inset-2"
                   >
                     ✕
                   </button>
@@ -175,7 +175,7 @@ export const ServingTray: React.FC<ServingTrayProps> = ({
         disabled={isHappy}
         whileHover={isHappy ? undefined : { scale: 1.02 }}
         whileTap={isHappy ? undefined : { scale: 0.95 }}
-        className={`w-full min-h-[38px] sm:min-h-[38px] rounded-xl sm:rounded-2xl border-2 px-2 sm:px-3.5 py-1 text-[11px] sm:text-xs font-bold shadow-xs transition-colors whitespace-nowrap ${
+        className={`w-full min-h-[42px] sm:min-h-[40px] rounded-xl sm:rounded-2xl border-2 px-2 sm:px-3.5 py-1 text-[11px] sm:text-xs font-bold shadow-xs transition-colors whitespace-nowrap ${
           isHappy
             ? 'border-[#9CCAA9] bg-[#DCEFE1] text-[#356A48] cursor-default'
             : hasAnythingOnTray

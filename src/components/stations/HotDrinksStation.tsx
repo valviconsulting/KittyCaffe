@@ -45,7 +45,7 @@ export const HotDrinksStation: React.FC<HotDrinksStationProps> = ({
       {/* Left: Cozy Linen Barista Mat with strict 3-tier non-overlapping column */}
       <div
         data-station-card="hot-cup"
-        className="barista-linen-mat shrink-0 sm:col-span-4 flex sm:h-full sm:min-h-0 flex-row sm:flex-col justify-between gap-2 rounded-2xl sm:rounded-3xl border-2 border-[#9B724E] p-2 sm:p-2.5"
+        className="barista-linen-mat shrink-0 sm:col-span-4 flex sm:h-full sm:min-h-0 flex-row sm:flex-col justify-between gap-2 rounded-2xl sm:rounded-3xl border-2 border-[#9B724E] p-1.5 sm:p-2.5"
       >
         {/* Tier 1: Top Badge Row (desktop/tablet) */}
         <div
@@ -66,12 +66,12 @@ export const HotDrinksStation: React.FC<HotDrinksStationProps> = ({
             <div className="relative flex items-center justify-center">
               <BaristaCoasterSvg
                 tint="cream"
-                className="pointer-events-none absolute bottom-0.5 w-20 sm:w-24 lg:w-28 h-5"
+                className="pointer-events-none absolute bottom-0.5 w-16 sm:w-24 lg:w-28 h-4 sm:h-5"
               />
               <HotCupSvg
                 ingredients={ingredients}
                 showSaucer={false}
-                className="relative z-10 h-[72px] w-[72px] sm:h-[84px] sm:w-[84px] lg:h-[92px] lg:w-[92px]"
+                className="relative z-10 h-[62px] w-[62px] sm:h-[84px] sm:w-[84px] lg:h-[92px] lg:w-[92px]"
               />
             </div>
 
@@ -212,24 +212,24 @@ export const HotDrinksStation: React.FC<HotDrinksStationProps> = ({
       {/* Right: Recessed Wooden Ingredient Box — strict flex-col gap-2 h-full with zero content-center overflow */}
       <div
         data-station-card="hot-ingredients"
-        className="barista-tray-recess flex-1 sm:col-span-8 flex h-full min-h-0 flex-col gap-2 rounded-2xl sm:rounded-3xl border-2 border-[#A67D58] px-2.5 pt-2 pb-2.5 sm:px-3 sm:pt-2.5 sm:pb-3 overflow-hidden"
+        className="barista-tray-recess flex-1 sm:col-span-8 flex h-full min-h-0 flex-col gap-1.5 sm:gap-2 rounded-2xl sm:rounded-3xl border-2 border-[#A67D58] px-2 pt-1.5 pb-2 sm:px-3 sm:pt-2.5 sm:pb-3 overflow-hidden"
       >
         {/* Strict Header Row physically above the grid — z-10 shrink-0 */}
         <div
           data-station-header="hot-ingredients"
-          className="relative z-10 flex shrink-0 items-center justify-between gap-2"
+          className="relative z-10 flex shrink-0 items-center justify-between gap-1.5 sm:gap-2"
         >
-          <h2 className="font-handwriting text-xl sm:text-2xl leading-none font-bold text-[#4F3323]">
+          <h2 className="font-handwriting text-lg sm:text-2xl leading-none font-bold text-[#4F3323]">
             Обери інгредієнти:
           </h2>
-          <span className="rounded-full border border-[#C89B58] bg-[#FDF1D4] px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold text-[#7A4F1C] shadow-2xs whitespace-nowrap">
+          <span className="rounded-full border border-[#C89B58] bg-[#FDF1D4] px-2 sm:px-2.5 py-0.5 text-[9.5px] sm:text-[11px] font-bold text-[#7A4F1C] shadow-2xs whitespace-nowrap">
             💡 Лате = 2× Тепле молоко
           </span>
         </div>
 
-        {/* Dedicated Grid Box strictly below Header — 3 cols on phone (all 8 items fit above fold!), 4×2 on sm+ */}
-        <div className="cozy-scroll flex-1 min-h-0 overflow-y-auto sm:overflow-visible overflow-x-hidden">
-          <div className="grid grid-cols-3 sm:grid-cols-4 sm:grid-rows-2 gap-1.5 sm:gap-2 h-full">
+        {/* Dedicated Grid Box strictly below Header — 4×2 across all viewports so all 8 tiles fit above fold even on 375×667 */}
+        <div className="flex-1 min-h-0 overflow-hidden sm:overflow-visible">
+          <div className="grid grid-cols-4 grid-rows-2 gap-1.5 sm:gap-2 h-full">
             {visibleIngredients.map((item) => {
               const count = ingredients[item.id] ?? 0;
               const max = item.maxCount ?? 1;
@@ -240,46 +240,46 @@ export const HotDrinksStation: React.FC<HotDrinksStationProps> = ({
                   key={item.id}
                   type="button"
                   onClick={() => onAddIngredient(item.id)}
-                  className="barista-tile group relative flex h-full min-h-[54px] sm:min-h-0 flex-col items-center justify-center gap-0.5 rounded-2xl px-1.5 sm:px-2 py-1 sm:py-1.5 text-center"
+                  className="barista-tile group relative flex h-full min-h-0 flex-col items-center justify-center gap-0.5 rounded-xl sm:rounded-2xl px-1 sm:px-2 py-1 sm:py-1.5 text-center"
                   style={{
                     backgroundImage: item.buttonGradient,
                     borderColor: count > 0 ? '#4B8B63' : item.buttonBorder,
                   }}
                 >
                   {count > 0 && (
-                    <span className="absolute right-1.5 top-1 rounded-full border border-[#4B8B63]/40 bg-[#A7DCB8] px-1.5 py-0.2 text-[9.5px] font-bold text-[#174A2C]">
+                    <span className="absolute right-1 top-0.5 sm:right-1.5 sm:top-1 rounded-full border border-[#4B8B63]/40 bg-[#A7DCB8] px-1 sm:px-1.5 py-0.2 text-[8.5px] sm:text-[9.5px] font-bold text-[#174A2C]">
                       {max > 1 ? `×${count}` : '✓'}
                     </span>
                   )}
 
                   <IngredientIconSvg
                     type={item.id}
-                    className="h-6 w-6 shrink-0 drop-shadow-[0_1px_1px_rgba(90,62,50,0.16)]"
+                    className="h-5 w-5 sm:h-6 sm:w-6 shrink-0 drop-shadow-[0_1px_1px_rgba(90,62,50,0.16)]"
                   />
-                  <span className="text-[11px] sm:text-xs font-bold leading-tight text-[#4D3224]">
+                  <span className="text-[9.5px] min-[420px]:text-[11px] sm:text-xs font-bold leading-[1.12] text-[#4D3224]">
                     {item.label}
                   </span>
 
                   {item.id === 'warmMilk' && (
-                    <div className="flex items-center gap-1 text-[9px] font-bold text-[#7E522B]">
+                    <div className="flex items-center gap-0.5 sm:gap-1 text-[8px] sm:text-[9px] font-bold text-[#7E522B]">
                       <span
-                        className={`h-2 w-2 rounded-full border border-[#8E6138] ${
+                        className={`h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full border border-[#8E6138] ${
                           count >= 1 ? 'bg-[#B97B42]' : 'bg-[#FFFDF8]'
                         }`}
                       />
                       <span
-                        className={`h-2 w-2 rounded-full border border-[#8E6138] ${
+                        className={`h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full border border-[#8E6138] ${
                           count >= 2 ? 'bg-[#B97B42]' : 'bg-[#FFFDF8]'
                         }`}
                       />
                       <span>
-                        {count === 1 ? 'ще (лате)' : count === 2 ? '×2' : 'до ×2'}
+                        {count === 1 ? 'ще' : count === 2 ? '×2' : 'до ×2'}
                       </span>
                     </div>
                   )}
 
                   {item.id !== 'warmMilk' && isFull && (
-                    <span className="text-[9px] font-bold text-[#2B6E44] leading-none">
+                    <span className="text-[8.5px] sm:text-[9px] font-bold text-[#2B6E44] leading-none">
                       У чашці
                     </span>
                   )}

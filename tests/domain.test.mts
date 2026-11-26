@@ -11,6 +11,7 @@ import {
   PASTRY_RECIPES,
   canDoLatteArt,
   getVisibleHotIngredients,
+  secretDrinkHasCaffeine,
   secretDrinkHasEspresso,
   validateOrder,
 } from '../src/data/recipes.ts';
@@ -24,6 +25,13 @@ import {
   RARE_STICKER_CATALOG,
   RARE_STICKER_ORDER,
 } from '../src/data/stickers.ts';
+import {
+  DEFAULT_SAVE_STATE,
+  exportSaveJson,
+  importSaveJson,
+  parseAndSanitizeSave,
+  sanitizeSecretDrink,
+} from '../src/services/storage.ts';
 import type { SecretDrinkRecipe } from '../src/types/game.ts';
 
 // 1. Hot ingredients: 7 base slots, 8th slot unlocks Matcha without adding a 3rd row
@@ -140,5 +148,80 @@ assert.equal(BEST_FRIEND_THRESHOLD, 3);
 assert.equal(isBestFriend({ puh: 2 }, 'puh'), false);
 assert.equal(isBestFriend({ puh: 3 }, 'puh'), true);
 assert.equal(isBestFriend({ mandrivnyk: 5 }, 'mandrivnyk'), false);
+
+// 8. SOL-003: Puff caffeine consistency (espresso AND matcha blocked; cocoa allowed!)
+const puhMatchaCheck = validateOrder(
+  puhOrder,
+  { category: 'hot', ingredients: { matcha: 1, warmMilk: 1 } },
+  null
+);
+assert.equal(puhMatchaCheck.ok, false);
+assert.equal(puhMatchaCheck.isPuhCoffeeReject, true);
+assert.ok(puhMatchaCheck.feedback.includes('матча'));
+
+const matchaSecret: SecretDrinkRecipe = {
+  name: 'Зелена Хмаринка',
+  icon: '✨',
+  accentColor: '#6FB58A',
+  category: 'hot',
+  hotIngredients: { matcha: 1, warmMilk: 1 },
+};
+assert.equal(secretDrinkHasCaffeine(matchaSecret), true);
+for (let i = 0; i < 25; i++) {
+  const secretOrder = generateOrder(20 + i, 'sunny', undefined, {
+    secretDrink: matchaSecret,
+    forceSecretDrink: true,
+    unlockedRecipes: ['matcha_latte'],
+  });
+  assert.notEqual(secretOrder.guestId, 'puh');
+}
+
+// 9. SOL-001 & SOL-003: Storage sanitization, locked-ingredient filtering, migration & export/import
+// Locked matcha secret drink is dropped cleanly if matcha_latte isn't unlocked
+assert.equal(sanitizeSecretDrink(matchaSecret, []), null);
+assert.ok(sanitizeSecretDrink(matchaSecret, ['matcha_latte']) !== null);
+
+// Future unknown version must NOT be silently overwritten/downgraded
+const futureRes = parseAndSanitizeSave({ version: 99, coins: 999 });
+assert.equal(futureRes.ok, false);
+if (!futureRes.ok) assert.equal(futureRes.reason, 'newer_version');
+
+// v1 legacy migration preserves coins & friendship safely
+const legacyV1 = parseAndSanitizeSave({
+  version: 1,
+  coins: 120,
+  servedCount: 5,
+  weather: 'rainy',
+  friendship: { puh: 2, invalid_guest: 99 },
+});
+assert.equal(legacyV1.ok, true);
+if (legacyV1.ok) {
+  assert.equal(legacyV1.migrated, true);
+  assert.equal(legacyV1.state.version, 3);
+  assert.equal(legacyV1.state.coins, 120);
+  assert.equal(legacyV1.state.friendship.puh, 2);
+}
+
+// Export / Import round-trip + invalid file rejection
+const exported = exportSaveJson({
+  ...DEFAULT_SAVE_STATE,
+  coins: 245,
+  servedCount: 11,
+  unlockedRecipes: ['matcha_latte'],
+  secretDrink: matchaSecret,
+  unlockedRareStickers: ['mushroom', 'pinecone'],
+});
+const importedOk = importSaveJson(exported);
+assert.equal(importedOk.ok, true);
+if (importedOk.ok) {
+  assert.equal(importedOk.state.coins, 245);
+  assert.equal(importedOk.state.secretDrink?.name, 'Зелена Хмаринка');
+  assert.deepEqual(importedOk.state.unlockedRareStickers, ['mushroom', 'pinecone']);
+}
+
+const importedBadJson = importSaveJson('{not valid json');
+assert.equal(importedBadJson.ok, false);
+const importedWrongObj = importSaveJson(JSON.stringify({ hello: 'world' }));
+assert.equal(importedWrongObj.ok, false);
 
 console.log('ALL_DOMAIN_TESTS_PASSED');

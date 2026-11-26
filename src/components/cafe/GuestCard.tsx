@@ -114,24 +114,25 @@ export const GuestCard: React.FC<GuestCardProps> = ({
           )}
         </AnimatePresence>
 
-        {/* Soft warm ambient shadow grounding guest naturally inside café behind counter */}
-        <div className="pointer-events-none absolute bottom-1 inset-x-4 h-7 rounded-full bg-[#472A14]/28 blur-[8px]" />
+        {/* Soft warm golden-afternoon ambient bounce behind guest so fur blends naturally into the café */}
+        <div className="pointer-events-none absolute inset-x-2 bottom-3 top-4 -z-10 rounded-full bg-radial from-[#FFEAB3]/52 via-[#FADBC4]/22 to-transparent blur-md" />
+        <div className="pointer-events-none absolute bottom-1 inset-x-4 h-7 rounded-full bg-[#5A3214]/32 blur-[8px]" />
 
-        {/* Portrait Sprite standing behind wooden counter — scales smoothly across mobile/tablet/desktop */}
+        {/* Portrait Sprite standing behind wooden counter — natural breathing + cute subtle head sway */}
         <motion.div
           animate={
             emotion === 'no_coffee'
               ? { x: [0, -7, 7, -6, 6, -3, 3, 0], rotate: [0, -5, 5, -4, 4, 0] }
               : isHappy
-                ? { y: [0, -8, 0, -4, 0], scale: [1, 1.04, 0.99, 1.02, 1] }
-                : { scaleY: [1, 1.024, 1], y: [0, -1.5, 0] }
+                ? { y: [0, -8, 0, -4, 0], scale: [1, 1.045, 0.99, 1.025, 1], rotate: [0, -2, 2, -1, 0] }
+                : { scaleY: [1, 1.024, 1], y: [0, -1.8, 0], rotate: [0, 0.85, 0, -0.85, 0] }
           }
           transition={
             emotion === 'no_coffee'
               ? { duration: 0.65, ease: 'easeInOut' }
               : isHappy
                 ? { duration: 0.95, repeat: Infinity, ease: 'easeInOut' }
-                : { duration: 3.4, repeat: Infinity, ease: 'easeInOut' }
+                : { duration: 4.2, repeat: Infinity, ease: 'easeInOut' }
           }
           style={{ transformOrigin: 'bottom center' }}
           className="relative"
@@ -139,8 +140,8 @@ export const GuestCard: React.FC<GuestCardProps> = ({
           <AssetIllustration
             src={CAFE_ASSETS.guests[guestId]}
             alt={guest.name}
-            className="h-[116px] w-[104px] sm:h-[146px] sm:w-[136px] md:h-[172px] md:w-[162px] lg:h-[196px] lg:w-[190px] xl:h-[234px] xl:w-[224px] drop-shadow-[0_10px_14px_rgba(68,38,18,0.28)]"
-            imgClassName="h-full w-full object-contain object-bottom"
+            className="h-[116px] w-[104px] sm:h-[146px] sm:w-[136px] md:h-[172px] md:w-[162px] lg:h-[196px] lg:w-[190px] xl:h-[234px] xl:w-[224px] drop-shadow-[0_10px_14px_rgba(90,48,18,0.34)]"
+            imgClassName="h-full w-full object-contain object-bottom saturate-[1.11] contrast-[1.03] sepia-[0.04]"
             fallback={
               <GuestCharacterSvg
                 guestId={guestId}

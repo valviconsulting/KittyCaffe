@@ -249,12 +249,12 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
       className="landscape-compact-scene relative flex h-[38%] sm:h-[42%] lg:h-auto lg:flex-1 min-h-[240px] shrink-0 w-full flex-col justify-between sm:flex-row sm:items-end overflow-hidden border-b-4 border-[#6B4223] px-2 sm:px-4 lg:px-6 pb-1.5 sm:pb-2 pt-1.5 sm:pt-2"
       aria-label="Зала кав’ярні та вікно з погодою"
     >
-      {/* Background: Rich vibrant 21:9 panoramic `/assets/bg-cafe.png` */}
+      {/* Background: Rich vibrant 21:9 panoramic `/assets/bg-cafe.png` with lush warm storybook tone */}
       <AssetIllustration
         src={CAFE_ASSETS.background}
         alt="Акварельний інтер’єр кав’ярні Мур-Лате"
         className="absolute inset-0 h-full w-full pointer-events-none"
-        imgClassName="h-full w-full object-cover object-[50%_54%] xl:object-[50%_48%]"
+        imgClassName="h-full w-full object-cover object-[50%_54%] xl:object-[50%_48%] saturate-[1.14] contrast-[1.04] brightness-[0.99]"
         fallback={<CafeBackgroundSvg weather={weather} />}
       />
 

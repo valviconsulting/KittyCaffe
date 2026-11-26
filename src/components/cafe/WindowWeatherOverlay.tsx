@@ -31,30 +31,52 @@ const SNOWFLAKES = [
   { x: 54, size: 4.5, delay: '2.7s', dur: '4.3s' },
 ];
 
+const GOLDEN_MOTES = [
+  { cx: 45, cy: 36, r: 0.42, delay: '0s', dur: '5.2s' },
+  { cx: 52, cy: 48, r: 0.52, delay: '1.1s', dur: '6.0s' },
+  { cx: 48.5, cy: 62, r: 0.36, delay: '2.3s', dur: '4.8s' },
+  { cx: 57, cy: 58, r: 0.45, delay: '0.7s', dur: '5.8s' },
+  { cx: 43, cy: 54, r: 0.35, delay: '3.1s', dur: '5.5s' },
+  { cx: 61, cy: 70, r: 0.4, delay: '1.8s', dur: '6.2s' },
+  { cx: 34, cy: 42, r: 0.32, delay: '2.6s', dur: '5.6s' },
+  { cx: 68, cy: 44, r: 0.34, delay: '0.4s', dur: '6.4s' },
+];
+
 /**
- * Adds warm amber pendant-lamp glow and crisp dimensional weather effects
- * strictly aligned to the central wooden window of our panoramic `bg-cafe.png`
- * without ever washing out the rich watercolor interior colors.
+ * Adds lush Studio Ghibli atmospheric depth:
+ * - Warm honey-amber pools from overhead pendant lamps (extra snug when rainy/snowy!)
+ * - Soft storybook golden edge vignette framing the interior naturally
+ * - Sunbeams + lazy drifting golden dust motes when sunny, crisp rain/snow outside the window
  */
 export const WindowWeatherOverlay: React.FC<WindowWeatherOverlayProps> = ({
   weather,
 }) => {
+  const lampStrength = weather === 'sunny' ? 0.32 : 0.44;
+
   return (
     <div
       className="pointer-events-none absolute inset-0 z-[2] overflow-hidden"
       aria-hidden="true"
     >
-      {/* Warm golden amber glow from the 3 overhead pendant lamps & fairy lights */}
+      {/* Subtle warm honey vignette grounding corners & framing the sunny center */}
       <div
-        className="animate-sun-shimmer absolute inset-x-0 top-0 h-[48%]"
+        className="absolute inset-0"
         style={{
           backgroundImage:
-            'radial-gradient(ellipse 30% 65% at 50% 18%, rgba(255, 208, 102, 0.28) 0%, rgba(255, 190, 86, 0.08) 55%, transparent 100%), radial-gradient(ellipse 20% 45% at 24% 8%, rgba(255, 218, 132, 0.16) 0%, transparent 100%), radial-gradient(ellipse 20% 45% at 76% 8%, rgba(255, 218, 132, 0.16) 0%, transparent 100%)',
+            'radial-gradient(ellipse 76% 84% at 50% 48%, transparent 56%, rgba(88, 48, 22, 0.16) 100%)',
+        }}
+      />
+
+      {/* Lush golden-amber light pools from overhead hanging lamps & warm interior bounce */}
+      <div
+        className="animate-sun-shimmer absolute inset-x-0 top-0 h-[58%]"
+        style={{
+          backgroundImage: `radial-gradient(ellipse 34% 72% at 50% 18%, rgba(255, 206, 102, ${lampStrength}) 0%, rgba(255, 184, 78, 0.12) 55%, transparent 100%), radial-gradient(ellipse 24% 52% at 22% 14%, rgba(255, 214, 128, 0.22) 0%, transparent 100%), radial-gradient(ellipse 24% 52% at 78% 14%, rgba(255, 214, 128, 0.22) 0%, transparent 100%)`,
           mixBlendMode: 'screen',
         }}
       />
 
-      {/* Focused window weather atmosphere (sunbeams / cozy rainy blue glow / snowy frost) */}
+      {/* Focused window weather atmosphere + drifting sunlit dust motes */}
       <svg
         viewBox="0 0 100 100"
         preserveAspectRatio="none"
@@ -62,17 +84,17 @@ export const WindowWeatherOverlay: React.FC<WindowWeatherOverlayProps> = ({
       >
         <defs>
           <linearGradient id="ghibli-sunbeam" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#FFEFA8" stopOpacity="0.42" />
-            <stop offset="60%" stopColor="#FFE082" stopOpacity="0.14" />
-            <stop offset="100%" stopColor="#FFEFA8" stopOpacity="0" />
+            <stop offset="0%" stopColor="#FFF1AD" stopOpacity="0.48" />
+            <stop offset="55%" stopColor="#FFDE82" stopOpacity="0.18" />
+            <stop offset="100%" stopColor="#FFF1AD" stopOpacity="0" />
           </linearGradient>
           <linearGradient id="rain-window-tint" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#4F779B" stopOpacity="0.34" />
-            <stop offset="100%" stopColor="#7DA2BE" stopOpacity="0.22" />
+            <stop offset="0%" stopColor="#466E94" stopOpacity="0.38" />
+            <stop offset="100%" stopColor="#779FBE" stopOpacity="0.24" />
           </linearGradient>
           <linearGradient id="snow-window-tint" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#8EB4D6" stopOpacity="0.28" />
-            <stop offset="100%" stopColor="#DCEAF7" stopOpacity="0.22" />
+            <stop offset="0%" stopColor="#88B0D6" stopOpacity="0.32" />
+            <stop offset="100%" stopColor="#DCEBF8" stopOpacity="0.24" />
           </linearGradient>
           {/* Matches the central wooden window panes of the 21:9 panoramic bg-cafe.png */}
           <clipPath id="panoramic-window-clip">
@@ -81,16 +103,31 @@ export const WindowWeatherOverlay: React.FC<WindowWeatherOverlayProps> = ({
         </defs>
 
         {weather === 'sunny' && (
-          <g className="animate-sun-shimmer">
-            <polygon points="43,12 56,12 72,96 52,96" fill="url(#ghibli-sunbeam)" />
-            <polygon points="39,18 46,18 55,96 41,96" fill="url(#ghibli-sunbeam)" />
+          <g>
+            <g className="animate-sun-shimmer">
+              <polygon points="42.5,12 56.5,12 73,96 52,96" fill="url(#ghibli-sunbeam)" />
+              <polygon points="39,18 46.5,18 55.5,96 41,96" fill="url(#ghibli-sunbeam)" />
+            </g>
+            {/* Cozy golden sunlit dust motes floating lazily in the warm beam */}
+            <g fill="#FFF7CC">
+              {GOLDEN_MOTES.map((m, idx) => (
+                <circle
+                  key={idx}
+                  cx={m.cx}
+                  cy={m.cy}
+                  r={m.r}
+                  className="animate-mote"
+                  style={{ animationDelay: m.delay, animationDuration: m.dur }}
+                />
+              ))}
+            </g>
           </g>
         )}
 
         {weather === 'rainy' && (
           <g clipPath="url(#panoramic-window-clip)">
             <rect x="38.8" y="10" width="22.4" height="69" fill="url(#rain-window-tint)" />
-            <g stroke="#E3F2FD" strokeWidth="0.42" strokeLinecap="round">
+            <g stroke="#E5F3FF" strokeWidth="0.44" strokeLinecap="round">
               {RAIN_STREAKS.map((drop, idx) => (
                 <line
                   key={idx}
@@ -107,11 +144,11 @@ export const WindowWeatherOverlay: React.FC<WindowWeatherOverlayProps> = ({
               ))}
             </g>
             {/* Shimmering raindrops on window glass */}
-            <g fill="#EEF7FF" opacity="0.82">
-              <circle cx="42" cy="40" r="0.5" />
-              <circle cx="47.5" cy="56" r="0.56" />
+            <g fill="#EEF8FF" opacity="0.86">
+              <circle cx="42" cy="40" r="0.52" />
+              <circle cx="47.5" cy="56" r="0.58" />
               <circle cx="54.5" cy="36" r="0.46" />
-              <circle cx="57.5" cy="60" r="0.52" />
+              <circle cx="57.5" cy="60" r="0.54" />
               <circle cx="44.5" cy="68" r="0.45" />
               <circle cx="52" cy="48" r="0.42" />
             </g>
@@ -121,6 +158,8 @@ export const WindowWeatherOverlay: React.FC<WindowWeatherOverlayProps> = ({
         {weather === 'snowy' && (
           <g clipPath="url(#panoramic-window-clip)">
             <rect x="38.8" y="10" width="22.4" height="69" fill="url(#snow-window-tint)" />
+            {/* Soft frosted snow sill along bottom of panes */}
+            <ellipse cx="50" cy="79" rx="13" ry="3.2" fill="#FFFFFF" opacity="0.58" />
             <g fill="#FFFFFF">
               {SNOWFLAKES.map((flake, idx) => (
                 <circle
