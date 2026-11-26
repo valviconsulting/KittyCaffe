@@ -1,0 +1,336 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --paper-bg: #FAF4E8;
+    --ink-brown: #5A3E32;
+    --ink-soft: #856352;
+    --honey-main: #E7B868;
+    --sage-main: #BFD8C4;
+    --blush-main: #F4C7D2;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    height: 100dvh;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+    font-family: 'Comfortaa', 'Segoe UI Rounded', 'Trebuchet MS', system-ui, sans-serif;
+    background-color: #FAF4E8;
+    color: #5A3E32;
+  }
+
+  button {
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Short-height landscape phone support (e.g., 844x390):
+   allow clean vertical scroll so scene, speech bubble, cup & buttons never squish or overlap */
+@media (max-height: 480px) and (orientation: landscape) {
+  .landscape-scroll-shell {
+    height: 100dvh !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+  .landscape-compact-topbar {
+    position: sticky;
+    top: 0;
+    height: 44px !important;
+    min-height: 44px !important;
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
+  }
+  .landscape-compact-scene {
+    height: 235px !important;
+    min-height: 235px !important;
+    flex-shrink: 0 !important;
+  }
+  .landscape-compact-main {
+    min-height: 270px !important;
+    flex: none !important;
+    padding-top: 6px !important;
+    padding-bottom: 10px !important;
+  }
+}
+
+.font-handwriting {
+  font-family: 'Caveat', cursive, serif;
+}
+
+/* Warm café-au-lait / kraft paper outer backdrop on ultrawide monitors */
+.cafe-outer-bg {
+  background-color: #E4D1BA;
+  background-image:
+    radial-gradient(circle at 50% 35%, rgba(250, 240, 224, 0.55) 0%, rgba(196, 162, 128, 0.35) 100%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='k'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23k)' opacity='0.045'/%3E%3C/svg%3E");
+}
+
+/* Warm handmade watercolor paper texture (CSS radial washes + soft grain) */
+.watercolor-paper {
+  background-color: #FAF4E8;
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(244, 199, 210, 0.28) 0%, transparent 42%),
+    radial-gradient(circle at 88% 15%, rgba(191, 216, 196, 0.3) 0%, transparent 44%),
+    radial-gradient(circle at 52% 94%, rgba(231, 184, 104, 0.22) 0%, transparent 48%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.032'/%3E%3C/svg%3E");
+}
+
+/* Watercolor postcard card style */
+.watercolor-card {
+  background-color: rgba(255, 252, 246, 0.94);
+  background-image:
+    radial-gradient(circle at 8% 10%, rgba(255, 240, 218, 0.5) 0%, transparent 46%),
+    radial-gradient(circle at 94% 92%, rgba(246, 220, 227, 0.38) 0%, transparent 46%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 140 140' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)' opacity='0.025'/%3E%3C/svg%3E");
+  box-shadow:
+    0 10px 26px -10px rgba(90, 62, 50, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.watercolor-notebook {
+  background-color: #FCF7EC;
+  background-image:
+    radial-gradient(circle at 5% 8%, rgba(244, 199, 210, 0.26) 0%, transparent 38%),
+    radial-gradient(circle at 95% 90%, rgba(191, 216, 196, 0.32) 0%, transparent 42%),
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0px,
+      transparent 31px,
+      rgba(176, 146, 118, 0.12) 32px
+    );
+}
+
+/* Warm honey-wood textured barista workbench surface */
+.barista-workbench {
+  background-color: #E5CEA9;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      rgba(138, 92, 54, 0.055) 0px,
+      rgba(138, 92, 54, 0.055) 2px,
+      transparent 2px,
+      transparent 16px,
+      rgba(255, 246, 230, 0.09) 16px,
+      rgba(255, 246, 230, 0.09) 18px,
+      transparent 18px,
+      transparent 30px
+    ),
+    linear-gradient(180deg, #EAD7BE 0%, #E5CCA9 52%, #DFC3A1 100%);
+  box-shadow:
+    inset 0 6px 14px -6px rgba(92, 56, 30, 0.28),
+    inset 0 1px 0 rgba(255, 249, 238, 0.65),
+    0 10px 24px -10px rgba(74, 46, 24, 0.22);
+}
+
+/* Cozy linen barista mat with subtle weave and stitched border */
+.barista-linen-mat {
+  background-color: #FBF3E4;
+  background-image:
+    radial-gradient(circle at 18% 15%, rgba(255, 250, 240, 0.7) 0%, transparent 55%),
+    radial-gradient(circle at 85% 88%, rgba(235, 207, 170, 0.32) 0%, transparent 55%),
+    repeating-linear-gradient(
+      0deg,
+      rgba(166, 130, 94, 0.04) 0px,
+      rgba(166, 130, 94, 0.04) 1px,
+      transparent 1px,
+      transparent 6px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(166, 130, 94, 0.04) 0px,
+      rgba(166, 130, 94, 0.04) 1px,
+      transparent 1px,
+      transparent 6px
+    );
+  box-shadow:
+    0 5px 14px -6px rgba(90, 56, 32, 0.24),
+    inset 0 0 0 4px #FBF3E4,
+    inset 0 0 0 5.5px rgba(186, 146, 104, 0.45);
+}
+
+/* Recessed wooden barista shelf/box for ingredient tiles */
+.barista-tray-recess {
+  background-color: rgba(246, 233, 213, 0.9);
+  background-image:
+    linear-gradient(180deg, rgba(212, 180, 142, 0.22) 0%, rgba(246, 233, 213, 0.1) 24%, rgba(238, 219, 191, 0.3) 100%);
+  box-shadow:
+    inset 0 3px 9px rgba(90, 56, 32, 0.16),
+    inset 0 -1px 0 rgba(255, 250, 240, 0.65),
+    0 1px 0 rgba(255, 250, 240, 0.55);
+}
+
+/* Tactile 3D ceramic/watercolor ingredient tile */
+.barista-tile {
+  border-color: #7A523B;
+  border-width: 2px;
+  border-bottom-width: 4px;
+  box-shadow:
+    0 4px 10px -4px rgba(84, 52, 30, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.15s ease;
+}
+.barista-tile:hover:not(:disabled) {
+  transform: translateY(-1.5px);
+  box-shadow:
+    0 7px 14px -4px rgba(84, 52, 30, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+.barista-tile:active:not(:disabled) {
+  transform: translateY(2px);
+  border-bottom-width: 2px;
+  box-shadow:
+    0 1px 4px -2px rgba(84, 52, 30, 0.22),
+    inset 0 1px 2px rgba(90, 56, 32, 0.14);
+}
+
+/* Cozy CSS ambient keyframes (paired with Framer Motion) */
+@keyframes steam-rise {
+  0% {
+    transform: translateY(6px) scaleX(0.95);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.85;
+  }
+  70% {
+    opacity: 0.58;
+  }
+  100% {
+    transform: translateY(-18px) scaleX(1.1);
+    opacity: 0;
+  }
+}
+
+@keyframes blender-shake {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  15% { transform: translate(-3px, -2px) rotate(-2.5deg); }
+  30% { transform: translate(3px, 1px) rotate(2.5deg); }
+  45% { transform: translate(-3px, 2px) rotate(-2deg); }
+  60% { transform: translate(3px, -2px) rotate(2deg); }
+  75% { transform: translate(-2px, 1px) rotate(-1.5deg); }
+  90% { transform: translate(2px, -1px) rotate(1.5deg); }
+}
+
+@keyframes bubble-float {
+  0% {
+    transform: translateY(6px);
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(-28px);
+    opacity: 0;
+  }
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.65; transform: scale(0.92); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+@keyframes oven-glow {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+@keyframes zzz-drift {
+  0% { transform: translate(0, 0) scale(0.8); opacity: 0; }
+  30% { opacity: 0.9; }
+  100% { transform: translate(10px, -16px) scale(1.15); opacity: 0; }
+}
+
+@keyframes rain-fall {
+  0% {
+    transform: translate(6px, -24px);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.72;
+  }
+  85% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate(-18px, 185px);
+    opacity: 0;
+  }
+}
+
+@keyframes snow-drift {
+  0% {
+    transform: translate(0px, -16px) rotate(0deg);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.92;
+  }
+  50% {
+    transform: translate(12px, 85px) rotate(120deg);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(-8px, 195px) rotate(260deg);
+    opacity: 0;
+  }
+}
+
+@keyframes sun-shimmer {
+  0%, 100% { opacity: 0.32; }
+  50% { opacity: 0.62; }
+}
+
+@keyframes whirl-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes clock-pendulum {
+  0%, 100% { transform: rotate(-12deg); }
+  50% { transform: rotate(12deg); }
+}
+
+.animate-steam-1 { animation: steam-rise 2.4s ease-in-out infinite; }
+.animate-steam-2 { animation: steam-rise 2.4s ease-in-out 0.8s infinite; }
+.animate-steam-3 { animation: steam-rise 2.4s ease-in-out 1.6s infinite; }
+.animate-blender-shake { animation: blender-shake 0.2s linear infinite; }
+.animate-bubble-1 { animation: bubble-float 2s ease-in infinite; }
+.animate-bubble-2 { animation: bubble-float 2.3s ease-in 0.7s infinite; }
+.animate-bubble-3 { animation: bubble-float 1.8s ease-in 1.2s infinite; }
+.animate-twinkle { animation: twinkle 2.8s ease-in-out infinite; }
+.animate-oven-glow { animation: oven-glow 0.7s ease-in-out infinite; }
+.animate-zzz-1 { animation: zzz-drift 2.6s ease-out infinite; }
+.animate-zzz-2 { animation: zzz-drift 2.6s ease-out 1.3s infinite; }
+.animate-rain { animation: rain-fall 1.35s linear infinite; }
+.animate-snow { animation: snow-drift 4.2s ease-in-out infinite; }
+.animate-sun-shimmer { animation: sun-shimmer 3.8s ease-in-out infinite; }
+.animate-clock-pendulum { animation: clock-pendulum 2.4s ease-in-out infinite; }
+.animate-whirl {
+  transform-origin: 65px 72px;
+  animation: whirl-spin 0.45s linear infinite;
+}
+
+/* Soft watercolor scrollbar inside Recipe Book modal */
+.cozy-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+.cozy-scroll::-webkit-scrollbar-track {
+  background: #F4E9D8;
+  border-radius: 999px;
+}
+.cozy-scroll::-webkit-scrollbar-thumb {
+  background: #D6B089;
+  border-radius: 999px;
+}
+.cozy-scroll::-webkit-scrollbar-thumb:hover {
+  background: #BF9163;
+}
