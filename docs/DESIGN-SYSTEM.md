@@ -72,18 +72,18 @@
 
 - **Маніфест у коді:** `src/config/assets.ts` (відносні шляхи `./assets/*.png` для сумісності з `localhost` і підшляхом `/KittyCaffe/`).
 - **Компонент завантаження:** `src/components/common/AssetIllustration.tsx` — рендерить `<picture>` із пріоритетом **`.webp`** (`type="image/webp"`), автоматичним fallback на **`.png`** (`decoding="async"`) і резервним **inline SVG** у разі `onError`.
-- **Сумарна вага растрових асетів:** **`4 863.4 KB` (PNG)** → **`487.0 KB` (WebP, −90.0%)**.
+- **Сумарна вага растрових асетів:** **`5 218.2 KB` (PNG)** → **`584.5 KB` (WebP, −88.8%)**.
 
 ### 4.1. Растрові ілюстрації (`public/assets/`)
 
 | Персонаж / Сцена | Шлях у репозиторії | Публічний HTTPS URL (WebP) | Розмір (px) | Канали | WebP | PNG | SVG Fallback |
 | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :--- |
-| Інтер’єр кав’ярні «золота година» | `public/assets/bg-cafe.webp` / `.png` | `https://valviconsulting.github.io/KittyCaffe/assets/bg-cafe.webp` | `1680×938` | RGB | `111.2 KB` | `1878.9 KB` | `src/components/svg/CafeBackgroundSvg.tsx` |
+| Деталізований інтер’єр кав’ярні «золота година» | `public/assets/bg-cafe.webp` / `.png` | `https://valviconsulting.github.io/KittyCaffe/assets/bg-cafe.webp` | `1680×938` | RGB | `205.0 KB` | `2180.0 KB` | `src/components/svg/CafeBackgroundSvg.tsx` |
 | Кіт-помічник Марципан (`aspect-[8/7]`) | `public/assets/cat-marzipan.webp` / `.png` | `https://valviconsulting.github.io/KittyCaffe/assets/cat-marzipan.webp` | `640×560` | RGBA | `40.0 KB` | `350.7 KB` | `src/components/svg/MarzipanCatSvg.tsx` |
 | Кошеня Пух | `public/assets/guest-pukh.webp` / `.png` | `https://valviconsulting.github.io/KittyCaffe/assets/guest-pukh.webp` | `466×640` | RGBA | `42.8 KB` | `359.4 KB` | `src/components/svg/GuestCharacterSvg.tsx` |
 | Кіт Персик | `public/assets/guest-persyk.webp` / `.png` | `https://valviconsulting.github.io/KittyCaffe/assets/guest-persyk.webp` | `475×640` | RGBA | `46.6 KB` | `371.3 KB` | `src/components/svg/GuestCharacterSvg.tsx` |
-| Кішечка Луна | `public/assets/guest-luna.webp` / `.png` | `https://valviconsulting.github.io/KittyCaffe/assets/guest-luna.webp` | `456×640` | RGBA | `39.9 KB` | `332.3 KB` | `src/components/svg/GuestCharacterSvg.tsx` |
-| Кіт Марсель | `public/assets/guest-marsel.webp` / `.png` | `https://valviconsulting.github.io/KittyCaffe/assets/guest-marsel.webp` | `551×640` | RGBA | `54.8 KB` | `430.0 KB` | `src/components/svg/GuestCharacterSvg.tsx` |
+| Лисичка Луна | `public/assets/guest-luna.webp` / `.png` | `https://valviconsulting.github.io/KittyCaffe/assets/guest-luna.webp` | `455×640` | RGBA | `49.0 KB` | `369.0 KB` | `src/components/svg/GuestCharacterSvg.tsx` |
+| Ведмедик Марсель | `public/assets/guest-marsel.webp` / `.png` | `https://valviconsulting.github.io/KittyCaffe/assets/guest-marsel.webp` | `539×640` | RGBA | `49.0 KB` | `448.0 KB` | `src/components/svg/GuestCharacterSvg.tsx` |
 | Сова Софія | `public/assets/guest-sofia.webp` / `.png` | `https://valviconsulting.github.io/KittyCaffe/assets/guest-sofia.webp` | `466×640` | RGBA | `55.6 KB` | `419.4 KB` | `src/components/svg/GuestCharacterSvg.tsx` |
 | Кролиця Мія | `public/assets/guest-miya.webp` / `.png` | `https://valviconsulting.github.io/KittyCaffe/assets/guest-miya.webp` | `392×640` | RGBA | `39.3 KB` | `277.0 KB` | `src/components/svg/GuestCharacterSvg.tsx` |
 | Котик-мандрівник *(особливий гість)* | `public/assets/guest-mandrivnyk.webp` / `.png` | `https://valviconsulting.github.io/KittyCaffe/assets/guest-mandrivnyk.webp` | `555×640` | RGBA | `56.8 KB` | `444.5 KB` | `src/components/svg/GuestCharacterSvg.tsx` |

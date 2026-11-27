@@ -181,12 +181,12 @@ export const GuestCharacterSvg: React.FC<GuestCharacterSvgProps> = ({
           <stop offset="100%" stopColor="#E69A54" />
         </radialGradient>
         <radialGradient id={`luna-fur-${uid}`} cx="40%" cy="30%" r="65%">
-          <stop offset="0%" stopColor="#584C63" />
-          <stop offset="100%" stopColor="#3F3648" />
+          <stop offset="0%" stopColor="#E48A49" />
+          <stop offset="100%" stopColor="#B85B2A" />
         </radialGradient>
         <radialGradient id={`marsel-fur-${uid}`} cx="42%" cy="32%" r="65%">
-          <stop offset="0%" stopColor="#B8C2CE" />
-          <stop offset="100%" stopColor="#8F9BA9" />
+          <stop offset="0%" stopColor="#D9A86C" />
+          <stop offset="100%" stopColor="#A97442" />
         </radialGradient>
         <radialGradient id={`sofiya-fur-${uid}`} cx="42%" cy="32%" r="65%">
           <stop offset="0%" stopColor="#C89B73" />
@@ -263,91 +263,85 @@ export const GuestCharacterSvg: React.FC<GuestCharacterSvgProps> = ({
         </g>
       )}
 
-      {/* 3. КІШЕЧКА ЛУНА — Velvet Midnight Watercolor Cat with Pink Bow */}
+      {/* 3. ЛИСИЧКА ЛУНА — Dreamy Russet-Auburn Woodland Fox with Pink Bow & Moon Pendant */}
       {guestId === 'luna' && (
         <g>
-          <ellipse cx="100" cy="166" rx="44" ry="34" fill={`url(#luna-fur-${uid})`} stroke="#3B2E3E" strokeWidth="2.6" />
-          <path d="M77 143 Q100 153 123 143" fill="none" stroke="#F0A4BA" strokeWidth="5" strokeLinecap="round" />
-          <path d="M102 149 A5.5 5.5 0 1 0 102 159 A4.2 4.2 0 1 1 102 149 Z" fill="#FDE49B" />
-          <path d="M57 74 L48 28 L85 55 Z" fill={`url(#luna-fur-${uid})`} stroke="#3B2E3E" strokeWidth="2.6" strokeLinejoin="round" />
-          <path d="M60 66 L54 40 L76 57 Z" fill="#EBB2C2" />
-          <path d="M143 74 L152 28 L115 55 Z" fill={`url(#luna-fur-${uid})`} stroke="#3B2E3E" strokeWidth="2.6" strokeLinejoin="round" />
-          <path d="M140 66 L146 40 L124 57 Z" fill="#EBB2C2" />
-          <ellipse cx="100" cy="99" rx="51" ry="44" fill={`url(#luna-fur-${uid})`} stroke="#3B2E3E" strokeWidth="2.6" />
-          <g transform="translate(132, 54) rotate(18)">
-            <ellipse cx="-11" cy="0" rx="11" ry="7.5" fill="#F4A2B8" stroke="#8C4E62" strokeWidth="2" />
-            <ellipse cx="11" cy="0" rx="11" ry="7.5" fill="#F4A2B8" stroke="#8C4E62" strokeWidth="2" />
-            <circle cx="0" cy="0" r="5" fill="#FCE0E7" stroke="#8C4E62" strokeWidth="1.8" />
+          <ellipse cx="100" cy="166" rx="44" ry="34" fill={`url(#luna-fur-${uid})`} stroke={INK} strokeWidth="2.5" />
+          <ellipse cx="100" cy="168" rx="24" ry="24" fill="#FCF3E4" />
+          <path d="M77 143 Q100 153 123 143" fill="none" stroke="#ECA2B7" strokeWidth="5" strokeLinecap="round" />
+          <path d="M102 149 A5.5 5.5 0 1 0 102 159 A4.2 4.2 0 1 1 102 149 Z" fill="#F8D87B" stroke="#9E6E24" strokeWidth="1" />
+          {/* Tall pointed fox ears with dark espresso tips */}
+          <path d="M56 76 L46 22 L85 55 Z" fill={`url(#luna-fur-${uid})`} stroke={INK} strokeWidth="2.5" strokeLinejoin="round" />
+          <path d="M51 39 L46 22 L62 36 Z" fill="#462C1E" />
+          <path d="M60 68 L54 38 L76 57 Z" fill="#FBF0DF" />
+          <path d="M144 76 L154 22 L115 55 Z" fill={`url(#luna-fur-${uid})`} stroke={INK} strokeWidth="2.5" strokeLinejoin="round" />
+          <path d="M149 39 L154 22 L138 36 Z" fill="#462C1E" />
+          <path d="M140 68 L146 38 L124 57 Z" fill="#FBF0DF" />
+          {/* Fox head + fluffy cream cheeks */}
+          <ellipse cx="100" cy="99" rx="51" ry="44" fill={`url(#luna-fur-${uid})`} stroke={INK} strokeWidth="2.5" />
+          <path d="M50 106 Q72 98 100 118 Q128 98 150 106 Q142 138 100 142 Q58 138 50 106 Z" fill="#FCF3E4" />
+          {/* Dusty-pink ribbon bow */}
+          <g transform="translate(65, 64) rotate(-18)">
+            <ellipse cx="-10" cy="0" rx="10" ry="7" fill="#F2A4B9" stroke="#8C4E62" strokeWidth="1.8" />
+            <ellipse cx="10" cy="0" rx="10" ry="7" fill="#F2A4B9" stroke="#8C4E62" strokeWidth="1.8" />
+            <circle cx="0" cy="0" r="4.5" fill="#FCE0E7" stroke="#8C4E62" strokeWidth="1.6" />
           </g>
-          <ellipse cx="64" cy="112" rx="11" ry="7" fill={`url(#blush-${uid})`} />
-          <ellipse cx="136" cy="112" rx="11" ry="7" fill={`url(#blush-${uid})`} />
-          <g stroke="#9F94B0" strokeWidth="1.8" strokeLinecap="round">
-            <line x1="37" y1="106" x2="56" y2="108" />
-            <line x1="39" y1="115" x2="57" y2="114" />
-            <line x1="163" y1="106" x2="144" y2="108" />
-            <line x1="161" y1="115" x2="143" y2="114" />
-          </g>
+          <ellipse cx="64" cy="113" rx="11" ry="6.5" fill={`url(#blush-${uid})`} />
+          <ellipse cx="136" cy="113" rx="11" ry="6.5" fill={`url(#blush-${uid})`} />
           {emotion === 'waiting' ? (
             <g>
-              <circle cx="76" cy="98" r="9.5" fill="#FAD77C" />
-              <circle cx="76" cy="98" r="5.3" fill="#3B2E3E" />
-              <circle cx="73" cy="95" r="2.6" fill="#FFFDF9" />
-              <circle cx="124" cy="98" r="9.5" fill="#FAD77C" />
-              <circle cx="124" cy="98" r="5.3" fill="#3B2E3E" />
-              <circle cx="121" cy="95" r="2.6" fill="#FFFDF9" />
-            </g>
-          ) : (
-            <CatEyes emotion={emotion} irisColor="#FAD77C" outlineColor="#FDE9B5" />
-          )}
-          <CatMouth emotion={emotion} strokeColor="#F5CFD8" noseColor="#F2A4BA" />
-          <ellipse cx="72" cy="176" rx="13" ry="9.5" fill="#483E52" stroke="#3B2E3E" strokeWidth="2.5" />
-          <ellipse cx="128" cy="176" rx="13" ry="9.5" fill="#483E52" stroke="#3B2E3E" strokeWidth="2.5" />
-        </g>
-      )}
-
-      {/* 4. КІТ МАРСЕЛЬ — Plush British Shorthair in Sage Bow-Tie */}
-      {guestId === 'marsel' && (
-        <g>
-          <ellipse cx="100" cy="166" rx="52" ry="35" fill={`url(#marsel-fur-${uid})`} stroke={INK} strokeWidth="2.6" />
-          <ellipse cx="100" cy="170" rx="26" ry="22" fill="#C4CDD8" />
-          <path d="M54 74 Q48 40 80 56 Z" fill={`url(#marsel-fur-${uid})`} stroke={INK} strokeWidth="2.6" strokeLinejoin="round" />
-          <path d="M58 67 Q56 49 73 59 Z" fill="#DFC2CA" />
-          <path d="M146 74 Q152 40 120 56 Z" fill={`url(#marsel-fur-${uid})`} stroke={INK} strokeWidth="2.6" strokeLinejoin="round" />
-          <path d="M142 67 Q144 49 127 59 Z" fill="#DFC2CA" />
-          <ellipse cx="100" cy="100" rx="58" ry="46" fill={`url(#marsel-fur-${uid})`} stroke={INK} strokeWidth="2.6" />
-          <ellipse cx="76" cy="116" rx="20" ry="15" fill="#B7C1CE" />
-          <ellipse cx="124" cy="116" rx="20" ry="15" fill="#B7C1CE" />
-          <ellipse cx="59" cy="113" rx="11" ry="7" fill={`url(#blush-${uid})`} />
-          <ellipse cx="141" cy="113" rx="11" ry="7" fill={`url(#blush-${uid})`} />
-          <g stroke="#5F636B" strokeWidth="1.9" strokeLinecap="round">
-            <line x1="34" y1="112" x2="54" y2="113" />
-            <line x1="36" y1="120" x2="55" y2="119" />
-            <line x1="166" y1="112" x2="146" y2="113" />
-            <line x1="164" y1="120" x2="145" y2="119" />
-          </g>
-          {emotion === 'waiting' ? (
-            <g>
-              <circle cx="76" cy="97" r="9.5" fill="#EBB453" stroke={INK} strokeWidth="1.4" />
-              <circle cx="76" cy="97" r="4.8" fill={INK} />
-              <circle cx="73" cy="94" r="2.4" fill="#FFFDF9" />
-              <circle cx="124" cy="97" r="9.5" fill="#EBB453" stroke={INK} strokeWidth="1.4" />
-              <circle cx="124" cy="97" r="4.8" fill={INK} />
-              <circle cx="121" cy="94" r="2.4" fill="#FFFDF9" />
+              <circle cx="76" cy="98" r="9" fill="#E8A93E" stroke={INK} strokeWidth="1.4" />
+              <circle cx="76" cy="98" r="4.8" fill={INK} />
+              <circle cx="73" cy="95" r="2.4" fill="#FFFDF9" />
+              <circle cx="124" cy="98" r="9" fill="#E8A93E" stroke={INK} strokeWidth="1.4" />
+              <circle cx="124" cy="98" r="4.8" fill={INK} />
+              <circle cx="121" cy="95" r="2.4" fill="#FFFDF9" />
             </g>
           ) : (
             <CatEyes emotion={emotion} />
           )}
-          <CatMouth emotion={emotion} noseColor="#78646C" />
-          {/* Sage Watercolor Bow-Tie */}
+          <CatMouth emotion={emotion} strokeColor={INK} noseColor="#5A3524" />
+          <ellipse cx="72" cy="176" rx="13" ry="9.5" fill="#C46A34" stroke={INK} strokeWidth="2.4" />
+          <ellipse cx="128" cy="176" rx="13" ry="9.5" fill="#C46A34" stroke={INK} strokeWidth="2.4" />
+        </g>
+      )}
+
+      {/* 4. ВЕДМЕДИК МАРСЕЛЬ — Dignified Honey-Brown Bear Gentleman in Burgundy Velvet Bow-Tie */}
+      {guestId === 'marsel' && (
+        <g>
+          <ellipse cx="100" cy="166" rx="56" ry="36" fill={`url(#marsel-fur-${uid})`} stroke={INK} strokeWidth="2.6" />
+          {/* Rounded fuzzy bear ears */}
+          <circle cx="56" cy="56" r="18" fill={`url(#marsel-fur-${uid})`} stroke={INK} strokeWidth="2.5" />
+          <circle cx="56" cy="57" r="9.5" fill="#E6C39B" />
+          <circle cx="144" cy="56" r="18" fill={`url(#marsel-fur-${uid})`} stroke={INK} strokeWidth="2.5" />
+          <circle cx="144" cy="57" r="9.5" fill="#E6C39B" />
+          {/* Bear head & warm cream muzzle */}
+          <ellipse cx="100" cy="98" rx="56" ry="47" fill={`url(#marsel-fur-${uid})`} stroke={INK} strokeWidth="2.6" />
+          <ellipse cx="100" cy="116" rx="26" ry="19" fill="#F4E2C8" />
+          <ellipse cx="60" cy="113" rx="11" ry="7" fill={`url(#blush-${uid})`} />
+          <ellipse cx="140" cy="113" rx="11" ry="7" fill={`url(#blush-${uid})`} />
+          {emotion === 'waiting' ? (
+            <g>
+              <circle cx="76" cy="95" r="8.5" fill="#C46722" stroke={INK} strokeWidth="1.4" />
+              <circle cx="76" cy="95" r="4.5" fill={INK} />
+              <circle cx="73" cy="92" r="2.2" fill="#FFFDF9" />
+              <circle cx="124" cy="95" r="8.5" fill="#C46722" stroke={INK} strokeWidth="1.4" />
+              <circle cx="124" cy="95" r="4.5" fill={INK} />
+              <circle cx="121" cy="92" r="2.2" fill="#FFFDF9" />
+            </g>
+          ) : (
+            <CatEyes emotion={emotion} />
+          )}
+          <ellipse cx="100" cy="109" rx="9" ry="6" fill="#5A3A2B" />
+          <path d="M90 120 Q100 127 110 120" fill="none" stroke={INK} strokeWidth="2.4" strokeLinecap="round" />
+          {/* Burgundy Velvet Bow-Tie */}
           <g transform="translate(100, 150)">
-            <path d="M-22 -10 L0 0 L-22 10 Q-26 0 -22 -10 Z" fill="#9AC7A9" stroke={INK} strokeWidth="2" />
-            <path d="M22 -10 L0 0 L22 10 Q26 0 22 -10 Z" fill="#9AC7A9" stroke={INK} strokeWidth="2" />
-            <circle cx="-12" cy="0" r="2" fill="#FAF4E8" />
-            <circle cx="12" cy="0" r="2" fill="#FAF4E8" />
-            <rect x="-5" y="-5" width="10" height="10" rx="3" fill="#82B694" stroke={INK} strokeWidth="1.8" />
+            <path d="M-24 -11 L0 0 L-24 11 Q-28 0 -24 -11 Z" fill="#9E2D45" stroke={INK} strokeWidth="2" />
+            <path d="M24 -11 L0 0 L24 11 Q28 0 24 -11 Z" fill="#9E2D45" stroke={INK} strokeWidth="2" />
+            <rect x="-6" y="-6" width="12" height="12" rx="3.5" fill="#7D2034" stroke={INK} strokeWidth="1.8" />
           </g>
-          <ellipse cx="67" cy="176" rx="14" ry="10" fill="#9FAAB7" stroke={INK} strokeWidth="2.5" />
-          <ellipse cx="133" cy="176" rx="14" ry="10" fill="#9FAAB7" stroke={INK} strokeWidth="2.5" />
+          <ellipse cx="64" cy="176" rx="15" ry="10" fill="#B8824E" stroke={INK} strokeWidth="2.5" />
+          <ellipse cx="136" cy="176" rx="15" ry="10" fill="#B8824E" stroke={INK} strokeWidth="2.5" />
         </g>
       )}
 

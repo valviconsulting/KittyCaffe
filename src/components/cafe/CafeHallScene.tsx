@@ -422,11 +422,11 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = React.memo(({
         <CafeWallArtFrame wallArt={wallArt} onEdit={onOpenWallArt} />
       )}
 
-      {/* Shop Decor: Wooden Cat Wall Clock on cozy wall between chalkboard and window */}
+      {/* Shop Decor: Wooden Cat Wall Clock on sunlit warm plaster wall beside framed wall art */}
       {hasCatClock && (
         <div
           title="Настінний годинник-котик"
-          className="pointer-events-none hidden sm:block absolute left-[26.6%] lg:left-[26.9%] top-[14%] z-[13] drop-shadow-[0_4px_6px_rgba(68,38,18,0.3)]"
+          className="pointer-events-none hidden sm:block absolute left-[63.5%] lg:left-[64.2%] top-[43%] lg:top-[44%] z-[13] drop-shadow-[0_4px_6px_rgba(68,38,18,0.3)]"
         >
           <CatWallClockSvg className="h-14 w-10 lg:h-16 lg:w-12" />
         </div>

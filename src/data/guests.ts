@@ -108,12 +108,12 @@ export const GUESTS: Record<GuestId, GuestProfile> = {
   },
   luna: {
     id: 'luna',
-    name: 'Кішечка Луна',
+    name: 'Лисичка Луна',
     subtitle: 'Стильна мрійниця',
     accentBg: '#F5EDF8',
     accentBorder: '#CCA7D9',
     greetings: [
-      'Мяу~ Я мрію про яскравий коктейль!',
+      'Привіт-привіт! Я мрію про яскравий коктейль!',
       'Вітаю! Зробиш для мене щось особливо красиве?',
     ],
     weatherGreetings: {
@@ -123,7 +123,7 @@ export const GUESTS: Record<GuestId, GuestProfile> = {
     },
     praises: [
       'Вау, просто чарівно! І на смак — казка!',
-      'Мур! Ти готуєш як справжня чарівниця!',
+      'Ох, аж хвостик радіє! Ти готуєш як справжня чарівниця!',
     ],
     favoriteDrinks: ['sunrise', 'strawberry_milkshake'],
     favoritePastries: ['chocolate_cookie'],
@@ -135,10 +135,10 @@ export const GUESTS: Record<GuestId, GuestProfile> = {
   },
   marsel: {
     id: 'marsel',
-    name: 'Кіт Марсель',
+    name: 'Ведмедик Марсель',
     subtitle: 'Джентльмен у метелику',
-    accentBg: '#EDF2F5',
-    accentBorder: '#A9B7C5',
+    accentBg: '#F6EFE6',
+    accentBorder: '#C7A688',
     greetings: [
       'Добридень! Один бездоганний напій, будь ласка.',
       'Мої вітання! Час для вишуканої кавової паузи.',
@@ -155,7 +155,7 @@ export const GUESTS: Record<GuestId, GuestProfile> = {
     favoriteDrinks: ['latte', 'americano'],
     favoritePastries: ['donut_chocolate', 'donut_chocolate_sprinkles'],
     secretFact:
-      'У Марселя вдома є аж сім м’ятних краваток-метеликів — по одній на кожен день тижня!',
+      'У Марселя вдома є аж сім бордових оксамитових краваток-метеликів — по одній на кожен день тижня!',
     favoriteComboLabel: 'Лате + Пончик із шоколадною глазур’ю',
     souvenirName: 'Вінтажна порцелянова чашечка',
     souvenirEmoji: '☕',

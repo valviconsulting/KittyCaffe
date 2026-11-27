@@ -7,42 +7,42 @@ interface WindowWeatherOverlayProps {
 }
 
 const RAIN_STREAKS = [
-  { x: 61, delay: '0s', dur: '1.05s' },
-  { x: 66, delay: '0.35s', dur: '1.22s' },
-  { x: 71, delay: '0.15s', dur: '1.08s' },
-  { x: 76, delay: '0.6s', dur: '1.18s' },
-  { x: 81.5, delay: '0.25s', dur: '1.14s' },
-  { x: 87, delay: '0.75s', dur: '1.28s' },
-  { x: 92, delay: '0.45s', dur: '1.06s' },
-  { x: 97.5, delay: '0.88s', dur: '1.2s' },
-  { x: 103, delay: '0.52s', dur: '1.12s' },
-  { x: 73.5, delay: '0.92s', dur: '1.16s' },
-  { x: 89.5, delay: '0.08s', dur: '1.25s' },
+  { x: 56.5, delay: '0s', dur: '1.05s' },
+  { x: 60.5, delay: '0.35s', dur: '1.22s' },
+  { x: 64.5, delay: '0.15s', dur: '1.08s' },
+  { x: 68.5, delay: '0.6s', dur: '1.18s' },
+  { x: 72.5, delay: '0.25s', dur: '1.14s' },
+  { x: 76.5, delay: '0.75s', dur: '1.28s' },
+  { x: 80.5, delay: '0.45s', dur: '1.06s' },
+  { x: 84.5, delay: '0.88s', dur: '1.2s' },
+  { x: 88.5, delay: '0.52s', dur: '1.12s' },
+  { x: 92.2, delay: '0.92s', dur: '1.16s' },
+  { x: 78.5, delay: '0.08s', dur: '1.25s' },
 ];
 
 const SNOWFLAKES = [
-  { x: 61.5, size: 5.5, delay: '0s', dur: '4.1s' },
-  { x: 66.5, size: 4, delay: '1.2s', dur: '4.7s' },
-  { x: 72, size: 6, delay: '0.5s', dur: '3.9s' },
-  { x: 77, size: 4.5, delay: '2.1s', dur: '4.4s' },
-  { x: 82.5, size: 5.5, delay: '0.9s', dur: '4.2s' },
-  { x: 88, size: 4, delay: '1.7s', dur: '4.9s' },
-  { x: 93.5, size: 5.8, delay: '0.3s', dur: '4.0s' },
-  { x: 99, size: 4.8, delay: '2.5s', dur: '4.5s' },
-  { x: 103.5, size: 4.2, delay: '1.5s', dur: '4.3s' },
-  { x: 74.5, size: 4, delay: '3.0s', dur: '4.6s' },
-  { x: 90.5, size: 5, delay: '2.7s', dur: '4.3s' },
+  { x: 57.0, size: 5.2, delay: '0s', dur: '4.1s' },
+  { x: 61.2, size: 3.8, delay: '1.2s', dur: '4.7s' },
+  { x: 65.5, size: 5.8, delay: '0.5s', dur: '3.9s' },
+  { x: 69.8, size: 4.3, delay: '2.1s', dur: '4.4s' },
+  { x: 74.0, size: 5.4, delay: '0.9s', dur: '4.2s' },
+  { x: 78.2, size: 3.9, delay: '1.7s', dur: '4.9s' },
+  { x: 82.5, size: 5.5, delay: '0.3s', dur: '4.0s' },
+  { x: 86.8, size: 4.6, delay: '2.5s', dur: '4.5s' },
+  { x: 91.2, size: 4.0, delay: '1.5s', dur: '4.3s' },
+  { x: 67.5, size: 3.8, delay: '3.0s', dur: '4.6s' },
+  { x: 80.5, size: 4.8, delay: '2.7s', dur: '4.3s' },
 ];
 
 const GOLDEN_MOTES = [
-  { cx: 76, cy: 36, r: 0.55, delay: '0s', dur: '5.2s' },
-  { cx: 88, cy: 46, r: 0.65, delay: '1.1s', dur: '6.0s' },
-  { cx: 81, cy: 58, r: 0.48, delay: '2.3s', dur: '4.8s' },
-  { cx: 96, cy: 54, r: 0.58, delay: '0.7s', dur: '5.8s' },
-  { cx: 72, cy: 52, r: 0.46, delay: '3.1s', dur: '5.5s' },
-  { cx: 102, cy: 65, r: 0.52, delay: '1.8s', dur: '6.2s' },
-  { cx: 58, cy: 42, r: 0.44, delay: '2.6s', dur: '5.6s' },
-  { cx: 114, cy: 44, r: 0.48, delay: '0.4s', dur: '6.4s' },
+  { cx: 68, cy: 36, r: 0.52, delay: '0s', dur: '5.2s' },
+  { cx: 79, cy: 46, r: 0.62, delay: '1.1s', dur: '6.0s' },
+  { cx: 73, cy: 58, r: 0.46, delay: '2.3s', dur: '4.8s' },
+  { cx: 88, cy: 54, r: 0.56, delay: '0.7s', dur: '5.8s' },
+  { cx: 64, cy: 52, r: 0.44, delay: '3.1s', dur: '5.5s' },
+  { cx: 94, cy: 65, r: 0.5, delay: '1.8s', dur: '6.2s' },
+  { cx: 56, cy: 42, r: 0.42, delay: '2.6s', dur: '5.6s' },
+  { cx: 108, cy: 44, r: 0.46, delay: '0.4s', dur: '6.4s' },
 ];
 
 /**
@@ -82,11 +82,11 @@ export const WindowWeatherOverlay: React.FC<WindowWeatherOverlayProps> = React.m
         }}
       />
 
-      {/* Warm golden-amber light pools aligned with the 3 hanging pendant lamps (pure alpha glow) */}
+      {/* Warm golden-amber light pools aligned with the ribbed-amber pendant lamps & left brass sconce */}
       <div
-        className="animate-sun-shimmer absolute inset-x-0 top-0 h-[58%]"
+        className="animate-sun-shimmer absolute inset-x-0 top-0 h-[62%]"
         style={{
-          backgroundImage: `radial-gradient(ellipse 24% 62% at 67% 20%, rgba(255, 222, 132, ${lampStrength}) 0%, rgba(255, 198, 104, 0.1) 55%, transparent 100%), radial-gradient(ellipse 28% 58% at 48% 30%, rgba(255, 232, 168, 0.14) 0%, transparent 100%)`,
+          backgroundImage: `radial-gradient(ellipse 22% 58% at 68.5% 24%, rgba(255, 218, 126, ${lampStrength}) 0%, rgba(255, 194, 98, 0.1) 55%, transparent 100%), radial-gradient(ellipse 16% 40% at 16.5% 26%, rgba(255, 224, 142, 0.18) 0%, transparent 100%)`,
         }}
       />
 
@@ -98,8 +98,8 @@ export const WindowWeatherOverlay: React.FC<WindowWeatherOverlayProps> = React.m
       >
         <defs>
           <linearGradient id="ghibli-sunbeam" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#FFF1AD" stopOpacity="0.4" />
-            <stop offset="55%" stopColor="#FFDE82" stopOpacity="0.14" />
+            <stop offset="0%" stopColor="#FFF1AD" stopOpacity="0.36" />
+            <stop offset="55%" stopColor="#FFDE82" stopOpacity="0.12" />
             <stop offset="100%" stopColor="#FFF1AD" stopOpacity="0" />
           </linearGradient>
           <linearGradient id="rain-window-tint" x1="0" y1="0" x2="0" y2="1">
@@ -110,17 +110,17 @@ export const WindowWeatherOverlay: React.FC<WindowWeatherOverlayProps> = React.m
             <stop offset="0%" stopColor="#88B0D6" stopOpacity="0.32" />
             <stop offset="100%" stopColor="#DCEBF8" stopOpacity="0.24" />
           </linearGradient>
-          {/* Exact wooden window inner glass panes of bg-cafe.webp (1680×938) — matches object-cover at EVERY aspect ratio! */}
+          {/* Exact multi-pane wooden window glass of detailed bg-cafe.webp (1680×938) — matches object-cover at EVERY aspect ratio! */}
           <clipPath id="panoramic-window-clip">
-            <rect x="57.2" y="20.0" width="49.5" height="51.2" rx="0.8" />
+            <rect x="54.2" y="21.2" width="40.6" height="45.4" rx="0.5" />
           </clipPath>
         </defs>
 
         {weather === 'sunny' && (
           <g>
             <g className="animate-sun-shimmer">
-              <polygon points="60,20 91,20 120,93 80,93" fill="url(#ghibli-sunbeam)" />
-              <polygon points="57,26 73,26 91,93 66,93" fill="url(#ghibli-sunbeam)" />
+              <polygon points="56,21 86,21 112,93 74,93" fill="url(#ghibli-sunbeam)" />
+              <polygon points="54,28 69,28 86,93 62,93" fill="url(#ghibli-sunbeam)" />
             </g>
             {/* Cozy golden sunlit dust motes floating lazily in the warm beam */}
             <g fill="#FFF7CC">
@@ -140,7 +140,7 @@ export const WindowWeatherOverlay: React.FC<WindowWeatherOverlayProps> = React.m
 
         {weather === 'rainy' && (
           <g clipPath="url(#panoramic-window-clip)">
-            <rect x="57.2" y="20.0" width="49.5" height="51.2" fill="url(#rain-window-tint)" />
+            <rect x="53.5" y="20.6" width="41.7" height="46.2" fill="url(#rain-window-tint)" />
             <g stroke="#E5F3FF" strokeWidth="0.52" strokeLinecap="round">
               {RAIN_STREAKS.map((drop, idx) => (
                 <line
@@ -151,29 +151,29 @@ export const WindowWeatherOverlay: React.FC<WindowWeatherOverlayProps> = React.m
                     animationDuration: drop.dur,
                   }}
                   x1={drop.x}
-                  y1={18}
+                  y1={19}
                   x2={drop.x - 1.8}
-                  y2={27}
+                  y2={28}
                 />
               ))}
             </g>
             {/* Shimmering raindrops on window glass */}
             <g fill="#EEF8FF" opacity="0.86">
-              <circle cx="64.5" cy="40" r="0.62" />
-              <circle cx="76.5" cy="54" r="0.68" />
-              <circle cx="91.5" cy="37" r="0.56" />
-              <circle cx="100" cy="57" r="0.64" />
-              <circle cx="71.5" cy="64" r="0.54" />
-              <circle cx="85.5" cy="47" r="0.52" />
+              <circle cx="59.5" cy="37" r="0.58" />
+              <circle cx="69.5" cy="51" r="0.64" />
+              <circle cx="81.5" cy="34" r="0.54" />
+              <circle cx="90.5" cy="54" r="0.6" />
+              <circle cx="65.5" cy="61" r="0.52" />
+              <circle cx="78.0" cy="45" r="0.48" />
             </g>
           </g>
         )}
 
         {weather === 'snowy' && (
           <g clipPath="url(#panoramic-window-clip)">
-            <rect x="57.2" y="20.0" width="49.5" height="51.2" fill="url(#snow-window-tint)" />
+            <rect x="53.5" y="20.6" width="41.7" height="46.2" fill="url(#snow-window-tint)" />
             {/* Soft frosted snow sill along bottom of panes */}
-            <ellipse cx="82" cy="70.8" rx="25" ry="2.4" fill="#FFFFFF" opacity="0.58" />
+            <ellipse cx="74.4" cy="66.5" rx="20.5" ry="2.1" fill="#FFFFFF" opacity="0.56" />
             <g fill="#FFFFFF">
               {SNOWFLAKES.map((flake, idx) => (
                 <circle
