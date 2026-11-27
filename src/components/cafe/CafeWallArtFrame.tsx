@@ -58,7 +58,7 @@ export const CafeWallArtFrame: React.FC<CafeWallArtFrameProps> = ({
           ? `Твоя картина на стіні: ${wallArt.title}. Натисни, щоб редагувати.`
           : 'Твоя картина на стіні кав’ярні. Натисни, щоб редагувати.'
       }
-      className="hidden sm:flex absolute left-[20%] lg:left-[20.8%] top-[23%] lg:top-[25%] z-[14] flex-col items-center focus:outline-none drop-shadow-[0_8px_14px_rgba(52,28,12,0.34)]"
+      className="hidden sm:flex absolute left-[72%] lg:left-[72.6%] top-[23%] lg:top-[24%] z-[14] flex-col items-center focus:outline-none drop-shadow-[0_8px_14px_rgba(52,28,12,0.34)]"
     >
       {/* Cute brass nail & delicate hanging twine */}
       <div className="relative h-3.5 w-14 flex items-start justify-center pointer-events-none">

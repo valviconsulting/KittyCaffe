@@ -24,7 +24,7 @@ export const MarzipanAccessoriesOverlaySvg: React.FC<{
     >
       {/* NECK SLOT: Knitted Scarf OR Velvet Red Bow-Tie */}
       {equipped.neck === 'knit_scarf' && (
-        <g transform="translate(222, 294) rotate(-19)">
+        <g transform="translate(232, 354) rotate(-26) scale(0.70)">
           {/* Soft contact shadow under scarf */}
           <ellipse cx="0" cy="14" rx="108" ry="26" fill="#4A2A14" opacity="0.2" />
           {/* Trailing fringed tail draped cozily down right side */}
@@ -76,7 +76,7 @@ export const MarzipanAccessoriesOverlaySvg: React.FC<{
       )}
 
       {equipped.neck === 'red_bowtie' && (
-        <g transform="translate(226, 294) rotate(-18)">
+        <g transform="translate(232, 358) rotate(-26) scale(0.68)">
           <ellipse cx="0" cy="14" rx="52" ry="18" fill="#4A2A14" opacity="0.22" />
           {/* Left & Right velvet ribbon wings */}
           <path
@@ -112,7 +112,7 @@ export const MarzipanAccessoriesOverlaySvg: React.FC<{
 
       {/* EYES SLOT: Pink Heart-Shaped Watercolor Sunglasses */}
       {equipped.eyes === 'heart_glasses' && (
-        <g transform="translate(202, 212) rotate(-22)">
+        <g transform="translate(193, 294) rotate(-24) scale(0.72)">
           {/* Center bridge & side temples */}
           <path
             d="M-112 -14 L-88 -8 M88 -8 L110 -14"
@@ -170,7 +170,7 @@ export const MarzipanAccessoriesOverlaySvg: React.FC<{
 
       {/* HEAD SLOT: Chef Hat OR Golden Crown */}
       {equipped.head === 'chef_hat' && (
-        <g transform="translate(150, 72) rotate(-19)">
+        <g transform="translate(154, 174) rotate(-24) scale(0.72)">
           {/* Soft shadow on forehead */}
           <ellipse cx="0" cy="24" rx="70" ry="14" fill="#5A3E32" opacity="0.16" />
           {/* Fluffy triple-cloud toque top */}
@@ -208,7 +208,7 @@ export const MarzipanAccessoriesOverlaySvg: React.FC<{
       )}
 
       {equipped.head === 'gold_crown' && (
-        <g transform="translate(152, 74) rotate(-19)">
+        <g transform="translate(154, 178) rotate(-24) scale(0.70)">
           <ellipse cx="0" cy="22" rx="64" ry="13" fill="#5A3E32" opacity="0.18" />
           <path
             d="M-62 18 L-72 -44 L-28 -10 L0 -64 L28 -10 L72 -44 L62 18 Q0 30 -62 18 Z"

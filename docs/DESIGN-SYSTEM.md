@@ -1,6 +1,6 @@
 # Дизайн-система та карта графічних ресурсів «Мур-Лате» (`KittyCaffe`)
 
-- **Версія документа:** 27 листопада 2026 року (`main` @ `24e3303`)
+- **Версія документа:** 27 листопада 2026 року (`main`, оновлення ілюстрацій — єдина цифрова гуаш)
 - **Публічний репозиторій:** https://github.com/valviconsulting/KittyCaffe
 - **Жива HTTPS-версія (PWA / GitHub Pages):** https://valviconsulting.github.io/KittyCaffe/
 - **Призначення:** повна специфікація візуальної мови, токенів, асетів, SVG/Canvas-компонентів, макета, адаптивності та поточних performance-спостережень для передачі незалежному аудитору.
@@ -9,7 +9,7 @@
 
 ## 1. Художній напрямок і непорушні інваріанти
 
-- **Естетика:** теплий акварельний storybook у дусі Studio Ghibli (м’яке золоте денне освітлення, медово-дубові поверхні, смарагдова зелень, пастельна випічка, м’які тіні).
+- **Естетика:** теплий напівреалістичний storybook у стилі цифрової гуаші з м’якою олійною текстурою та легкою зернистістю паперу (реалістична анатомія й промальоване хутро тварин, лагідні виразні очі, тепле пізньополудневе золоте світло зверху зліва, м’який бурштиновий контровий відблиск від ламп справа, приглушена тепла палітра: мед, дуб, крем, шавлія, припилена троянда, без жорстких чорних контурів).
 - **Контури:** виключно темно-коричневе чорнило **`#5A3E32`** та теплі дерев’яні відтінки (`#7A523B`, `#8C6248`) — **заборонено** жорсткий чорний `#000000`.
 - **Мова інтерфейсу:** 100% українська (тепла й природна для дитини 9 років); жодних таймерів програшу, штрафів чи агресивного UI.
 - **Стек рендерингу:** React `19.3` + Vite `8.3` + TypeScript `~7.0` + Tailwind CSS `4.3` (`src/index.css`) + Framer Motion `14.14` + CSS `@keyframes` + inline SVG + 2 HTML5 `<canvas>` редактори (`LatteArtModal`, `WallArtModal`).
@@ -72,21 +72,21 @@
 
 - **Маніфест у коді:** `src/config/assets.ts` (відносні шляхи `./assets/*.png` для сумісності з `localhost` і підшляхом `/KittyCaffe/`).
 - **Компонент завантаження:** `src/components/common/AssetIllustration.tsx` — рендерить `<picture>` із пріоритетом **`.webp`** (`type="image/webp"`), автоматичним fallback на **`.png`** (`decoding="async"`) і резервним **inline SVG** у разі `onError`.
-- **Сумарна вага растрових асетів:** **`5 640.7 KB` (PNG)** → **`732.1 KB` (WebP, −87.0%)**.
+- **Сумарна вага растрових асетів:** **`4 863.4 KB` (PNG)** → **`487.0 KB` (WebP, −90.0%)**.
 
 ### 4.1. Растрові ілюстрації (`public/assets/`)
 
 | Персонаж / Сцена | Шлях у репозиторії | Публічний HTTPS URL (WebP) | Розмір (px) | Канали | WebP | PNG | SVG Fallback |
 | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :--- |
-| Панорамний інтер’єр кав’ярні (`21:9`) | `public/assets/bg-cafe.webp` / `.png` | `https://valviconsulting.github.io/KittyCaffe/assets/bg-cafe.webp` | `1670×716` | RGB | `210.8 KB` | `1683.0 KB` | `src/components/svg/CafeBackgroundSvg.tsx` |
-| Кіт-помічник Марципан (`aspect-[8/7]`) | `public/assets/cat-marzipan.webp` / `.png` | `https://valviconsulting.github.io/KittyCaffe/assets/cat-marzipan.webp` | `640×560` | RGBA | `57.1 KB` | `483.1 KB` | `src/components/svg/MarzipanCatSvg.tsx` |
-| Кошеня Пух | `public/assets/guest-pukh.webp` / `.png` | `https://valviconsulting.github.io/KittyCaffe/assets/guest-pukh.webp` | `498×640` | RGBA | `54.3 KB` | `443.7 KB` | `src/components/svg/GuestCharacterSvg.tsx` |
-| Ведмедик Персик | `public/assets/guest-persyk.webp` / `.png` | `https://valviconsulting.github.io/KittyCaffe/assets/guest-persyk.webp` | `603×640` | RGBA | `58.7 KB` | `522.3 KB` | `src/components/svg/GuestCharacterSvg.tsx` |
-| Кішечка Луна | `public/assets/guest-luna.webp` / `.png` | `https://valviconsulting.github.io/KittyCaffe/assets/guest-luna.webp` | `473×640` | RGBA | `60.9 KB` | `403.2 KB` | `src/components/svg/GuestCharacterSvg.tsx` |
-| Кіт Марсель | `public/assets/guest-marsel.webp` / `.png` | `https://valviconsulting.github.io/KittyCaffe/assets/guest-marsel.webp` | `573×640` | RGBA | `85.4 KB` | `579.5 KB` | `src/components/svg/GuestCharacterSvg.tsx` |
-| Сова Софія | `public/assets/guest-sofia.webp` / `.png` | `https://valviconsulting.github.io/KittyCaffe/assets/guest-sofia.webp` | `640×632` | RGBA | `84.6 KB` | `636.8 KB` | `src/components/svg/GuestCharacterSvg.tsx` |
-| Кролиця Мія | `public/assets/guest-miya.webp` / `.png` | `https://valviconsulting.github.io/KittyCaffe/assets/guest-miya.webp` | `399×640` | RGBA | `47.0 KB` | `337.3 KB` | `src/components/svg/GuestCharacterSvg.tsx` |
-| Котик-мандрівник *(особливий гість)* | `public/assets/guest-mandrivnyk.webp` / `.png` | `https://valviconsulting.github.io/KittyCaffe/assets/guest-mandrivnyk.webp` | `558×640` | RGBA | `73.3 KB` | `552.0 KB` | `src/components/svg/GuestCharacterSvg.tsx` |
+| Інтер’єр кав’ярні «золота година» | `public/assets/bg-cafe.webp` / `.png` | `https://valviconsulting.github.io/KittyCaffe/assets/bg-cafe.webp` | `1680×938` | RGB | `111.2 KB` | `1878.9 KB` | `src/components/svg/CafeBackgroundSvg.tsx` |
+| Кіт-помічник Марципан (`aspect-[8/7]`) | `public/assets/cat-marzipan.webp` / `.png` | `https://valviconsulting.github.io/KittyCaffe/assets/cat-marzipan.webp` | `640×560` | RGBA | `40.0 KB` | `350.7 KB` | `src/components/svg/MarzipanCatSvg.tsx` |
+| Кошеня Пух | `public/assets/guest-pukh.webp` / `.png` | `https://valviconsulting.github.io/KittyCaffe/assets/guest-pukh.webp` | `466×640` | RGBA | `42.8 KB` | `359.4 KB` | `src/components/svg/GuestCharacterSvg.tsx` |
+| Кіт Персик | `public/assets/guest-persyk.webp` / `.png` | `https://valviconsulting.github.io/KittyCaffe/assets/guest-persyk.webp` | `475×640` | RGBA | `46.6 KB` | `371.3 KB` | `src/components/svg/GuestCharacterSvg.tsx` |
+| Кішечка Луна | `public/assets/guest-luna.webp` / `.png` | `https://valviconsulting.github.io/KittyCaffe/assets/guest-luna.webp` | `456×640` | RGBA | `39.9 KB` | `332.3 KB` | `src/components/svg/GuestCharacterSvg.tsx` |
+| Кіт Марсель | `public/assets/guest-marsel.webp` / `.png` | `https://valviconsulting.github.io/KittyCaffe/assets/guest-marsel.webp` | `551×640` | RGBA | `54.8 KB` | `430.0 KB` | `src/components/svg/GuestCharacterSvg.tsx` |
+| Сова Софія | `public/assets/guest-sofia.webp` / `.png` | `https://valviconsulting.github.io/KittyCaffe/assets/guest-sofia.webp` | `466×640` | RGBA | `55.6 KB` | `419.4 KB` | `src/components/svg/GuestCharacterSvg.tsx` |
+| Кролиця Мія | `public/assets/guest-miya.webp` / `.png` | `https://valviconsulting.github.io/KittyCaffe/assets/guest-miya.webp` | `392×640` | RGBA | `39.3 KB` | `277.0 KB` | `src/components/svg/GuestCharacterSvg.tsx` |
+| Котик-мандрівник *(особливий гість)* | `public/assets/guest-mandrivnyk.webp` / `.png` | `https://valviconsulting.github.io/KittyCaffe/assets/guest-mandrivnyk.webp` | `555×640` | RGBA | `56.8 KB` | `444.5 KB` | `src/components/svg/GuestCharacterSvg.tsx` |
 
 ### 4.2. Інші статичні файли (`public/`)
 
@@ -119,7 +119,7 @@
 
 ### 5.2. Інтерактивні HTML5 `<canvas>` поверхні
 1. **Лате-арт (`src/components/modals/LatteArtModal.tsx`):** кругла чашка вигляд зверху, Pointer Events + `touch-none`, малюнок зберігається лише в рантаймі на поточній чашці (не пишеться у `localStorage`).
-2. **Картина дитини на стіні кав’ярні (`src/components/modals/WallArtModal.tsx` + `src/components/cafe/CafeWallArtFrame.tsx`):** мольберт `360×270`, 8 кольорів, 3 пензлі, 4 штампики (`🐾`, `🌸`, `⭐`, `❤️`), 3 стилі рамок (`honey_wood`, `blush_ribbon`, `golden_stars`), підпис; експорт у компактний WebP `240×180` із лімітом безпеки `<= 65 KB` у `localStorage v6`, реально висить у рамці на лівій стіні залу.
+2. **Картина дитини на стіні кав’ярні (`src/components/modals/WallArtModal.tsx` + `src/components/cafe/CafeWallArtFrame.tsx`):** мольберт `360×270`, 8 кольорів, 3 пензлі, 4 штампики (`🐾`, `🌸`, `⭐`, `❤️`), 3 стилі рамок (`honey_wood`, `blush_ribbon`, `golden_stars`), підпис; експорт у компактний WebP `240×180` із лімітом безпеки `<= 65 KB` у `localStorage v6`, реально висить у рамці на вільній теплій стіні праворуч (`left: 72%`).
 
 ---
 
@@ -138,8 +138,8 @@
      - `z-[2]`: `WindowWeatherOverlay.tsx` (віньєтка, золоті ореоли ламп, передвечірній теплий відтінок на 5-му гості, промені/пилинки, дощ або сніг у віконній масці)
      - `z-[10]`: портрет гостя `GuestCard.tsx` (стоїть *за* дерев’яною стійкою)
      - `z-[12]`: гірлянда зірочок та святкова гірлянда `BirthdayDecorOverlaySvg.tsx`
-     - `z-[13]`: настінний годинник-котик (`sm+`)
-     - `z-[14]`: картина дитини в рамці `CafeWallArtFrame.tsx` (`sm+`, над крейдяною дошкою)
+     - `z-[13]`: настінний годинник-котик (`sm+`, між крейдяною дошкою та вікном)
+     - `z-[14]`: картина дитини в рамці `CafeWallArtFrame.tsx` (`sm+`, на вільній теплій стіні праворуч між лампами й поличками з чайниками)
      - `z-[15]`: 3D медово-дубова барна стійка + ваза з ромашками / шишка
      - `z-20`: кутові плашки («Напій дня», «Поличка друзів»), музична скринька, Марципан + кнопка `🧶`, табличка імені гостя, легка напівпрозора бульбашка діалогу з клікабельними бейджами замовлення, плоска дерев’яна дощечка подачі `ServingTray.tsx` (`~50–59px` порожня; при заповненні показує напій/десерт + рожеву кнопку `🛎️ Подати!`)
      - `z-30`: анімовані святкові банери-тости

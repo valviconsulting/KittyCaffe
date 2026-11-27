@@ -100,7 +100,7 @@ export const MarzipanHelper: React.FC<MarzipanHelperProps> = ({
           src={CAFE_ASSETS.marzipan}
           alt="Кіт-помічник Марципан"
           className="h-full w-full drop-shadow-[0_6px_9px_rgba(92,48,18,0.38)]"
-          imgClassName="h-full w-full object-fill saturate-[1.13] contrast-[1.03] sepia-[0.04]"
+          imgClassName="h-full w-full object-fill saturate-[1.03] contrast-[1.01]"
           fallback={<MarzipanCatSvg isPurring={isPurring} className="h-full w-full" />}
         />
         <MarzipanAccessoriesOverlaySvg equipped={equippedAccessories} />

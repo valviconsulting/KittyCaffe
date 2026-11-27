@@ -313,16 +313,12 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
       }`}
       aria-label="Зала кав’ярні та вікно з погодою"
     >
-      {/* Background: Rich vibrant 21:9 panoramic `/assets/bg-cafe.webp` with lush warm storybook tone */}
+      {/* Background: Cozy digital gouache interior `/assets/bg-cafe.webp` with warm golden-hour palette */}
       <AssetIllustration
         src={CAFE_ASSETS.background}
-        alt="Акварельний інтер’єр кав’ярні Мур-Лате"
+        alt="Ілюстрований інтер’єр кав’ярні Мур-Лате"
         className="absolute inset-0 h-full w-full pointer-events-none"
-        imgClassName={`h-full w-full object-cover saturate-[1.14] contrast-[1.04] brightness-[0.99] transition-all duration-300 ${
-          isWorkbenchOpen
-            ? 'object-[50%_54%] xl:object-[50%_48%]'
-            : 'object-[50%_46%] sm:object-[50%_48%]'
-        }`}
+        imgClassName="h-full w-full object-cover object-[50%_54%] saturate-[1.03] contrast-[1.01] transition-all duration-300"
         fallback={<CafeBackgroundSvg weather={weather} />}
       />
 
@@ -345,11 +341,11 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
         <CafeWallArtFrame wallArt={wallArt} onEdit={onOpenWallArt} />
       )}
 
-      {/* Shop Decor: Wooden Cat Wall Clock on cozy wooden pillar beside window */}
+      {/* Shop Decor: Wooden Cat Wall Clock on cozy wall between chalkboard and window */}
       {hasCatClock && (
         <div
           title="Настінний годинник-котик"
-          className="pointer-events-none hidden sm:block absolute left-[63.5%] xl:left-[64.5%] top-2.5 z-[13] drop-shadow-[0_4px_6px_rgba(68,38,18,0.3)]"
+          className="pointer-events-none hidden sm:block absolute left-[26.6%] lg:left-[26.9%] top-[14%] z-[13] drop-shadow-[0_4px_6px_rgba(68,38,18,0.3)]"
         >
           <CatWallClockSvg className="h-14 w-10 lg:h-16 lg:w-12" />
         </div>

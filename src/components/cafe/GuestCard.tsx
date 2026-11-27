@@ -141,7 +141,7 @@ export const GuestCard: React.FC<GuestCardProps> = ({
             src={CAFE_ASSETS.guests[guestId]}
             alt={guest.name}
             className="h-[116px] w-[104px] sm:h-[146px] sm:w-[136px] md:h-[172px] md:w-[162px] lg:h-[196px] lg:w-[190px] xl:h-[234px] xl:w-[224px] drop-shadow-[0_10px_14px_rgba(90,48,18,0.34)]"
-            imgClassName="h-full w-full object-contain object-bottom saturate-[1.11] contrast-[1.03] sepia-[0.04]"
+            imgClassName="h-full w-full object-contain object-bottom saturate-[1.03] contrast-[1.01]"
             fallback={
               <GuestCharacterSvg
                 guestId={guestId}
