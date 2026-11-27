@@ -24,6 +24,7 @@ import type {
   RareStickerId,
   SecretDrinkRecipe,
   StationTab,
+  WallArtState,
   WeatherType,
 } from '../../types/game';
 import { AssetIllustration } from '../common/AssetIllustration';
@@ -36,6 +37,7 @@ import {
   SouvenirSvg,
   TwinkleStarsGarlandSvg,
 } from '../svg/CafeDecorAndSouvenirsSvg';
+import { CafeWallArtFrame } from './CafeWallArtFrame';
 import { GuestCard } from './GuestCard';
 import { MarzipanHelper } from './MarzipanHelper';
 import { ServingTray } from './ServingTray';
@@ -70,7 +72,10 @@ interface CafeHallSceneProps {
   isDayComplete?: boolean;
   isWorkbenchOpen?: boolean;
   birthdayDecor?: { theme: BirthdayThemeId; level: 1 | 2 | 3 } | null;
+  wallArt?: WallArtState;
   onPetMarzipan: () => void;
+  onOpenMarzipanCare?: () => void;
+  onOpenWallArt?: () => void;
   onToggleMusicBox: () => void;
   onOpenSecretCreator: () => void;
   onOpenFriendshipAlbum: () => void;
@@ -104,7 +109,10 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
   isDayComplete = false,
   isWorkbenchOpen = false,
   birthdayDecor = null,
+  wallArt,
   onPetMarzipan,
+  onOpenMarzipanCare,
+  onOpenWallArt,
   onToggleMusicBox,
   onOpenSecretCreator,
   onOpenFriendshipAlbum,
@@ -332,6 +340,11 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
         />
       )}
 
+      {/* Step 06 Personalization: Child's Own Framed Watercolor Painting on the Café Wall */}
+      {wallArt && onOpenWallArt && (
+        <CafeWallArtFrame wallArt={wallArt} onEdit={onOpenWallArt} />
+      )}
+
       {/* Shop Decor: Wooden Cat Wall Clock on cozy wooden pillar beside window */}
       {hasCatClock && (
         <div
@@ -507,6 +520,7 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
             isPurring={marzipanPurring}
             equippedAccessories={equippedAccessories}
             onPet={onPetMarzipan}
+            onOpenCare={onOpenMarzipanCare}
           />
         </div>
 

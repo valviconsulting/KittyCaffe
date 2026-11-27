@@ -186,6 +186,39 @@ export interface PuhBirthdayStoryState {
   finaleRewardClaimed: boolean;
 }
 
+export type WallFrameStyle = 'honey_wood' | 'blush_ribbon' | 'golden_stars';
+
+export interface WallArtState {
+  /** Compact WebP/PNG dataURL (<= 65KB) painted by the player and hung on the café wall */
+  dataUrl: string | null;
+  title: string;
+  frameStyle: WallFrameStyle;
+  visible: boolean;
+}
+
+export interface MarzipanCareState {
+  treatsGiven: number;
+  yarnGamesPlayed: number;
+  petsCount: number;
+  /** Day number when the daily +5 fish yarn-game coin surprise was last awarded */
+  lastPlayRewardDay: number;
+}
+
+export interface CafeLetter {
+  /** Stable unique ID (preserved in saveState.readLetterIds) */
+  id: string;
+  fromName: string;
+  fromEmoji: string;
+  title: string;
+  body: string;
+  stampEmoji: string;
+  /** Day number from which this letter arrives in the mailbox (1 = immediately) */
+  unlockMinDay: number;
+  /** Optional minimum total guests served required */
+  unlockMinServed?: number;
+  paperTint?: 'cream' | 'blush' | 'mint' | 'lavender';
+}
+
 export interface DayProgressState {
   dayNumber: number;
   themeId: DayThemeId;
@@ -252,7 +285,7 @@ export interface ValidationResult {
   feedback: string;
 }
 
-/** Full localStorage persistence schema (v5: Phase 1–3 + Day Director + Puff Birthday Story) */
+/** Full localStorage persistence schema (v6: Phase 1–3 + Day Director + Birthday Story + Personalization & Marzipan) */
 export interface CafeSaveState {
   version: number;
   coins: number;
@@ -284,4 +317,8 @@ export interface CafeSaveState {
   dayHistory: DayMemoryEntry[];
   /** Step 05: First Story Chapter — «День народження Пуха» (3 days, 3 themes) */
   puhBirthday: PuhBirthdayStoryState;
+  /** Step 06: Personalization — read letter IDs, child's framed wall art & Marzipan care */
+  readLetterIds: string[];
+  wallArt: WallArtState;
+  marzipanCare: MarzipanCareState;
 }

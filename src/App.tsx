@@ -42,8 +42,11 @@ import { sound } from './services/sound';
 import type { BirthdayModalMode } from './components/modals/BirthdayStoryModal';
 import type { DayJournalMode } from './components/modals/DayJournalModal';
 import { BIRTHDAY_THEMES } from './data/birthdayStory';
+import { DEFAULT_CAFE_LETTERS } from './data/letters';
 import {
+  DEFAULT_MARZIPAN_CARE,
   DEFAULT_SAVE_STATE,
+  DEFAULT_WALL_ART,
   loadCafeSaveWithStatus,
   saveCafeProgress,
 } from './services/storage';
@@ -51,6 +54,7 @@ import type {
   BirthdayThemeId,
   BlenderIngredientId,
   CafeDecorId,
+  CafeLetter,
   CafeSaveState,
   DayProgressState,
   DonutGlaze,
@@ -66,6 +70,7 @@ import type {
   TakeawayDecoration,
   TallGlassIngredientId,
   UnlockableRecipeId,
+  WallArtState,
   WeatherType,
 } from './types/game';
 import {
@@ -85,6 +90,11 @@ import {
   isLateAfternoon,
   recordServedGuestInDay,
 } from './utils/dayDirector';
+import {
+  getUnlockedLetters,
+  getUnreadLettersCount,
+  loadLocalLettersCatalog,
+} from './utils/letters';
 
 // Lazy-loaded modal flows so initial mobile bundle stays light & fast
 const RecipeBookModal = lazy(() =>
@@ -130,6 +140,16 @@ const DayJournalModal = lazy(() =>
 const BirthdayStoryModal = lazy(() =>
   import('./components/modals/BirthdayStoryModal').then((m) => ({
     default: m.BirthdayStoryModal,
+  }))
+);
+const WallArtModal = lazy(() =>
+  import('./components/modals/WallArtModal').then((m) => ({
+    default: m.WallArtModal,
+  }))
+);
+const MarzipanCareModal = lazy(() =>
+  import('./components/modals/MarzipanCareModal').then((m) => ({
+    default: m.MarzipanCareModal,
   }))
 );
 
@@ -233,6 +253,10 @@ export function App() {
     useState<BirthdayModalMode | null>(null);
   const [birthdayPostcardTheme, setBirthdayPostcardTheme] =
     useState<BirthdayThemeId | null>(null);
+  const [isWallArtOpen, setIsWallArtOpen] = useState<boolean>(false);
+  const [isMarzipanCareOpen, setIsMarzipanCareOpen] = useState<boolean>(false);
+  const [lettersCatalog, setLettersCatalog] =
+    useState<CafeLetter[]>(DEFAULT_CAFE_LETTERS);
   const [pendingTakeawayDrink, setPendingTakeawayDrink] =
     useState<PreparedDrink | null>(null);
   const [pendingTakeawaySource, setPendingTakeawaySource] = useState<
@@ -334,6 +358,17 @@ export function App() {
     };
   }, [saveState.muted, saveState.enabledDecor, saveState.musicBoxPlaying]);
 
+  // Load customizable local letters from `public/content/letters.json` with automatic fallback
+  useEffect(() => {
+    let active = true;
+    void loadLocalLettersCatalog().then((loaded) => {
+      if (active) setLettersCatalog(loaded);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   // Cleanup active timers on unmount
   const marzipanTimerRef = useRef<number | null>(null);
   const nextGuestTimerRef = useRef<number | null>(null);
@@ -385,6 +420,8 @@ export function App() {
     isBackupOpen ||
     dayJournalMode !== null ||
     birthdayModalMode !== null ||
+    isWallArtOpen ||
+    isMarzipanCareOpen ||
     Boolean(pendingTakeawayDrink);
 
   // Advance to next guest OR settle the Evening Memory Diary when all 5 guests of the day are served
@@ -526,10 +563,87 @@ export function App() {
   const handlePetMarzipan = () => {
     sound.playPurr();
     setMarzipanPurring(true);
+    canAutoSaveRef.current = true;
+    setSaveState((prev) => ({
+      ...prev,
+      marzipanCare: {
+        ...prev.marzipanCare,
+        petsCount: prev.marzipanCare.petsCount + 1,
+      },
+    }));
     if (marzipanTimerRef.current) window.clearTimeout(marzipanTimerRef.current);
     marzipanTimerRef.current = window.setTimeout(() => {
       setMarzipanPurring(false);
     }, 1700);
+  };
+
+  // --- Step 06: Personalization & Marzipan Care Handlers (StrictMode-pure) ---
+  const handleMarkLetterRead = (letterId: string) => {
+    if (saveState.readLetterIds.includes(letterId)) return;
+    canAutoSaveRef.current = true;
+    setSaveState((prev) =>
+      prev.readLetterIds.includes(letterId)
+        ? prev
+        : { ...prev, readLetterIds: [...prev.readLetterIds, letterId] }
+    );
+  };
+
+  const handleSaveWallArt = (nextArt: WallArtState) => {
+    canAutoSaveRef.current = true;
+    setSaveState((prev) => ({ ...prev, wallArt: nextArt }));
+    setIsWallArtOpen(false);
+    sound.playSecretSaved();
+    if (nextArt.visible && nextArt.dataUrl) {
+      showCelebration({
+        icon: '🖼️',
+        title: nextArt.title
+          ? `Картину «${nextArt.title}» повішено!`
+          : 'Твою картину повішено в кав’ярні!',
+        subtitle: 'Вона тепер прикрашає стіну — натисни на неї, щоб домалювати!',
+        tone: 'friend',
+      });
+    }
+  };
+
+  const handleGiveMarzipanTreat = (
+    _treatId: 'fish_crunch' | 'cat_milk' | 'salmon_delight',
+    cost: number
+  ) => {
+    if (cost > 0 && saveState.coins < cost) return;
+    canAutoSaveRef.current = true;
+    setSaveState((prev) => {
+      if (cost > 0 && prev.coins < cost) return prev;
+      return {
+        ...prev,
+        coins: prev.coins - cost,
+        marzipanCare: {
+          ...prev.marzipanCare,
+          treatsGiven: prev.marzipanCare.treatsGiven + 1,
+        },
+      };
+    });
+  };
+
+  const handleCompleteYarnRound = (): boolean => {
+    const currentDay = saveState.dayProgress.dayNumber;
+    const deservesDailyBonus =
+      saveState.marzipanCare.lastPlayRewardDay < currentDay;
+    canAutoSaveRef.current = true;
+    setSaveState((prev) => {
+      const canClaim = prev.marzipanCare.lastPlayRewardDay < prev.dayProgress.dayNumber;
+      return {
+        ...prev,
+        coins: prev.coins + (canClaim ? 5 : 0),
+        marzipanCare: {
+          ...prev.marzipanCare,
+          yarnGamesPlayed: prev.marzipanCare.yarnGamesPlayed + 1,
+          lastPlayRewardDay: canClaim
+            ? prev.dayProgress.dayNumber
+            : prev.marzipanCare.lastPlayRewardDay,
+        },
+      };
+    });
+    return deservesDailyBonus;
   };
 
   const handleSaveSecretDrink = (recipe: SecretDrinkRecipe) => {
@@ -713,6 +827,9 @@ export function App() {
       dayProgress: createFreshDayProgress(1, 'open'),
       dayHistory: [],
       puhBirthday: createInitialBirthdayStoryState(),
+      readLetterIds: [],
+      wallArt: { ...DEFAULT_WALL_ART },
+      marzipanCare: { ...DEFAULT_MARZIPAN_CARE },
     });
   };
 
@@ -1352,6 +1469,16 @@ export function App() {
     (id) => (saveState.friendship[id] ?? 0) >= BEST_FRIEND_THRESHOLD
   ).length;
 
+  const unlockedLetters = getUnlockedLetters(
+    lettersCatalog,
+    saveState.dayProgress.dayNumber,
+    saveState.servedCount
+  );
+  const unreadLettersCount = getUnreadLettersCount(
+    unlockedLetters,
+    saveState.readLetterIds
+  );
+
   const suggestedTabs: StationTab[] = [];
   if (emotion !== 'happy') {
     if (order.isTravelerGuest) {
@@ -1448,7 +1575,16 @@ export function App() {
             isDayComplete={isDayTargetReached(saveState.dayProgress)}
             isWorkbenchOpen={isWorkbenchOpen}
             birthdayDecor={getActiveBirthdayDecor(saveState.puhBirthday)}
+            wallArt={saveState.wallArt}
             onPetMarzipan={handlePetMarzipan}
+            onOpenMarzipanCare={() => {
+              sound.playPop();
+              setIsMarzipanCareOpen(true);
+            }}
+            onOpenWallArt={() => {
+              sound.playPop();
+              setIsWallArtOpen(true);
+            }}
             onToggleMusicBox={handleToggleMusicBox}
             onOpenSecretCreator={() => {
               sound.playPop();
@@ -1485,6 +1621,7 @@ export function App() {
               suggestedTabs={suggestedTabs}
               dayProgress={saveState.dayProgress}
               puhBirthday={saveState.puhBirthday}
+              unreadLettersCount={unreadLettersCount}
               onSelectTab={handleOpenStationTab}
               onToggleOpen={() => {
                 sound.playPop();
@@ -1683,7 +1820,7 @@ export function App() {
               />
             )}
 
-            {dayJournalMode && !birthdayModalMode && (
+            {dayJournalMode && !birthdayModalMode && !isWallArtOpen && (
               <DayJournalModal
                 isOpen={true}
                 mode={dayJournalMode}
@@ -1691,6 +1828,9 @@ export function App() {
                 dayHistory={saveState.dayHistory}
                 weather={saveState.weather}
                 puhBirthday={saveState.puhBirthday}
+                unlockedLetters={unlockedLetters}
+                readLetterIds={saveState.readLetterIds}
+                wallArt={saveState.wallArt}
                 onStartDay={handleStartMorningDay}
                 onAdvanceNextDay={handleAdvanceNextDay}
                 onOpenBirthdayChooser={() => {
@@ -1702,6 +1842,12 @@ export function App() {
                   sound.playPop();
                   setBirthdayPostcardTheme(theme ?? null);
                   setBirthdayModalMode('postcard');
+                }}
+                onMarkLetterRead={handleMarkLetterRead}
+                onOpenWallArt={() => {
+                  sound.playPop();
+                  setIsDiaryOpen(false);
+                  setIsWallArtOpen(true);
                 }}
                 onClose={() => {
                   sound.playPop();
@@ -1725,6 +1871,34 @@ export function App() {
                 onClose={() => {
                   sound.playPop();
                   setBirthdayModalMode(null);
+                }}
+              />
+            )}
+
+            {isWallArtOpen && (
+              <WallArtModal
+                isOpen={isWallArtOpen}
+                wallArt={saveState.wallArt}
+                onSave={handleSaveWallArt}
+                onClose={() => {
+                  sound.playPop();
+                  setIsWallArtOpen(false);
+                }}
+              />
+            )}
+
+            {isMarzipanCareOpen && (
+              <MarzipanCareModal
+                isOpen={isMarzipanCareOpen}
+                coins={saveState.coins}
+                currentDayNumber={saveState.dayProgress.dayNumber}
+                equippedAccessories={saveState.equippedAccessories}
+                care={saveState.marzipanCare}
+                onGiveTreat={handleGiveMarzipanTreat}
+                onCompleteYarnRound={handleCompleteYarnRound}
+                onClose={() => {
+                  sound.playPop();
+                  setIsMarzipanCareOpen(false);
                 }}
               />
             )}

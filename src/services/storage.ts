@@ -18,6 +18,7 @@ import type {
   GuestId,
   HotIngredientId,
   MarzipanAccessoryId,
+  MarzipanCareState,
   MarzipanEquipped,
   MarzipanEyesAccessoryId,
   MarzipanHeadAccessoryId,
@@ -28,16 +29,24 @@ import type {
   SecretDrinkRecipe,
   TallGlassIngredientId,
   UnlockableRecipeId,
+  WallArtState,
+  WallFrameStyle,
   WeatherType,
 } from '../types/game';
 import { createInitialBirthdayStoryState } from '../utils/birthdayStory.ts';
 import { createFreshDayProgress } from '../utils/dayDirector.ts';
 
-export const CURRENT_SAVE_VERSION = 5;
+export const CURRENT_SAVE_VERSION = 6;
 export const STORAGE_KEY = 'mur_late_save_v1';
 export const STORAGE_BACKUP_KEY = 'mur_late_save_v1_backup';
+export const MAX_WALL_ART_DATA_URL_LENGTH = 65_000;
 
 const VALID_WEATHERS: WeatherType[] = ['sunny', 'rainy', 'snowy'];
+const VALID_FRAME_STYLES: WallFrameStyle[] = [
+  'honey_wood',
+  'blush_ribbon',
+  'golden_stars',
+];
 const VALID_BIRTHDAY_STATUSES: BirthdayStoryStatus[] = [
   'not_started',
   'active',
@@ -107,6 +116,20 @@ export const DEFAULT_EQUIPPED: MarzipanEquipped = {
   neck: null,
 };
 
+export const DEFAULT_WALL_ART: WallArtState = {
+  dataUrl: null,
+  title: '',
+  frameStyle: 'honey_wood',
+  visible: true,
+};
+
+export const DEFAULT_MARZIPAN_CARE: MarzipanCareState = {
+  treatsGiven: 0,
+  yarnGamesPlayed: 0,
+  petsCount: 0,
+  lastPlayRewardDay: 0,
+};
+
 export const DEFAULT_SAVE_STATE: CafeSaveState = {
   version: CURRENT_SAVE_VERSION,
   coins: 0,
@@ -127,6 +150,9 @@ export const DEFAULT_SAVE_STATE: CafeSaveState = {
   dayProgress: createFreshDayProgress(1, 'open'),
   dayHistory: [],
   puhBirthday: createInitialBirthdayStoryState(),
+  readLetterIds: [],
+  wallArt: { ...DEFAULT_WALL_ART },
+  marzipanCare: { ...DEFAULT_MARZIPAN_CARE },
 };
 
 export type LoadSaveStatus =
@@ -375,6 +401,59 @@ function sanitizeBirthdayStory(raw: unknown): PuhBirthdayStoryState {
   };
 }
 
+function sanitizeReadLetterIds(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const unique = new Set<string>();
+  for (const item of raw) {
+    if (typeof item === 'string' && item.trim() && item.trim().length <= 64) {
+      unique.add(item.trim());
+      if (unique.size >= 120) break;
+    }
+  }
+  return Array.from(unique);
+}
+
+export function sanitizeWallArt(raw: unknown): WallArtState {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return { ...DEFAULT_WALL_ART };
+  }
+  const c = raw as Partial<WallArtState>;
+  const isSafeDataUrl =
+    typeof c.dataUrl === 'string' &&
+    c.dataUrl.length <= MAX_WALL_ART_DATA_URL_LENGTH &&
+    (c.dataUrl.startsWith('data:image/webp;base64,') ||
+      c.dataUrl.startsWith('data:image/png;base64,'));
+  const title =
+    typeof c.title === 'string' ? c.title.trim().slice(0, 32) : '';
+  const frameStyle: WallFrameStyle =
+    c.frameStyle && VALID_FRAME_STYLES.includes(c.frameStyle)
+      ? c.frameStyle
+      : 'honey_wood';
+
+  return {
+    dataUrl: isSafeDataUrl ? c.dataUrl! : null,
+    title,
+    frameStyle,
+    visible: typeof c.visible === 'boolean' ? c.visible : true,
+  };
+}
+
+function sanitizeMarzipanCare(raw: unknown): MarzipanCareState {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return { ...DEFAULT_MARZIPAN_CARE };
+  }
+  const c = raw as Partial<MarzipanCareState>;
+  const safeNum = (v: unknown) =>
+    typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0;
+
+  return {
+    treatsGiven: safeNum(c.treatsGiven),
+    yarnGamesPlayed: safeNum(c.yarnGamesPlayed),
+    petsCount: safeNum(c.petsCount),
+    lastPlayRewardDay: safeNum(c.lastPlayRewardDay),
+  };
+}
+
 export function sanitizeSecretDrink(
   raw: unknown,
   unlockedRecipes: UnlockableRecipeId[]
@@ -542,6 +621,9 @@ export function parseAndSanitizeSave(rawObj: unknown): ParseSaveResult {
   const dayProgress = sanitizeDayProgress(parsed.dayProgress, fallbackDayNumber);
   const dayHistory = sanitizeDayHistory(parsed.dayHistory);
   const puhBirthday = sanitizeBirthdayStory(parsed.puhBirthday);
+  const readLetterIds = sanitizeReadLetterIds(parsed.readLetterIds);
+  const wallArt = sanitizeWallArt(parsed.wallArt);
+  const marzipanCare = sanitizeMarzipanCare(parsed.marzipanCare);
 
   return {
     ok: true,
@@ -566,6 +648,9 @@ export function parseAndSanitizeSave(rawObj: unknown): ParseSaveResult {
       dayProgress,
       dayHistory,
       puhBirthday,
+      readLetterIds,
+      wallArt,
+      marzipanCare,
     },
   };
 }

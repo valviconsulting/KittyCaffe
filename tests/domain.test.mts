@@ -1,4 +1,15 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import {
+  BIRTHDAY_FINALE_BONUS_COINS,
+  BIRTHDAY_THEMES,
+  BIRTHDAY_THEME_ORDER,
+} from '../src/data/birthdayStory.ts';
+import {
+  DAY_EVENING_BONUS_COINS,
+  DAY_GUEST_TARGET,
+  getThemeForDayNumber,
+} from '../src/data/days.ts';
 import {
   BEST_FRIEND_THRESHOLD,
   GUESTS,
@@ -6,6 +17,7 @@ import {
   generateOrder,
   isBestFriend,
 } from '../src/data/guests.ts';
+import { DEFAULT_CAFE_LETTERS } from '../src/data/letters.ts';
 import {
   DRINK_RECIPES,
   PASTRY_RECIPES,
@@ -26,22 +38,14 @@ import {
   RARE_STICKER_ORDER,
 } from '../src/data/stickers.ts';
 import {
-  BIRTHDAY_FINALE_BONUS_COINS,
-  BIRTHDAY_THEMES,
-  BIRTHDAY_THEME_ORDER,
-} from '../src/data/birthdayStory.ts';
-import {
-  DAY_EVENING_BONUS_COINS,
-  DAY_GUEST_TARGET,
-  getThemeForDayNumber,
-} from '../src/data/days.ts';
-import {
   CURRENT_SAVE_VERSION,
   DEFAULT_SAVE_STATE,
+  MAX_WALL_ART_DATA_URL_LENGTH,
   exportSaveJson,
   importSaveJson,
   parseAndSanitizeSave,
   sanitizeSecretDrink,
+  sanitizeWallArt,
 } from '../src/services/storage.ts';
 import {
   advanceBirthdayStageOnNextMorning,
@@ -60,6 +64,11 @@ import {
   isLateAfternoon,
   recordServedGuestInDay,
 } from '../src/utils/dayDirector.ts';
+import {
+  getUnlockedLetters,
+  getUnreadLettersCount,
+  sanitizeLettersCatalog,
+} from '../src/utils/letters.ts';
 import {
   MILK_POUR_DURATION_PER_PORTION_MS,
   MILK_POUR_HOLD_THRESHOLD_MS,
@@ -488,6 +497,73 @@ if (importedStory.ok) {
     'forest',
   ]);
   assert.equal(importedStory.state.puhBirthday.status, 'completed');
+}
+
+// 13. Step 06: Local letters (`public/content/letters.json`), Wall Art safety cap, & Marzipan Care v6 persistence
+const rawLettersJson = JSON.parse(
+  readFileSync(new URL('../public/content/letters.json', import.meta.url), 'utf8')
+);
+const parsedLetters = sanitizeLettersCatalog(rawLettersJson);
+assert.ok(parsedLetters.length >= 6);
+assert.equal(parsedLetters.length, DEFAULT_CAFE_LETTERS.length);
+assert.equal(getUnlockedLetters(parsedLetters, 1, 0).length, 1);
+assert.equal(getUnlockedLetters(parsedLetters, 6, 20).length, parsedLetters.length);
+assert.equal(
+  getUnreadLettersCount(
+    getUnlockedLetters(parsedLetters, 3, 10),
+    ['letter_welcome_marzipan']
+  ),
+  2
+);
+// Malformed letter payload safely falls back to defaults without throwing
+assert.deepEqual(sanitizeLettersCatalog({ bad: true }), DEFAULT_CAFE_LETTERS);
+
+// Wall art sanitizer blocks unsafe URLs / oversized payloads, preserves valid WebP drawings
+assert.equal(
+  sanitizeWallArt({ dataUrl: 'javascript:alert(1)', title: 'bad' }).dataUrl,
+  null
+);
+assert.equal(
+  sanitizeWallArt({
+    dataUrl: `data:image/webp;base64,${'A'.repeat(MAX_WALL_ART_DATA_URL_LENGTH + 10)}`,
+  }).dataUrl,
+  null
+);
+const validArt = sanitizeWallArt({
+  dataUrl: 'data:image/webp;base64,UklGRh4AAABXRUJQVlA4TBEAAAAvAAAAAAfQ//73v/+BiOh/AAA=',
+  title: '  Мій котик  ',
+  frameStyle: 'blush_ribbon',
+  visible: true,
+});
+assert.ok(validArt.dataUrl?.startsWith('data:image/webp;base64,'));
+assert.equal(validArt.title, 'Мій котик');
+assert.equal(validArt.frameStyle, 'blush_ribbon');
+
+// Full v6 save export/import preserves letters, wall art, and Marzipan care cleanly
+const v6Export = exportSaveJson({
+  ...DEFAULT_SAVE_STATE,
+  coins: 303,
+  readLetterIds: ['letter_welcome_marzipan', 'letter_puh_cocoa'],
+  wallArt: validArt,
+  marzipanCare: {
+    treatsGiven: 4,
+    yarnGamesPlayed: 2,
+    petsCount: 9,
+    lastPlayRewardDay: 6,
+  },
+});
+const v6Import = importSaveJson(v6Export);
+assert.equal(v6Import.ok, true);
+if (v6Import.ok) {
+  assert.equal(v6Import.state.version, CURRENT_SAVE_VERSION);
+  assert.deepEqual(v6Import.state.readLetterIds, [
+    'letter_welcome_marzipan',
+    'letter_puh_cocoa',
+  ]);
+  assert.equal(v6Import.state.wallArt.title, 'Мій котик');
+  assert.equal(v6Import.state.wallArt.frameStyle, 'blush_ribbon');
+  assert.equal(v6Import.state.marzipanCare.treatsGiven, 4);
+  assert.equal(v6Import.state.marzipanCare.lastPlayRewardDay, 6);
 }
 
 console.log('ALL_DOMAIN_TESTS_PASSED');

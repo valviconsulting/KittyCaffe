@@ -13,6 +13,7 @@ interface StationTabsProps {
   suggestedTabs?: StationTab[];
   dayProgress: DayProgressState;
   puhBirthday?: PuhBirthdayStoryState;
+  unreadLettersCount?: number;
   onSelectTab: (tab: StationTab) => void;
   onToggleOpen: () => void;
   onOpenDayJournal: () => void;
@@ -28,7 +29,7 @@ const TABS: Array<{
   {
     id: 'hot',
     icon: '☕',
-    shortLabel: 'Кава/какао',
+    shortLabel: 'Кава',
     label: 'Кава та какао',
     dotColor: '#C5844A',
   },
@@ -54,6 +55,7 @@ export const StationTabs: React.FC<StationTabsProps> = ({
   suggestedTabs = [],
   dayProgress,
   puhBirthday,
+  unreadLettersCount = 0,
   onSelectTab,
   onToggleOpen,
   onOpenDayJournal,
@@ -80,7 +82,7 @@ export const StationTabs: React.FC<StationTabsProps> = ({
               aria-expanded={isActive}
               whileTap={{ scale: 0.97 }}
               onClick={() => onSelectTab(tab.id)}
-              className={`relative flex min-h-[38px] sm:min-h-[38px] flex-1 sm:flex-none items-center justify-center gap-1 sm:gap-1.5 px-1.5 sm:px-4 md:px-5 py-1.5 text-[10.5px] sm:text-xs md:text-[13px] font-bold transition-all whitespace-nowrap ${
+              className={`relative flex min-h-[38px] sm:min-h-[38px] flex-1 sm:flex-none items-center justify-center gap-1 sm:gap-1.5 px-1 sm:px-4 md:px-5 py-1.5 text-[10px] sm:text-xs md:text-[13px] font-bold transition-all whitespace-nowrap ${
                 isOpen
                   ? isActive
                     ? 'z-10 -mb-[2px] rounded-t-2xl border-2 border-b-0 border-[#8C6248] bg-gradient-to-b from-[#FBF2E2] via-[#F2E2C9] to-[#EAD7BE] pb-2 text-[#4A2E1D] shadow-[0_-3px_10px_rgba(90,56,32,0.12),inset_0_1px_0_rgba(255,252,245,0.9)]'
@@ -140,17 +142,25 @@ export const StationTabs: React.FC<StationTabsProps> = ({
           whileHover={{ y: -1, scale: 1.02 }}
           whileTap={{ scale: 0.96 }}
           onClick={onOpenDayJournal}
-          title={`День ${dayProgress.dayNumber}: ${dayTheme.title} (${servedToday}/${dayProgress.guestsTarget} гостей). Натисни, щоб відкрити Щоденник спогадів!`}
-          aria-label={`День ${dayProgress.dayNumber}, ${dayTheme.title}, обслужено ${servedToday} з ${dayProgress.guestsTarget} гостей. Відкрити щоденник.`}
-          className={`${
+          title={`День ${dayProgress.dayNumber}: ${dayTheme.title} (${servedToday}/${dayProgress.guestsTarget} гостей)${unreadLettersCount > 0 ? ` • Нових листів: ${unreadLettersCount}` : ''}. Натисни, щоб відкрити Щоденник і пошту!`}
+          aria-label={`День ${dayProgress.dayNumber}, ${dayTheme.title}, обслужено ${servedToday} з ${dayProgress.guestsTarget} гостей. Відкрити щоденник і пошту.`}
+          className={`relative ${
             isOpen ? 'hidden sm:flex' : 'flex'
-          } min-h-[34px] sm:min-h-[32px] shrink-0 items-center gap-1 sm:gap-2 rounded-full border-2 px-2 sm:px-3 py-0.5 text-[10px] sm:text-[11px] font-bold shadow-xs transition-all hover:brightness-98 whitespace-nowrap`}
+          } min-h-[34px] sm:min-h-[32px] shrink-0 items-center gap-1 sm:gap-2 rounded-full border-2 px-1.5 sm:px-3 py-0.5 text-[9.5px] sm:text-[11px] font-bold shadow-xs transition-all hover:brightness-98 whitespace-nowrap`}
           style={{
             backgroundColor: dayTheme.pillBg,
             borderColor: dayTheme.pillBorder,
             color: dayTheme.pillText,
           }}
         >
+          {unreadLettersCount > 0 && (
+            <span
+              aria-hidden="true"
+              className="absolute -right-0.5 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#E85C84] px-1 text-[9px] font-bold text-white ring-2 ring-[#E5CEAB] animate-pulse"
+            >
+              💌
+            </span>
+          )}
           <span aria-hidden="true" className="text-xs sm:text-sm leading-none">
             {isBirthdayActive ? '🎂' : dayTheme.icon}
           </span>

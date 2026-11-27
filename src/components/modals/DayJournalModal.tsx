@@ -10,9 +10,11 @@ import { GUESTS } from '../../data/guests';
 import { WEATHER_CONFIG } from '../../data/weather';
 import type {
   BirthdayThemeId,
+  CafeLetter,
   DayMemoryEntry,
   DayProgressState,
   PuhBirthdayStoryState,
+  WallArtState,
   WeatherType,
 } from '../../types/game';
 import { buildDayMemoryHighlight } from '../../utils/dayDirector';
@@ -26,12 +28,27 @@ interface DayJournalModalProps {
   dayHistory: DayMemoryEntry[];
   weather: WeatherType;
   puhBirthday: PuhBirthdayStoryState;
+  unlockedLetters: CafeLetter[];
+  readLetterIds: string[];
+  wallArt: WallArtState;
   onStartDay: () => void;
   onAdvanceNextDay: () => void;
   onOpenBirthdayChooser: () => void;
   onOpenBirthdayPostcard: (theme?: BirthdayThemeId) => void;
+  onMarkLetterRead: (id: string) => void;
+  onOpenWallArt: () => void;
   onClose: () => void;
 }
+
+const LETTER_TINT_STYLES: Record<
+  NonNullable<CafeLetter['paperTint']>,
+  string
+> = {
+  cream: 'border-[#DFC29B] bg-gradient-to-br from-[#FFFDF7] to-[#FAF0DC]',
+  blush: 'border-[#E5B0C2] bg-gradient-to-br from-[#FFF8FA] to-[#FCEAF0]',
+  mint: 'border-[#A7CEB3] bg-gradient-to-br from-[#F7FCF8] to-[#E6F4EA]',
+  lavender: 'border-[#C5B3DF] bg-gradient-to-br from-[#FAF8FE] to-[#EFE8FA]',
+};
 
 export const DayJournalModal: React.FC<DayJournalModalProps> = ({
   isOpen,
@@ -40,13 +57,22 @@ export const DayJournalModal: React.FC<DayJournalModalProps> = ({
   dayHistory,
   weather,
   puhBirthday,
+  unlockedLetters,
+  readLetterIds,
+  wallArt,
   onStartDay,
   onAdvanceNextDay,
   onOpenBirthdayChooser,
   onOpenBirthdayPostcard,
+  onMarkLetterRead,
+  onOpenWallArt,
   onClose,
 }) => {
   const [showHistoryInEvening, setShowHistoryInEvening] = useState(false);
+  const [diaryTab, setDiaryTab] = useState<'memories' | 'letters'>('memories');
+  const [openLetterId, setOpenLetterId] = useState<string | null>(null);
+  const readSet = new Set(readLetterIds);
+  const unreadCount = unlockedLetters.filter((l) => !readSet.has(l.id)).length;
 
   const theme = DAY_THEMES[dayProgress.themeId];
   const weatherMeta = WEATHER_CONFIG[weather];
@@ -364,9 +390,110 @@ export const DayJournalModal: React.FC<DayJournalModalProps> = ({
                 </>
               )}
 
-              {/* MODE 3: DIARY OPENED MID-DAY */}
+              {/* MODE 3: DIARY & LOCAL LETTERS MAILBOX OPENED MID-DAY */}
               {mode === 'diary' && (
                 <>
+                  {/* Sub-Tabs: Memories/Creative vs Local Letters Mailbox */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      data-diary-tab="memories"
+                      onClick={() => setDiaryTab('memories')}
+                      className={`min-h-[38px] rounded-2xl border-2 px-3 py-1.5 text-xs font-bold transition-all ${
+                        diaryTab === 'memories'
+                          ? 'border-[#8F6549] bg-[#F7E5C8] text-[#4E2F18] shadow-2xs'
+                          : 'border-[#DFC6A6] bg-[#FFFDF8] text-[#7D593D] hover:bg-[#FAF1E2]'
+                      }`}
+                    >
+                      📖 Спогади й історії
+                    </button>
+                    <button
+                      type="button"
+                      data-diary-tab="letters"
+                      onClick={() => setDiaryTab('letters')}
+                      className={`relative min-h-[38px] rounded-2xl border-2 px-3 py-1.5 text-xs font-bold transition-all ${
+                        diaryTab === 'letters'
+                          ? 'border-[#C26E8A] bg-[#FCE8EF] text-[#7D2B46] shadow-2xs'
+                          : 'border-[#DFC6A6] bg-[#FFFDF8] text-[#7D593D] hover:bg-[#FAF1E2]'
+                      }`}
+                    >
+                      💌 Теплі листи ({unlockedLetters.length})
+                      {unreadCount > 0 && (
+                        <span className="ml-1.5 inline-flex items-center rounded-full bg-[#E85C84] px-1.5 py-0.2 text-[9.5px] font-bold text-white">
+                          +{unreadCount}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+
+                  {diaryTab === 'letters' ? (
+                    <div className="space-y-2.5">
+                      <p className="text-[11px] font-semibold text-[#7D583C]">
+                        У поштовій скриньці «Мур-Лате» зберігаються листи від друзів та особливі записки. Натисни на конверт, щоб прочитати!
+                      </p>
+
+                      {unlockedLetters.map((letter) => {
+                        const isRead = readSet.has(letter.id);
+                        const isExpanded = openLetterId === letter.id;
+                        const tintClass =
+                          LETTER_TINT_STYLES[letter.paperTint ?? 'cream'];
+
+                        return (
+                          <div
+                            key={letter.id}
+                            data-letter-id={letter.id}
+                            className={`rounded-2xl border-2 transition-all shadow-2xs overflow-hidden ${tintClass}`}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const nextOpen = isExpanded ? null : letter.id;
+                                setOpenLetterId(nextOpen);
+                                if (!isRead) onMarkLetterRead(letter.id);
+                              }}
+                              className="flex w-full items-center justify-between gap-2 px-3.5 py-2.5 text-left"
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <span className="text-xl leading-none shrink-0">
+                                  {letter.fromEmoji}
+                                </span>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="truncate text-xs font-bold text-[#5A3E32]">
+                                      {letter.title}
+                                    </span>
+                                    {!isRead && (
+                                      <span className="shrink-0 rounded-full bg-[#E85C84] px-1.5 py-0.2 text-[9px] font-bold text-white">
+                                        Новий!
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="block text-[10.5px] font-semibold text-[#856045]">
+                                    Від: {letter.fromName} • День {letter.unlockMinDay}+
+                                  </span>
+                                </div>
+                              </div>
+                              <span className="shrink-0 text-sm">
+                                {isExpanded ? '▲' : letter.stampEmoji}
+                              </span>
+                            </button>
+
+                            {isExpanded && (
+                              <div className="border-t border-[#8C6242]/15 px-3.5 py-3 bg-[#FFFDF9]/75">
+                                <p className="font-handwriting text-xl leading-snug font-bold text-[#5A3E32]">
+                                  {letter.body}
+                                </p>
+                                <p className="mt-2 text-right text-[11px] font-bold text-[#8A6142]">
+                                  — {letter.fromName} {letter.stampEmoji}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <>
                   {/* Today's Live Progress Card */}
                   <div className="rounded-2xl border-2 border-[#D7B58A] bg-[#FFFDF8] p-3.5 shadow-2xs space-y-2.5">
                     <div className="flex flex-wrap items-center justify-between gap-2">
@@ -499,6 +626,43 @@ export const DayJournalModal: React.FC<DayJournalModalProps> = ({
                     )}
                   </div>
 
+                  {/* Step 06 Creative Personalization Card: Child's Own Wall Painting */}
+                  <div className="flex items-center justify-between gap-3 rounded-2xl border-2 border-[#D4B186] bg-gradient-to-r from-[#FFF9EC] via-[#FDF2DC] to-[#FAF0E4] p-3 shadow-2xs">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {wallArt.dataUrl ? (
+                        <img
+                          src={wallArt.dataUrl}
+                          alt={wallArt.title || 'Твоя картина'}
+                          className="h-11 w-14 shrink-0 rounded-lg border-2 border-[#8C5A34] object-cover shadow-xs"
+                        />
+                      ) : (
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border-2 border-dashed border-[#C79B6B] bg-[#FFFDF8] text-xl">
+                          🎨
+                        </span>
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-handwriting text-xl leading-none font-bold text-[#5A3E32]">
+                          🖼️ Моя картина на стіні
+                        </p>
+                        <p className="mt-0.5 text-[11px] font-semibold text-[#7A563C] truncate">
+                          {wallArt.dataUrl
+                            ? wallArt.visible
+                              ? `Висить у залі${wallArt.title ? `: «${wallArt.title}»` : '!'}`
+                              : 'Збережено (можна повісити знову)'
+                            : 'Намалюй власну картину й повісь її в кав’ярні!'}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      data-wall-art-open="true"
+                      onClick={onOpenWallArt}
+                      className="shrink-0 min-h-[38px] rounded-xl border-2 border-[#A87544] border-b-[3px] bg-gradient-to-b from-[#FFF5DF] to-[#F3D5A3] px-3 py-1 text-xs font-bold text-[#5A3615] hover:brightness-98"
+                    >
+                      {wallArt.dataUrl ? 'Домалювати' : 'Малювати →'}
+                    </button>
+                  </div>
+
                   {/* Past Completed Days */}
                   <div className="space-y-2">
                     <h3 className="font-handwriting text-xl font-bold text-[#5A3E32]">
@@ -554,6 +718,8 @@ export const DayJournalModal: React.FC<DayJournalModalProps> = ({
                       </div>
                     )}
                   </div>
+                    </>
+                  )}
                 </>
               )}
             </div>

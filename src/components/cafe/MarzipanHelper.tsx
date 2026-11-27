@@ -10,6 +10,7 @@ interface MarzipanHelperProps {
   isPurring: boolean;
   equippedAccessories?: MarzipanEquipped;
   onPet: () => void;
+  onOpenCare?: () => void;
 }
 
 const EMPTY_EQUIPPED: MarzipanEquipped = {
@@ -22,17 +23,19 @@ export const MarzipanHelper: React.FC<MarzipanHelperProps> = ({
   isPurring,
   equippedAccessories = EMPTY_EQUIPPED,
   onPet,
+  onOpenCare,
 }) => {
   return (
-    <motion.button
-      type="button"
-      onClick={onPet}
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.94 }}
-      title="Погладити кота-помічника Марципана"
-      aria-label="Кіт-помічник Марципан. Натисни, щоб погладити!"
-      className="group relative flex min-h-[44px] min-w-[44px] flex-col items-center focus:outline-none"
-    >
+    <div className="relative flex flex-col items-center">
+      <motion.button
+        type="button"
+        onClick={onPet}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.94 }}
+        title="Погладити кота-помічника Марципана"
+        aria-label="Кіт-помічник Марципан. Натисни, щоб погладити!"
+        className="group relative flex min-h-[44px] min-w-[44px] flex-col items-center focus:outline-none"
+      >
       {/* Floating handwritten «Муррр~ ♥» and rising watercolor hearts */}
       <AnimatePresence>
         {isPurring && (
@@ -102,10 +105,31 @@ export const MarzipanHelper: React.FC<MarzipanHelperProps> = ({
         />
         <MarzipanAccessoriesOverlaySvg equipped={equippedAccessories} />
       </motion.div>
+      </motion.button>
 
-      <span className="relative z-20 -mt-1.5 rounded-full border border-[#D4AD84] bg-[#FCF7EC]/95 px-2 sm:px-2.5 py-0.5 text-[9px] sm:text-[10px] font-bold text-[#6E4A34] shadow-xs group-hover:border-[#E59FB3] group-hover:bg-[#FDF0F4] transition-colors">
-        Марципан
-      </span>
-    </motion.button>
+      <div className="relative z-20 -mt-1.5 flex items-center gap-1">
+        <button
+          type="button"
+          onClick={onPet}
+          className="rounded-full border border-[#D4AD84] bg-[#FCF7EC]/95 px-2 sm:px-2.5 py-0.5 text-[9px] sm:text-[10px] font-bold text-[#6E4A34] shadow-xs hover:border-[#E59FB3] hover:bg-[#FDF0F4] transition-colors"
+        >
+          Марципан
+        </button>
+        {onOpenCare && (
+          <motion.button
+            type="button"
+            data-marzipan-care-open="true"
+            whileHover={{ scale: 1.12 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={onOpenCare}
+            title="Куточок Марципана: котячі смаколики й гра з клубочком!"
+            aria-label="Відкрити куточок Марципана зі смаколиками та клубочком"
+            className="relative flex h-6 w-6 items-center justify-center rounded-full border border-[#D894AA] bg-[#FFF0F5] text-[11px] shadow-xs hover:bg-[#FADBE5] after:content-[''] after:absolute after:-inset-2"
+          >
+            🧶
+          </motion.button>
+        )}
+      </div>
+    </div>
   );
 };
