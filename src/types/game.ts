@@ -156,6 +156,44 @@ export type CafeDecorId =
 
 export type UnlockableRecipeId = 'matcha_latte' | 'carrot_cake';
 
+export type DayThemeId =
+  | 'honey_morning'
+  | 'rainy_cocoa'
+  | 'berry_breeze'
+  | 'snowy_cozy'
+  | 'pastry_fair'
+  | 'starlight_friends';
+
+export type DayPhase = 'morning' | 'open' | 'evening';
+
+export interface DayProgressState {
+  dayNumber: number;
+  themeId: DayThemeId;
+  phase: DayPhase;
+  guestsTarget: number;
+  guestsServedToday: GuestId[];
+  coinsEarnedToday: number;
+  latteArtToday: number;
+  takeawayToday: number;
+  travelerVisitedToday: boolean;
+  newBestFriendsToday: RegularGuestId[];
+  /** Idempotent guard: prevents duplicate +20 fish evening bonus across reloads */
+  eveningBonusClaimed: boolean;
+  /** Idempotent guard: prevents duplicate diary entries across reloads */
+  eveningEntryRecorded: boolean;
+}
+
+export interface DayMemoryEntry {
+  dayNumber: number;
+  themeId: DayThemeId;
+  weather: WeatherType;
+  guestsServed: GuestId[];
+  coinsEarned: number;
+  latteArtCount: number;
+  takeawayCount: number;
+  highlight: string;
+}
+
 export interface SecretDrinkRecipe {
   name: string;
   icon: string;
@@ -191,7 +229,7 @@ export interface ValidationResult {
   feedback: string;
 }
 
-/** Full localStorage persistence schema (v3: Phase 1 + 2 + 3) */
+/** Full localStorage persistence schema (v4: Phase 1–3 + Minimal Day Director) */
 export interface CafeSaveState {
   version: number;
   coins: number;
@@ -218,4 +256,7 @@ export interface CafeSaveState {
   musicBoxPlaying: boolean;
   /** Phase 3: Number of times player treated the Traveler Cat */
   travelerVisits: number;
+  /** Step 04: Minimal Day Director — current day progress & evening memory diary */
+  dayProgress: DayProgressState;
+  dayHistory: DayMemoryEntry[];
 }

@@ -1,7 +1,17 @@
+import {
+  DAY_GUEST_TARGET,
+  DAY_THEME_ORDER,
+  MAX_DAY_HISTORY,
+  getThemeForDayNumber,
+} from '../data/days.ts';
 import type {
   BlenderIngredientId,
   CafeDecorId,
   CafeSaveState,
+  DayMemoryEntry,
+  DayPhase,
+  DayProgressState,
+  DayThemeId,
   GuestId,
   HotIngredientId,
   MarzipanAccessoryId,
@@ -10,26 +20,29 @@ import type {
   MarzipanHeadAccessoryId,
   MarzipanNeckAccessoryId,
   RareStickerId,
+  RegularGuestId,
   SecretDrinkRecipe,
   TallGlassIngredientId,
   UnlockableRecipeId,
   WeatherType,
 } from '../types/game';
+import { createFreshDayProgress } from '../utils/dayDirector.ts';
 
-export const CURRENT_SAVE_VERSION = 3;
+export const CURRENT_SAVE_VERSION = 4;
 export const STORAGE_KEY = 'mur_late_save_v1';
 export const STORAGE_BACKUP_KEY = 'mur_late_save_v1_backup';
 
 const VALID_WEATHERS: WeatherType[] = ['sunny', 'rainy', 'snowy'];
-const VALID_GUEST_IDS: GuestId[] = [
+const VALID_REGULAR_GUEST_IDS: RegularGuestId[] = [
   'puh',
   'persyk',
   'luna',
   'marsel',
   'sofiya',
   'miya',
-  'mandrivnyk',
 ];
+const VALID_GUEST_IDS: GuestId[] = [...VALID_REGULAR_GUEST_IDS, 'mandrivnyk'];
+const VALID_DAY_PHASES: DayPhase[] = ['morning', 'open', 'evening'];
 const VALID_HOT_INGREDIENTS: HotIngredientId[] = [
   'espresso',
   'hotWater',
@@ -101,6 +114,8 @@ export const DEFAULT_SAVE_STATE: CafeSaveState = {
   unlockedRareStickers: [],
   musicBoxPlaying: false,
   travelerVisits: 0,
+  dayProgress: createFreshDayProgress(1, 'open'),
+  dayHistory: [],
 };
 
 export type LoadSaveStatus =
@@ -174,6 +189,145 @@ function sanitizeEquipped(
       ? c.neck
       : null;
   return { head, eyes, neck };
+}
+
+function sanitizeOrderedGuests(raw: unknown, limit: number): GuestId[] {
+  if (!Array.isArray(raw)) return [];
+  const allowed = new Set<string>(VALID_GUEST_IDS);
+  const out: GuestId[] = [];
+  for (const item of raw) {
+    if (typeof item === 'string' && allowed.has(item)) {
+      out.push(item as GuestId);
+      if (out.length >= limit) break;
+    }
+  }
+  return out;
+}
+
+function sanitizeDayProgress(
+  raw: unknown,
+  fallbackDayNumber: number
+): DayProgressState {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return createFreshDayProgress(fallbackDayNumber, 'open');
+  }
+  const c = raw as Partial<DayProgressState>;
+  const dayNumber =
+    typeof c.dayNumber === 'number' &&
+    Number.isFinite(c.dayNumber) &&
+    c.dayNumber >= 1
+      ? Math.floor(c.dayNumber)
+      : fallbackDayNumber;
+  const fallbackTheme = getThemeForDayNumber(dayNumber).id;
+  const themeId: DayThemeId =
+    c.themeId && DAY_THEME_ORDER.includes(c.themeId) ? c.themeId : fallbackTheme;
+  const phase: DayPhase =
+    c.phase && VALID_DAY_PHASES.includes(c.phase) ? c.phase : 'open';
+  const guestsTarget = DAY_GUEST_TARGET;
+  const guestsServedToday = sanitizeOrderedGuests(
+    c.guestsServedToday,
+    guestsTarget
+  );
+  const coinsEarnedToday =
+    typeof c.coinsEarnedToday === 'number' &&
+    Number.isFinite(c.coinsEarnedToday) &&
+    c.coinsEarnedToday >= 0
+      ? Math.floor(c.coinsEarnedToday)
+      : 0;
+  const latteArtToday =
+    typeof c.latteArtToday === 'number' &&
+    Number.isFinite(c.latteArtToday) &&
+    c.latteArtToday >= 0
+      ? Math.floor(c.latteArtToday)
+      : 0;
+  const takeawayToday =
+    typeof c.takeawayToday === 'number' &&
+    Number.isFinite(c.takeawayToday) &&
+    c.takeawayToday >= 0
+      ? Math.floor(c.takeawayToday)
+      : 0;
+  const newBestFriendsToday = sanitizeStringArray(
+    c.newBestFriendsToday,
+    VALID_REGULAR_GUEST_IDS
+  );
+
+  return {
+    dayNumber,
+    themeId,
+    phase,
+    guestsTarget,
+    guestsServedToday,
+    coinsEarnedToday,
+    latteArtToday,
+    takeawayToday,
+    travelerVisitedToday: Boolean(c.travelerVisitedToday),
+    newBestFriendsToday,
+    eveningBonusClaimed: Boolean(c.eveningBonusClaimed),
+    eveningEntryRecorded: Boolean(c.eveningEntryRecorded),
+  };
+}
+
+function sanitizeDayHistory(raw: unknown): DayMemoryEntry[] {
+  if (!Array.isArray(raw)) return [];
+  const seenDays = new Set<number>();
+  const entries: DayMemoryEntry[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
+    const c = item as Partial<DayMemoryEntry>;
+    if (
+      typeof c.dayNumber !== 'number' ||
+      !Number.isFinite(c.dayNumber) ||
+      c.dayNumber < 1
+    ) {
+      continue;
+    }
+    const dayNumber = Math.floor(c.dayNumber);
+    if (seenDays.has(dayNumber)) continue;
+    seenDays.add(dayNumber);
+
+    const themeId: DayThemeId =
+      c.themeId && DAY_THEME_ORDER.includes(c.themeId)
+        ? c.themeId
+        : getThemeForDayNumber(dayNumber).id;
+    const weather: WeatherType =
+      c.weather && VALID_WEATHERS.includes(c.weather) ? c.weather : 'sunny';
+    const guestsServed = sanitizeOrderedGuests(c.guestsServed, DAY_GUEST_TARGET);
+    const coinsEarned =
+      typeof c.coinsEarned === 'number' &&
+      Number.isFinite(c.coinsEarned) &&
+      c.coinsEarned >= 0
+        ? Math.floor(c.coinsEarned)
+        : 0;
+    const latteArtCount =
+      typeof c.latteArtCount === 'number' &&
+      Number.isFinite(c.latteArtCount) &&
+      c.latteArtCount >= 0
+        ? Math.floor(c.latteArtCount)
+        : 0;
+    const takeawayCount =
+      typeof c.takeawayCount === 'number' &&
+      Number.isFinite(c.takeawayCount) &&
+      c.takeawayCount >= 0
+        ? Math.floor(c.takeawayCount)
+        : 0;
+    const highlight =
+      typeof c.highlight === 'string' && c.highlight.trim()
+        ? c.highlight.trim().slice(0, 180)
+        : 'Теплий і затишний день у «Мур-Лате»!';
+
+    entries.push({
+      dayNumber,
+      themeId,
+      weather,
+      guestsServed,
+      coinsEarned,
+      latteArtCount,
+      takeawayCount,
+      highlight,
+    });
+    if (entries.length >= MAX_DAY_HISTORY) break;
+  }
+  return entries;
 }
 
 export function sanitizeSecretDrink(
@@ -336,6 +490,13 @@ export function parseAndSanitizeSave(rawObj: unknown): ParseSaveResult {
       ? Math.floor(parsed.travelerVisits)
       : 0;
 
+  const fallbackDayNumber = Math.max(
+    1,
+    Math.floor(servedCount / DAY_GUEST_TARGET) + 1
+  );
+  const dayProgress = sanitizeDayProgress(parsed.dayProgress, fallbackDayNumber);
+  const dayHistory = sanitizeDayHistory(parsed.dayHistory);
+
   return {
     ok: true,
     migrated: sourceVersion < CURRENT_SAVE_VERSION,
@@ -356,6 +517,8 @@ export function parseAndSanitizeSave(rawObj: unknown): ParseSaveResult {
       unlockedRareStickers,
       musicBoxPlaying,
       travelerVisits,
+      dayProgress,
+      dayHistory,
     },
   };
 }

@@ -26,12 +26,26 @@ import {
   RARE_STICKER_ORDER,
 } from '../src/data/stickers.ts';
 import {
+  DAY_EVENING_BONUS_COINS,
+  DAY_GUEST_TARGET,
+  getThemeForDayNumber,
+} from '../src/data/days.ts';
+import {
+  CURRENT_SAVE_VERSION,
   DEFAULT_SAVE_STATE,
   exportSaveJson,
   importSaveJson,
   parseAndSanitizeSave,
   sanitizeSecretDrink,
 } from '../src/services/storage.ts';
+import {
+  advanceToNextDay,
+  completeDayIntoEvening,
+  createFreshDayProgress,
+  isDayTargetReached,
+  isLateAfternoon,
+  recordServedGuestInDay,
+} from '../src/utils/dayDirector.ts';
 import {
   MILK_POUR_DURATION_PER_PORTION_MS,
   MILK_POUR_HOLD_THRESHOLD_MS,
@@ -204,9 +218,12 @@ const legacyV1 = parseAndSanitizeSave({
 assert.equal(legacyV1.ok, true);
 if (legacyV1.ok) {
   assert.equal(legacyV1.migrated, true);
-  assert.equal(legacyV1.state.version, 3);
+  assert.equal(legacyV1.state.version, CURRENT_SAVE_VERSION);
   assert.equal(legacyV1.state.coins, 120);
   assert.equal(legacyV1.state.friendship.puh, 2);
+  // 5 served guests -> seamlessly lands on Day 2 open
+  assert.equal(legacyV1.state.dayProgress.dayNumber, 2);
+  assert.equal(legacyV1.state.dayProgress.phase, 'open');
 }
 
 // Export / Import round-trip + invalid file rejection
@@ -271,5 +288,84 @@ assert.equal(hit2, true);
 assert.equal(completed, true);
 assert.equal(pourState.level, 2);
 assert.equal(pourState.committedCount, 2);
+
+// 11. Step 04: Minimal Day Director — 5-guest day lifecycle, idempotent evening bonus & v4 persistence
+let day = createFreshDayProgress(1, 'open');
+assert.equal(day.dayNumber, 1);
+assert.equal(day.themeId, getThemeForDayNumber(1).id);
+assert.equal(isDayTargetReached(day), false);
+assert.equal(isLateAfternoon(day), false);
+
+const sampleGuests: Array<'puh' | 'persyk' | 'luna' | 'marsel' | 'sofiya'> = [
+  'puh',
+  'persyk',
+  'luna',
+  'marsel',
+  'sofiya',
+];
+for (let i = 0; i < DAY_GUEST_TARGET; i++) {
+  day = recordServedGuestInDay(day, {
+    guestId: sampleGuests[i],
+    coinsEarned: 15,
+    hasLatteArt: i === 2,
+    hasTakeaway: i === 3,
+    isTraveler: false,
+    becameBestFriend: i === 4,
+  });
+  if (i === 3) {
+    assert.equal(isLateAfternoon(day), true);
+    assert.equal(isDayTargetReached(day), false);
+  }
+}
+assert.equal(isDayTargetReached(day), true);
+assert.equal(day.guestsServedToday.length, DAY_GUEST_TARGET);
+assert.equal(day.coinsEarnedToday, 75);
+assert.equal(day.latteArtToday, 1);
+assert.equal(day.takeawayToday, 1);
+
+// First evening settlement awards +20 fish & writes 1 diary entry
+const evening1 = completeDayIntoEvening(day, [], 'sunny');
+assert.equal(evening1.bonusCoins, DAY_EVENING_BONUS_COINS);
+assert.equal(evening1.nextDay.phase, 'evening');
+assert.equal(evening1.nextDay.eveningBonusClaimed, true);
+assert.equal(evening1.nextDay.eveningEntryRecorded, true);
+assert.equal(evening1.nextHistory.length, 1);
+assert.equal(evening1.nextHistory[0].coinsEarned, 75 + DAY_EVENING_BONUS_COINS);
+assert.ok(evening1.nextHistory[0].highlight.includes('Сова Софія'));
+
+// Calling completeDayIntoEvening again (e.g. after page reload) MUST be 100% idempotent (0 bonus, no duplicate!)
+const eveningReload = completeDayIntoEvening(
+  evening1.nextDay,
+  evening1.nextHistory,
+  'sunny'
+);
+assert.equal(eveningReload.bonusCoins, 0);
+assert.equal(eveningReload.nextHistory.length, 1);
+
+// Advancing from evening moves cleanly to Day 2 morning with fresh theme & weather
+const day2Transition = advanceToNextDay(evening1.nextDay);
+assert.equal(day2Transition.nextDay.dayNumber, 2);
+assert.equal(day2Transition.nextDay.phase, 'morning');
+assert.equal(day2Transition.nextDay.themeId, 'rainy_cocoa');
+assert.equal(day2Transition.suggestedWeather, 'rainy');
+assert.equal(day2Transition.nextDay.guestsServedToday.length, 0);
+
+// Reload persistence round-trip preserves exact mid-day & evening day state
+const exportedDaySave = exportSaveJson({
+  ...DEFAULT_SAVE_STATE,
+  coins: 195,
+  servedCount: 5,
+  dayProgress: evening1.nextDay,
+  dayHistory: evening1.nextHistory,
+});
+const restoredDaySave = importSaveJson(exportedDaySave);
+assert.equal(restoredDaySave.ok, true);
+if (restoredDaySave.ok) {
+  assert.equal(restoredDaySave.state.version, CURRENT_SAVE_VERSION);
+  assert.equal(restoredDaySave.state.dayProgress.phase, 'evening');
+  assert.equal(restoredDaySave.state.dayProgress.eveningBonusClaimed, true);
+  assert.equal(restoredDaySave.state.dayHistory.length, 1);
+  assert.equal(restoredDaySave.state.dayHistory[0].guestsServed.length, 5);
+}
 
 console.log('ALL_DOMAIN_TESTS_PASSED');

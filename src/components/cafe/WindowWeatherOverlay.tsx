@@ -3,6 +3,7 @@ import type { WeatherType } from '../../types/game';
 
 interface WindowWeatherOverlayProps {
   weather: WeatherType;
+  isLateAfternoon?: boolean;
 }
 
 const RAIN_STREAKS = [
@@ -50,14 +51,27 @@ const GOLDEN_MOTES = [
  */
 export const WindowWeatherOverlay: React.FC<WindowWeatherOverlayProps> = ({
   weather,
+  isLateAfternoon = false,
 }) => {
-  const lampStrength = weather === 'sunny' ? 0.32 : 0.44;
+  const baseLampStrength = weather === 'sunny' ? 0.32 : 0.44;
+  const lampStrength = isLateAfternoon ? baseLampStrength + 0.08 : baseLampStrength;
 
   return (
     <div
       className="pointer-events-none absolute inset-0 z-[2] overflow-hidden"
       aria-hidden="true"
     >
+      {/* Gentle late-afternoon golden-peach sunset wash as the final guest of the day arrives */}
+      {isLateAfternoon && (
+        <div
+          className="absolute inset-0 transition-opacity duration-700"
+          style={{
+            backgroundImage:
+              'linear-gradient(to bottom, rgba(255, 166, 92, 0.16) 0%, rgba(235, 132, 98, 0.1) 55%, rgba(164, 96, 86, 0.08) 100%)',
+            mixBlendMode: 'soft-light',
+          }}
+        />
+      )}
       {/* Subtle warm honey vignette grounding corners & framing the sunny center */}
       <div
         className="absolute inset-0"

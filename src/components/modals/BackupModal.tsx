@@ -154,6 +154,9 @@ const BackupModalInner: React.FC<BackupModalProps> = ({
               <span className="rounded-full bg-[#FDF5DC] border border-[#E3BE73] px-2.5 py-0.5">
                 🐟 {saveState.coins} рибок
               </span>
+              <span className="rounded-full bg-[#FFF5DF] border border-[#DEB36B] px-2.5 py-0.5">
+                ☀️ День {saveState.dayProgress.dayNumber}
+              </span>
               <span className="rounded-full bg-[#FDF1F4] border border-[#E9B8C5] px-2.5 py-0.5">
                 🐾 Гостей: {saveState.servedCount}
               </span>

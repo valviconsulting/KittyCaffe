@@ -63,6 +63,8 @@ interface CafeHallSceneProps {
   secretDrink: SecretDrinkRecipe | null;
   lastReward: number | null;
   celebration: CelebrationBanner | null;
+  isLateAfternoon?: boolean;
+  isDayComplete?: boolean;
   onPetMarzipan: () => void;
   onToggleMusicBox: () => void;
   onOpenSecretCreator: () => void;
@@ -91,6 +93,8 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
   secretDrink,
   lastReward,
   celebration,
+  isLateAfternoon = false,
+  isDayComplete = false,
   onPetMarzipan,
   onToggleMusicBox,
   onOpenSecretCreator,
@@ -235,9 +239,13 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.94 }}
             onClick={onNextGuest}
-            className="min-h-[34px] rounded-full border-2 border-[#84BC96] bg-[#B7DEC3] px-3 py-0.5 text-[11px] font-bold text-[#235436] shadow-xs hover:bg-[#A3D2B1]"
+            className={`min-h-[34px] rounded-full border-2 px-3 py-0.5 text-[11px] font-bold shadow-xs ${
+              isDayComplete
+                ? 'border-[#C98F35] bg-[#FFE7A8] text-[#5C370A] hover:bg-[#FBD980]'
+                : 'border-[#84BC96] bg-[#B7DEC3] text-[#235436] hover:bg-[#A3D2B1]'
+            }`}
           >
-            Наступний гість →
+            {isDayComplete ? '📖 Підсумок дня →' : 'Наступний гість →'}
           </motion.button>
         </div>
       )}
@@ -259,7 +267,7 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
       />
 
       {/* Warm amber lamp glow + live weather effects over central window */}
-      <WindowWeatherOverlay weather={weather} />
+      <WindowWeatherOverlay weather={weather} isLateAfternoon={isLateAfternoon} />
 
       {/* Shop Decor: Twinkling Golden Stars along Top Garland */}
       {hasTwinkleStars && <TwinkleStarsGarlandSvg />}

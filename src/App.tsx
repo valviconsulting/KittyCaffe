@@ -38,6 +38,7 @@ import { MARZIPAN_WARDROBE } from './data/shop';
 import { RARE_STICKER_CATALOG, RARE_STICKER_ORDER } from './data/stickers';
 import { getNextWeather } from './data/weather';
 import { sound } from './services/sound';
+import type { DayJournalMode } from './components/modals/DayJournalModal';
 import {
   DEFAULT_SAVE_STATE,
   loadCafeSaveWithStatus,
@@ -47,6 +48,7 @@ import type {
   BlenderIngredientId,
   CafeDecorId,
   CafeSaveState,
+  DayProgressState,
   DonutGlaze,
   GuestEmotion,
   HotIngredientId,
@@ -61,6 +63,14 @@ import type {
   UnlockableRecipeId,
   WeatherType,
 } from './types/game';
+import {
+  advanceToNextDay,
+  completeDayIntoEvening,
+  createFreshDayProgress,
+  isDayTargetReached,
+  isLateAfternoon,
+  recordServedGuestInDay,
+} from './utils/dayDirector';
 
 // Lazy-loaded modal flows so initial mobile bundle stays light & fast
 const RecipeBookModal = lazy(() =>
@@ -98,13 +108,40 @@ const BackupModal = lazy(() =>
     default: m.BackupModal,
   }))
 );
+const DayJournalModal = lazy(() =>
+  import('./components/modals/DayJournalModal').then((m) => ({
+    default: m.DayJournalModal,
+  }))
+);
 
 export function App() {
   // Safe initial load from localStorage (never silently overwrites corrupted or future-version saves!)
   const [initialLoad] = useState(() => {
     const loaded = loadCafeSaveWithStatus();
     sound.setMuted(loaded.state.muted);
-    return loaded;
+    // Reload-safe evening recovery: if player served 5/5 guests & reloaded before evening opened,
+    // settle evening idempotently ONCE without duplicating bonus coins or diary history.
+    if (
+      loaded.state.dayProgress.phase === 'open' &&
+      isDayTargetReached(loaded.state.dayProgress)
+    ) {
+      const { nextDay, nextHistory, bonusCoins } = completeDayIntoEvening(
+        loaded.state.dayProgress,
+        loaded.state.dayHistory,
+        loaded.state.weather
+      );
+      return {
+        ...loaded,
+        state: {
+          ...loaded.state,
+          coins: loaded.state.coins + bonusCoins,
+          dayProgress: nextDay,
+          dayHistory: nextHistory,
+        },
+        forceInitialPersist: true,
+      };
+    }
+    return { ...loaded, forceInitialPersist: false };
   });
 
   const [saveState, setSaveState] = useState<CafeSaveState>(initialLoad.state);
@@ -151,6 +188,7 @@ export function App() {
   const [isFriendshipAlbumOpen, setIsFriendshipAlbumOpen] =
     useState<boolean>(false);
   const [isBackupOpen, setIsBackupOpen] = useState<boolean>(false);
+  const [isDiaryOpen, setIsDiaryOpen] = useState<boolean>(false);
   const [pendingTakeawayDrink, setPendingTakeawayDrink] =
     useState<PreparedDrink | null>(null);
   const [pendingTakeawaySource, setPendingTakeawaySource] = useState<
@@ -203,6 +241,7 @@ export function App() {
   const unlockedRecipesRef = useRef<UnlockableRecipeId[]>(
     saveState.unlockedRecipes
   );
+  const dayProgressRef = useRef<DayProgressState>(saveState.dayProgress);
   const forceNextSecretRef = useRef<boolean>(false);
   const forceNextRecipeRef = useRef<UnlockableRecipeId | null>(null);
   const isFirstSaveEffectRef = useRef<boolean>(true);
@@ -215,17 +254,25 @@ export function App() {
     weatherRef.current = saveState.weather;
     secretDrinkRef.current = saveState.secretDrink;
     unlockedRecipesRef.current = saveState.unlockedRecipes;
-  }, [saveState.weather, saveState.secretDrink, saveState.unlockedRecipes]);
+    dayProgressRef.current = saveState.dayProgress;
+  }, [
+    saveState.weather,
+    saveState.secretDrink,
+    saveState.unlockedRecipes,
+    saveState.dayProgress,
+  ]);
 
   // Persist saveState cleanly whenever progress changes (never clobbering unreadable saves on mount!)
   useEffect(() => {
     if (isFirstSaveEffectRef.current) {
       isFirstSaveEffectRef.current = false;
-      if (initialLoad.status !== 'migrated') return;
+      if (initialLoad.status !== 'migrated' && !initialLoad.forceInitialPersist) {
+        return;
+      }
     }
     if (!canAutoSaveRef.current) return;
     saveCafeProgress(saveState);
-  }, [saveState, initialLoad.status]);
+  }, [saveState, initialLoad.status, initialLoad.forceInitialPersist]);
 
   // Sync Cozy Web Audio Music Box with decor + mute state
   useEffect(() => {
@@ -272,6 +319,15 @@ export function App() {
     []
   );
 
+  const dayJournalMode: DayJournalMode | null =
+    saveState.dayProgress.phase === 'morning'
+      ? 'morning'
+      : saveState.dayProgress.phase === 'evening'
+        ? 'evening'
+        : isDiaryOpen
+          ? 'diary'
+          : null;
+
   const anyModalOpen =
     isRecipeBookOpen ||
     isLatteArtOpen ||
@@ -279,13 +335,37 @@ export function App() {
     isShopOpen ||
     isFriendshipAlbumOpen ||
     isBackupOpen ||
+    dayJournalMode !== null ||
     Boolean(pendingTakeawayDrink);
 
-  // Advance to next guest using current weather, secret drink, unlocked recipes & traveler schedule
+  // Advance to next guest OR settle the Evening Memory Diary when all 5 guests of the day are served
   const goToNextGuest = useCallback(() => {
     if (nextGuestTimerRef.current) {
       window.clearTimeout(nextGuestTimerRef.current);
       nextGuestTimerRef.current = null;
+    }
+
+    if (isDayTargetReached(dayProgressRef.current)) {
+      canAutoSaveRef.current = true;
+      setSaveState((prev) => {
+        const { nextDay, nextHistory, bonusCoins } = completeDayIntoEvening(
+          prev.dayProgress,
+          prev.dayHistory,
+          prev.weather
+        );
+        return {
+          ...prev,
+          coins: prev.coins + bonusCoins,
+          dayProgress: nextDay,
+          dayHistory: nextHistory,
+        };
+      });
+      setEmotion('waiting');
+      setLastReward(null);
+      setTrayDrink(null);
+      setTrayPastry(null);
+      sound.playBestFriendFanfare();
+      return;
     }
 
     const prevOrder = orderRef.current;
@@ -394,13 +474,67 @@ export function App() {
     setIsSecretCreatorOpen(false);
   };
 
+  const handleStartMorningDay = () => {
+    canAutoSaveRef.current = true;
+    setSaveState((prev) => ({
+      ...prev,
+      dayProgress: { ...prev.dayProgress, phase: 'open' },
+    }));
+    if (orderRef.current.isTravelerGuest) {
+      sound.playTravelerBell();
+    } else {
+      sound.playGuestBell();
+    }
+  };
+
+  const handleAdvanceNextDay = () => {
+    const { nextDay, suggestedWeather } = advanceToNextDay(
+      saveState.dayProgress
+    );
+    canAutoSaveRef.current = true;
+    weatherRef.current = suggestedWeather;
+    dayProgressRef.current = nextDay;
+
+    const freshOrder = generateOrder(
+      saveState.servedCount + 1,
+      suggestedWeather,
+      orderRef.current.guestId,
+      {
+        secretDrink: secretDrinkRef.current,
+        unlockedRecipes: unlockedRecipesRef.current,
+      }
+    );
+    orderRef.current = freshOrder;
+    servedOrderIdRef.current = null;
+    setOrder(freshOrder);
+    setEmotion('waiting');
+    setLastReward(null);
+    setTrayDrink(null);
+    setTrayPastry(null);
+    setSpeechText(
+      buildOrderGreeting(
+        freshOrder,
+        getOrderDrinkName(freshOrder),
+        suggestedWeather
+      )
+    );
+    setSaveState((prev) => ({
+      ...prev,
+      weather: suggestedWeather,
+      dayProgress: nextDay,
+    }));
+    sound.playSecretSaved();
+  };
+
   const handleImportSave = (imported: CafeSaveState) => {
     canAutoSaveRef.current = true;
     setStorageWarning(null);
+    setIsDiaryOpen(false);
     sound.setMuted(imported.muted);
     weatherRef.current = imported.weather;
     secretDrinkRef.current = imported.secretDrink;
     unlockedRecipesRef.current = imported.unlockedRecipes;
+    dayProgressRef.current = imported.dayProgress;
     setSaveState(imported);
     saveCafeProgress(imported);
 
@@ -434,6 +568,8 @@ export function App() {
       ...DEFAULT_SAVE_STATE,
       equippedAccessories: { ...DEFAULT_SAVE_STATE.equippedAccessories },
       friendship: {},
+      dayProgress: createFreshDayProgress(1, 'open'),
+      dayHistory: [],
     });
   };
 
@@ -897,6 +1033,19 @@ export function App() {
         })
       );
 
+      const travelerDayPayload = {
+        guestId: 'mandrivnyk' as const,
+        coinsEarned: riverCoins,
+        hasLatteArt: false,
+        hasTakeaway: false,
+        isTraveler: true,
+        becameBestFriend: false,
+      };
+      dayProgressRef.current = recordServedGuestInDay(
+        dayProgressRef.current,
+        travelerDayPayload
+      );
+
       setSaveState((prev) => {
         const nextRare =
           nextStickerId && !prev.unlockedRareStickers.includes(nextStickerId)
@@ -914,6 +1063,10 @@ export function App() {
             ...prev.friendship,
             mandrivnyk: (prev.friendship.mandrivnyk ?? 0) + 1,
           },
+          dayProgress: recordServedGuestInDay(
+            prev.dayProgress,
+            travelerDayPayload
+          ),
         };
       });
 
@@ -972,6 +1125,19 @@ export function App() {
     );
     setLastReward(reward);
 
+    const regularDayPayload = {
+      guestId: order.guestId,
+      coinsEarned: reward,
+      hasLatteArt,
+      hasTakeaway: hasTakeawayDecor,
+      isTraveler: false,
+      becameBestFriend: justBecameBestFriend,
+    };
+    dayProgressRef.current = recordServedGuestInDay(
+      dayProgressRef.current,
+      regularDayPayload
+    );
+
     setSaveState((prev) => ({
       ...prev,
       coins: prev.coins + reward,
@@ -981,6 +1147,7 @@ export function App() {
         ...prev.friendship,
         [order.guestId]: (prev.friendship[order.guestId] ?? 0) + 1,
       },
+      dayProgress: recordServedGuestInDay(prev.dayProgress, regularDayPayload),
     }));
 
     if (justBecameBestFriend) {
@@ -1069,6 +1236,8 @@ export function App() {
             secretDrink={saveState.secretDrink}
             lastReward={lastReward}
             celebration={celebration}
+            isLateAfternoon={isLateAfternoon(saveState.dayProgress)}
+            isDayComplete={isDayTargetReached(saveState.dayProgress)}
             onPetMarzipan={handlePetMarzipan}
             onToggleMusicBox={handleToggleMusicBox}
             onOpenSecretCreator={() => {
@@ -1097,9 +1266,14 @@ export function App() {
           <main className="landscape-compact-main flex flex-1 min-h-0 lg:flex-none lg:shrink-0 flex-col bg-gradient-to-b from-[#DFC5A2] via-[#E7D2B6] to-[#DCBF9A] px-2 sm:px-4 lg:px-5 pb-2 sm:pb-2.5 pt-1.5 overflow-hidden">
             <StationTabs
               activeTab={activeTab}
+              dayProgress={saveState.dayProgress}
               onSelectTab={(tab) => {
                 setActiveTab(tab);
                 sound.playPop();
+              }}
+              onOpenDayJournal={() => {
+                sound.playPop();
+                setIsDiaryOpen(true);
               }}
             />
 
@@ -1271,6 +1445,22 @@ export function App() {
                 }}
                 onImportSave={handleImportSave}
                 onResetSave={handleResetSave}
+              />
+            )}
+
+            {dayJournalMode && (
+              <DayJournalModal
+                isOpen={true}
+                mode={dayJournalMode}
+                dayProgress={saveState.dayProgress}
+                dayHistory={saveState.dayHistory}
+                weather={saveState.weather}
+                onStartDay={handleStartMorningDay}
+                onAdvanceNextDay={handleAdvanceNextDay}
+                onClose={() => {
+                  sound.playPop();
+                  setIsDiaryOpen(false);
+                }}
               />
             )}
           </Suspense>
