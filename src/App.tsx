@@ -38,13 +38,16 @@ import { MARZIPAN_WARDROBE } from './data/shop';
 import { RARE_STICKER_CATALOG, RARE_STICKER_ORDER } from './data/stickers';
 import { getNextWeather } from './data/weather';
 import { sound } from './services/sound';
+import type { BirthdayModalMode } from './components/modals/BirthdayStoryModal';
 import type { DayJournalMode } from './components/modals/DayJournalModal';
+import { BIRTHDAY_THEMES } from './data/birthdayStory';
 import {
   DEFAULT_SAVE_STATE,
   loadCafeSaveWithStatus,
   saveCafeProgress,
 } from './services/storage';
 import type {
+  BirthdayThemeId,
   BlenderIngredientId,
   CafeDecorId,
   CafeSaveState,
@@ -56,6 +59,7 @@ import type {
   Order,
   PreparedDrink,
   PreparedPastry,
+  PuhBirthdayStoryState,
   SecretDrinkRecipe,
   StationTab,
   TakeawayDecoration,
@@ -63,6 +67,15 @@ import type {
   UnlockableRecipeId,
   WeatherType,
 } from './types/game';
+import {
+  advanceBirthdayStageOnNextMorning,
+  createInitialBirthdayStoryState,
+  getActiveBirthdayDecor,
+  getBirthdayOrderRoleForSlot,
+  markBirthdayStoryOrderServed,
+  settleBirthdayChapterAtEvening,
+  startBirthdayChapter,
+} from './utils/birthdayStory';
 import {
   advanceToNextDay,
   completeDayIntoEvening,
@@ -113,6 +126,24 @@ const DayJournalModal = lazy(() =>
     default: m.DayJournalModal,
   }))
 );
+const BirthdayStoryModal = lazy(() =>
+  import('./components/modals/BirthdayStoryModal').then((m) => ({
+    default: m.BirthdayStoryModal,
+  }))
+);
+
+function buildBirthdayOrderOpt(
+  story: PuhBirthdayStoryState,
+  dayProgress: DayProgressState
+) {
+  if (!story.theme) return null;
+  const role = getBirthdayOrderRoleForSlot(
+    story,
+    dayProgress.guestsServedToday.length,
+    dayProgress.guestsTarget
+  );
+  return role ? { role, theme: story.theme } : null;
+}
 
 export function App() {
   // Safe initial load from localStorage (never silently overwrites corrupted or future-version saves!)
@@ -120,23 +151,27 @@ export function App() {
     const loaded = loadCafeSaveWithStatus();
     sound.setMuted(loaded.state.muted);
     // Reload-safe evening recovery: if player served 5/5 guests & reloaded before evening opened,
-    // settle evening idempotently ONCE without duplicating bonus coins or diary history.
+    // settle evening & birthday chapter idempotently ONCE without duplicating bonus coins or diary history.
     if (
       loaded.state.dayProgress.phase === 'open' &&
       isDayTargetReached(loaded.state.dayProgress)
     ) {
+      const { nextStory, finaleBonusCoins, eveningHighlightOverride } =
+        settleBirthdayChapterAtEvening(loaded.state.puhBirthday);
       const { nextDay, nextHistory, bonusCoins } = completeDayIntoEvening(
         loaded.state.dayProgress,
         loaded.state.dayHistory,
-        loaded.state.weather
+        loaded.state.weather,
+        eveningHighlightOverride
       );
       return {
         ...loaded,
         state: {
           ...loaded.state,
-          coins: loaded.state.coins + bonusCoins,
+          coins: loaded.state.coins + bonusCoins + finaleBonusCoins,
           dayProgress: nextDay,
           dayHistory: nextHistory,
+          puhBirthday: nextStory,
         },
         forceInitialPersist: true,
       };
@@ -165,6 +200,10 @@ export function App() {
       {
         secretDrink: initialLoad.state.secretDrink,
         unlockedRecipes: initialLoad.state.unlockedRecipes,
+        birthdayStory: buildBirthdayOrderOpt(
+          initialLoad.state.puhBirthday,
+          initialLoad.state.dayProgress
+        ),
       }
     )
   );
@@ -189,6 +228,10 @@ export function App() {
     useState<boolean>(false);
   const [isBackupOpen, setIsBackupOpen] = useState<boolean>(false);
   const [isDiaryOpen, setIsDiaryOpen] = useState<boolean>(false);
+  const [birthdayModalMode, setBirthdayModalMode] =
+    useState<BirthdayModalMode | null>(null);
+  const [birthdayPostcardTheme, setBirthdayPostcardTheme] =
+    useState<BirthdayThemeId | null>(null);
   const [pendingTakeawayDrink, setPendingTakeawayDrink] =
     useState<PreparedDrink | null>(null);
   const [pendingTakeawaySource, setPendingTakeawaySource] = useState<
@@ -242,6 +285,7 @@ export function App() {
     saveState.unlockedRecipes
   );
   const dayProgressRef = useRef<DayProgressState>(saveState.dayProgress);
+  const puhBirthdayRef = useRef<PuhBirthdayStoryState>(saveState.puhBirthday);
   const forceNextSecretRef = useRef<boolean>(false);
   const forceNextRecipeRef = useRef<UnlockableRecipeId | null>(null);
   const isFirstSaveEffectRef = useRef<boolean>(true);
@@ -255,11 +299,13 @@ export function App() {
     secretDrinkRef.current = saveState.secretDrink;
     unlockedRecipesRef.current = saveState.unlockedRecipes;
     dayProgressRef.current = saveState.dayProgress;
+    puhBirthdayRef.current = saveState.puhBirthday;
   }, [
     saveState.weather,
     saveState.secretDrink,
     saveState.unlockedRecipes,
     saveState.dayProgress,
+    saveState.puhBirthday,
   ]);
 
   // Persist saveState cleanly whenever progress changes (never clobbering unreadable saves on mount!)
@@ -336,6 +382,7 @@ export function App() {
     isFriendshipAlbumOpen ||
     isBackupOpen ||
     dayJournalMode !== null ||
+    birthdayModalMode !== null ||
     Boolean(pendingTakeawayDrink);
 
   // Advance to next guest OR settle the Evening Memory Diary when all 5 guests of the day are served
@@ -347,17 +394,24 @@ export function App() {
 
     if (isDayTargetReached(dayProgressRef.current)) {
       canAutoSaveRef.current = true;
+      const previewBirthday = settleBirthdayChapterAtEvening(
+        puhBirthdayRef.current
+      );
       setSaveState((prev) => {
+        const { nextStory, finaleBonusCoins, eveningHighlightOverride } =
+          settleBirthdayChapterAtEvening(prev.puhBirthday);
         const { nextDay, nextHistory, bonusCoins } = completeDayIntoEvening(
           prev.dayProgress,
           prev.dayHistory,
-          prev.weather
+          prev.weather,
+          eveningHighlightOverride
         );
         return {
           ...prev,
-          coins: prev.coins + bonusCoins,
+          coins: prev.coins + bonusCoins + finaleBonusCoins,
           dayProgress: nextDay,
           dayHistory: nextHistory,
+          puhBirthday: nextStory,
         };
       });
       setEmotion('waiting');
@@ -365,6 +419,15 @@ export function App() {
       setTrayDrink(null);
       setTrayPastry(null);
       sound.playBestFriendFanfare();
+      if (previewBirthday.justCompletedFinale && previewBirthday.nextStory.theme) {
+        const tm = BIRTHDAY_THEMES[previewBirthday.nextStory.theme];
+        showCelebration({
+          icon: '🎂',
+          title: `З Днем народження, Пух! (${tm.shortTitle})`,
+          subtitle: 'Пам’ятна листівка збережена в Щоденнику + 40 🐟!',
+          tone: 'friend',
+        });
+      }
       return;
     }
 
@@ -386,6 +449,10 @@ export function App() {
         forceSecretDrink: forceSecret,
         unlockedRecipes: currentUnlocked,
         forceUnlockedRecipe: forceRecipe,
+        birthdayStory: buildBirthdayOrderOpt(
+          puhBirthdayRef.current,
+          dayProgressRef.current
+        ),
       }
     );
     orderRef.current = next;
@@ -403,7 +470,7 @@ export function App() {
     } else {
       sound.playGuestBell();
     }
-  }, []);
+  }, [showCelebration]);
 
   // Auto-advance after 2.8s when happy (pauses if any modal is open)
   useEffect(() => {
@@ -476,6 +543,7 @@ export function App() {
 
   const handleStartMorningDay = () => {
     canAutoSaveRef.current = true;
+    dayProgressRef.current = { ...dayProgressRef.current, phase: 'open' };
     setSaveState((prev) => ({
       ...prev,
       dayProgress: { ...prev.dayProgress, phase: 'open' },
@@ -491,9 +559,11 @@ export function App() {
     const { nextDay, suggestedWeather } = advanceToNextDay(
       saveState.dayProgress
     );
+    const nextStory = advanceBirthdayStageOnNextMorning(saveState.puhBirthday);
     canAutoSaveRef.current = true;
     weatherRef.current = suggestedWeather;
     dayProgressRef.current = nextDay;
+    puhBirthdayRef.current = nextStory;
 
     const freshOrder = generateOrder(
       saveState.servedCount + 1,
@@ -502,6 +572,7 @@ export function App() {
       {
         secretDrink: secretDrinkRef.current,
         unlockedRecipes: unlockedRecipesRef.current,
+        birthdayStory: buildBirthdayOrderOpt(nextStory, nextDay),
       }
     );
     orderRef.current = freshOrder;
@@ -522,19 +593,84 @@ export function App() {
       ...prev,
       weather: suggestedWeather,
       dayProgress: nextDay,
+      puhBirthday: nextStory,
     }));
     sound.playSecretSaved();
+  };
+
+  // --- Step 05: Puff's Birthday Story Chapter Handlers ---
+  const handleSelectBirthdayTheme = (theme: BirthdayThemeId) => {
+    const nextStory = startBirthdayChapter(saveState.puhBirthday, theme);
+    canAutoSaveRef.current = true;
+    puhBirthdayRef.current = nextStory;
+    setSaveState((prev) => ({
+      ...prev,
+      puhBirthday: startBirthdayChapter(prev.puhBirthday, theme),
+    }));
+    setBirthdayModalMode(null);
+    setIsDiaryOpen(false);
+    sound.playSecretSaved();
+
+    const meta = BIRTHDAY_THEMES[theme];
+    showCelebration({
+      icon: meta.icon,
+      title: `Обрано тему: ${meta.title}!`,
+      subtitle: 'Святкові прапорці вже у залі! Починаємо День 1/3 підготовки!',
+      tone: 'friend',
+    });
+
+    // If the player is waiting on a normal guest right now, welcome the Day 1 story helper immediately!
+    if (
+      emotion === 'waiting' &&
+      saveState.dayProgress.phase === 'open' &&
+      !isDayTargetReached(saveState.dayProgress)
+    ) {
+      const storyOrder = generateOrder(
+        orderRef.current.id,
+        weatherRef.current,
+        undefined,
+        {
+          secretDrink: secretDrinkRef.current,
+          unlockedRecipes: unlockedRecipesRef.current,
+          birthdayStory: { role: 'prep_day1', theme },
+        }
+      );
+      orderRef.current = storyOrder;
+      servedOrderIdRef.current = null;
+      setOrder(storyOrder);
+      setSpeechText(
+        buildOrderGreeting(
+          storyOrder,
+          getOrderDrinkName(storyOrder),
+          weatherRef.current
+        )
+      );
+    }
+  };
+
+  const handleToggleBirthdayDecor = () => {
+    canAutoSaveRef.current = true;
+    setSaveState((prev) => ({
+      ...prev,
+      puhBirthday: {
+        ...prev.puhBirthday,
+        keepDecorEnabled: !prev.puhBirthday.keepDecorEnabled,
+      },
+    }));
+    sound.playPop();
   };
 
   const handleImportSave = (imported: CafeSaveState) => {
     canAutoSaveRef.current = true;
     setStorageWarning(null);
     setIsDiaryOpen(false);
+    setBirthdayModalMode(null);
     sound.setMuted(imported.muted);
     weatherRef.current = imported.weather;
     secretDrinkRef.current = imported.secretDrink;
     unlockedRecipesRef.current = imported.unlockedRecipes;
     dayProgressRef.current = imported.dayProgress;
+    puhBirthdayRef.current = imported.puhBirthday;
     setSaveState(imported);
     saveCafeProgress(imported);
 
@@ -545,6 +681,10 @@ export function App() {
       {
         secretDrink: imported.secretDrink,
         unlockedRecipes: imported.unlockedRecipes,
+        birthdayStory: buildBirthdayOrderOpt(
+          imported.puhBirthday,
+          imported.dayProgress
+        ),
       }
     );
     orderRef.current = freshOrder;
@@ -570,6 +710,7 @@ export function App() {
       friendship: {},
       dayProgress: createFreshDayProgress(1, 'open'),
       dayHistory: [],
+      puhBirthday: createInitialBirthdayStoryState(),
     });
   };
 
@@ -1137,6 +1278,11 @@ export function App() {
       dayProgressRef.current,
       regularDayPayload
     );
+    if (order.birthdayStoryRole) {
+      puhBirthdayRef.current = markBirthdayStoryOrderServed(
+        puhBirthdayRef.current
+      );
+    }
 
     setSaveState((prev) => ({
       ...prev,
@@ -1148,6 +1294,9 @@ export function App() {
         [order.guestId]: (prev.friendship[order.guestId] ?? 0) + 1,
       },
       dayProgress: recordServedGuestInDay(prev.dayProgress, regularDayPayload),
+      puhBirthday: order.birthdayStoryRole
+        ? markBirthdayStoryOrderServed(prev.puhBirthday)
+        : prev.puhBirthday,
     }));
 
     if (justBecameBestFriend) {
@@ -1238,6 +1387,7 @@ export function App() {
             celebration={celebration}
             isLateAfternoon={isLateAfternoon(saveState.dayProgress)}
             isDayComplete={isDayTargetReached(saveState.dayProgress)}
+            birthdayDecor={getActiveBirthdayDecor(saveState.puhBirthday)}
             onPetMarzipan={handlePetMarzipan}
             onToggleMusicBox={handleToggleMusicBox}
             onOpenSecretCreator={() => {
@@ -1267,6 +1417,7 @@ export function App() {
             <StationTabs
               activeTab={activeTab}
               dayProgress={saveState.dayProgress}
+              puhBirthday={saveState.puhBirthday}
               onSelectTab={(tab) => {
                 setActiveTab(tab);
                 sound.playPop();
@@ -1448,18 +1599,48 @@ export function App() {
               />
             )}
 
-            {dayJournalMode && (
+            {dayJournalMode && !birthdayModalMode && (
               <DayJournalModal
                 isOpen={true}
                 mode={dayJournalMode}
                 dayProgress={saveState.dayProgress}
                 dayHistory={saveState.dayHistory}
                 weather={saveState.weather}
+                puhBirthday={saveState.puhBirthday}
                 onStartDay={handleStartMorningDay}
                 onAdvanceNextDay={handleAdvanceNextDay}
+                onOpenBirthdayChooser={() => {
+                  sound.playPop();
+                  setIsDiaryOpen(false);
+                  setBirthdayModalMode('choose_theme');
+                }}
+                onOpenBirthdayPostcard={(theme) => {
+                  sound.playPop();
+                  setBirthdayPostcardTheme(theme ?? null);
+                  setBirthdayModalMode('postcard');
+                }}
                 onClose={() => {
                   sound.playPop();
                   setIsDiaryOpen(false);
+                }}
+              />
+            )}
+
+            {birthdayModalMode && (
+              <BirthdayStoryModal
+                isOpen={true}
+                mode={birthdayModalMode}
+                story={saveState.puhBirthday}
+                initialPostcardTheme={birthdayPostcardTheme}
+                onSelectThemeAndStart={handleSelectBirthdayTheme}
+                onToggleKeepDecor={handleToggleBirthdayDecor}
+                onSwitchToChooser={() => {
+                  sound.playPop();
+                  setBirthdayModalMode('choose_theme');
+                }}
+                onClose={() => {
+                  sound.playPop();
+                  setBirthdayModalMode(null);
                 }}
               />
             )}

@@ -1,11 +1,16 @@
 import { motion } from 'framer-motion';
 import React from 'react';
 import { DAY_THEMES } from '../../data/days';
-import type { DayProgressState, StationTab } from '../../types/game';
+import type {
+  DayProgressState,
+  PuhBirthdayStoryState,
+  StationTab,
+} from '../../types/game';
 
 interface StationTabsProps {
   activeTab: StationTab;
   dayProgress: DayProgressState;
+  puhBirthday?: PuhBirthdayStoryState;
   onSelectTab: (tab: StationTab) => void;
   onOpenDayJournal: () => void;
 }
@@ -43,11 +48,13 @@ const TABS: Array<{
 export const StationTabs: React.FC<StationTabsProps> = ({
   activeTab,
   dayProgress,
+  puhBirthday,
   onSelectTab,
   onOpenDayJournal,
 }) => {
   const dayTheme = DAY_THEMES[dayProgress.themeId];
   const servedToday = dayProgress.guestsServedToday.length;
+  const isBirthdayActive = puhBirthday?.status === 'active';
 
   return (
     <nav
@@ -103,7 +110,7 @@ export const StationTabs: React.FC<StationTabsProps> = ({
         }}
       >
         <span aria-hidden="true" className="text-xs sm:text-sm leading-none">
-          {dayTheme.icon}
+          {isBirthdayActive ? '🎂' : dayTheme.icon}
         </span>
         <span className="sm:hidden tabular-nums">
           Д{dayProgress.dayNumber}·{servedToday}/{dayProgress.guestsTarget}

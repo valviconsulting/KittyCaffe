@@ -1,4 +1,9 @@
+import {
+  BIRTHDAY_THEMES,
+  resolveBirthdayPastry,
+} from './birthdayStory.ts';
 import type {
+  BirthdayThemeId,
   DrinkRecipeId,
   GuestId,
   Order,
@@ -288,6 +293,10 @@ export interface GenerateOrderOptions {
   unlockedRecipes?: UnlockableRecipeId[];
   forceTraveler?: boolean;
   forceUnlockedRecipe?: UnlockableRecipeId | null;
+  birthdayStory?: {
+    role: 'prep_day1' | 'prep_day2' | 'finale_party';
+    theme: BirthdayThemeId;
+  } | null;
 }
 
 /**
@@ -311,10 +320,63 @@ export function generateOrder(
     unlockedRecipes = [],
     forceTraveler,
     forceUnlockedRecipe,
+    birthdayStory,
   } = options;
 
   const hasMatcha = unlockedRecipes.includes('matcha_latte');
   const hasCarrotCake = unlockedRecipes.includes('carrot_cake');
+
+  // 0. Scripted Story Chapter moment («День народження Пуха» — theme-specific treats & Puff's party!)
+  if (birthdayStory) {
+    const themeMeta = BIRTHDAY_THEMES[birthdayStory.theme];
+    const pastryId = resolveBirthdayPastry(
+      birthdayStory.theme,
+      birthdayStory.role,
+      unlockedRecipes
+    );
+
+    if (birthdayStory.role === 'prep_day1') {
+      return {
+        id: orderNumber,
+        guestId: themeMeta.prepDay1Guest,
+        drinkId: themeMeta.prepDay1Drink,
+        pastryId,
+        isCombo: true,
+        weatherAtArrival: weather,
+        serviceMode: 'dine-in',
+        birthdayStoryRole: 'prep_day1',
+        birthdayTheme: birthdayStory.theme,
+      };
+    }
+
+    if (birthdayStory.role === 'prep_day2') {
+      return {
+        id: orderNumber,
+        guestId: themeMeta.prepDay2Guest,
+        drinkId: themeMeta.prepDay2Drink,
+        pastryId,
+        isCombo: true,
+        weatherAtArrival: weather,
+        serviceMode: 'dine-in',
+        birthdayStoryRole: 'prep_day2',
+        birthdayTheme: birthdayStory.theme,
+      };
+    }
+
+    // Grand Day 3 Finale: Кошеня Пух's Birthday Party (100% caffeine-free!)
+    return {
+      id: orderNumber,
+      guestId: 'puh',
+      drinkId: themeMeta.finaleDrink,
+      pastryId,
+      isCombo: true,
+      weatherAtArrival: weather,
+      serviceMode: 'dine-in',
+      wantsLatteArt: themeMeta.finaleWantsLatteArt,
+      birthdayStoryRole: 'finale_party',
+      birthdayTheme: birthdayStory.theme,
+    };
+  }
 
   // 1. Immediate showcase when player creates a brand-new Secret Drink!
   if (secretDrink && forceSecretDrink) {
@@ -579,6 +641,18 @@ export function buildOrderGreeting(
   drinkName: string,
   weather: WeatherType
 ): string {
+  // Step 05: Puff's Birthday Story Chapter scripted dialogues
+  if (order.birthdayStoryRole && order.birthdayTheme) {
+    const themeMeta = BIRTHDAY_THEMES[order.birthdayTheme];
+    if (order.birthdayStoryRole === 'prep_day1') {
+      return themeMeta.prepDay1Greeting;
+    }
+    if (order.birthdayStoryRole === 'prep_day2') {
+      return themeMeta.prepDay2Greeting;
+    }
+    return themeMeta.finaleGreeting;
+  }
+
   // Special Traveler Cat greeting
   if (order.isTravelerGuest) {
     const feeling = weather === 'sunny' ? 'втомився' : 'змерз';
@@ -648,6 +722,14 @@ export function buildOrderPraise(
     travelerAllCollected?: boolean;
   }
 ): string {
+  if (order.birthdayStoryRole === 'finale_party' && order.birthdayTheme) {
+    return BIRTHDAY_THEMES[order.birthdayTheme].finalePraise;
+  }
+  if (order.birthdayStoryRole && order.birthdayTheme) {
+    const themeTitle = BIRTHDAY_THEMES[order.birthdayTheme].title;
+    return `Смакота! «${themeTitle}» для Пуха буде просто чарівною — тримай бонус!`;
+  }
+
   if (order.isTravelerGuest) {
     if (options.travelerGiftLabel) {
       return `Ой, яке ж у тебе добре серце! Дякую за частування! Дарую тобі рідкісний стікер «${options.travelerGiftLabel}» на згадку!`;

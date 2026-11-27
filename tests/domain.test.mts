@@ -26,6 +26,11 @@ import {
   RARE_STICKER_ORDER,
 } from '../src/data/stickers.ts';
 import {
+  BIRTHDAY_FINALE_BONUS_COINS,
+  BIRTHDAY_THEMES,
+  BIRTHDAY_THEME_ORDER,
+} from '../src/data/birthdayStory.ts';
+import {
   DAY_EVENING_BONUS_COINS,
   DAY_GUEST_TARGET,
   getThemeForDayNumber,
@@ -38,6 +43,15 @@ import {
   parseAndSanitizeSave,
   sanitizeSecretDrink,
 } from '../src/services/storage.ts';
+import {
+  advanceBirthdayStageOnNextMorning,
+  createInitialBirthdayStoryState,
+  getActiveBirthdayDecor,
+  getBirthdayOrderRoleForSlot,
+  markBirthdayStoryOrderServed,
+  settleBirthdayChapterAtEvening,
+  startBirthdayChapter,
+} from '../src/utils/birthdayStory.ts';
 import {
   advanceToNextDay,
   completeDayIntoEvening,
@@ -366,6 +380,114 @@ if (restoredDaySave.ok) {
   assert.equal(restoredDaySave.state.dayProgress.eveningBonusClaimed, true);
   assert.equal(restoredDaySave.state.dayHistory.length, 1);
   assert.equal(restoredDaySave.state.dayHistory[0].guestsServed.length, 5);
+}
+
+// 12. Step 05: Story Chapter 1 «День народження Пуха» (3 themes × 3 days + caffeine safety + idempotent finale)
+assert.equal(BIRTHDAY_THEME_ORDER.length, 3);
+let storyProgress = createInitialBirthdayStoryState();
+assert.equal(getActiveBirthdayDecor(storyProgress), null);
+
+for (const theme of BIRTHDAY_THEME_ORDER) {
+  storyProgress = startBirthdayChapter(storyProgress, theme);
+  assert.equal(storyProgress.status, 'active');
+  assert.equal(storyProgress.stageDay, 1);
+  assert.deepEqual(getActiveBirthdayDecor(storyProgress), { theme, level: 1 });
+
+  // Day 1 prep order
+  assert.equal(getBirthdayOrderRoleForSlot(storyProgress, 0, DAY_GUEST_TARGET), 'prep_day1');
+  const day1Order = generateOrder(30, 'sunny', undefined, {
+    birthdayStory: { role: 'prep_day1', theme },
+  });
+  assert.equal(day1Order.birthdayStoryRole, 'prep_day1');
+  assert.equal(day1Order.birthdayTheme, theme);
+  assert.equal(
+    validateOrder(
+      day1Order,
+      DRINK_RECIPES[day1Order.drinkId as keyof typeof DRINK_RECIPES].sampleDrink,
+      PASTRY_RECIPES[day1Order.pastryId!].expected
+    ).ok,
+    true
+  );
+
+  storyProgress = markBirthdayStoryOrderServed(storyProgress);
+  assert.equal(getBirthdayOrderRoleForSlot(storyProgress, 1, DAY_GUEST_TARGET), null);
+  const eve1 = settleBirthdayChapterAtEvening(storyProgress);
+  assert.equal(eve1.finaleBonusCoins, 0);
+  assert.equal(eve1.justCompletedFinale, false);
+  assert.equal(eve1.eveningHighlightOverride, BIRTHDAY_THEMES[theme].day1EveningNote);
+
+  // Day 2 rehearsal order
+  storyProgress = advanceBirthdayStageOnNextMorning(eve1.nextStory);
+  assert.equal(storyProgress.stageDay, 2);
+  assert.deepEqual(getActiveBirthdayDecor(storyProgress), { theme, level: 2 });
+  assert.equal(getBirthdayOrderRoleForSlot(storyProgress, 0, DAY_GUEST_TARGET), 'prep_day2');
+  const eve2 = settleBirthdayChapterAtEvening(
+    markBirthdayStoryOrderServed(storyProgress)
+  );
+  assert.equal(eve2.finaleBonusCoins, 0);
+
+  // Day 3 Grand Finale — Puff arrives on slot #5 (index 4), 100% caffeine-free!
+  storyProgress = advanceBirthdayStageOnNextMorning(eve2.nextStory);
+  assert.equal(storyProgress.stageDay, 3);
+  assert.equal(getBirthdayOrderRoleForSlot(storyProgress, 0, DAY_GUEST_TARGET), null);
+  assert.equal(getBirthdayOrderRoleForSlot(storyProgress, 4, DAY_GUEST_TARGET), 'finale_party');
+
+  // Verify Forest finale safely avoids locked carrot_cake when not unlocked, and uses it when unlocked!
+  const finaleNoUnlocks = generateOrder(35, 'sunny', undefined, {
+    unlockedRecipes: [],
+    birthdayStory: { role: 'finale_party', theme },
+  });
+  assert.equal(finaleNoUnlocks.guestId, 'puh');
+  assert.notEqual(finaleNoUnlocks.pastryId, 'carrot_cake');
+  const finaleDrinkRecipe =
+    DRINK_RECIPES[finaleNoUnlocks.drinkId as keyof typeof DRINK_RECIPES];
+  // Crucial invariant: Puff's birthday drink NEVER contains espresso or matcha!
+  if (finaleDrinkRecipe.sampleDrink.category === 'hot') {
+    assert.equal(finaleDrinkRecipe.sampleDrink.ingredients.espresso ?? 0, 0);
+    assert.equal(finaleDrinkRecipe.sampleDrink.ingredients.matcha ?? 0, 0);
+  }
+  assert.equal(
+    validateOrder(
+      finaleNoUnlocks,
+      finaleDrinkRecipe.sampleDrink,
+      PASTRY_RECIPES[finaleNoUnlocks.pastryId!].expected
+    ).ok,
+    true
+  );
+
+  // Evening settlement on Day 3 awards +40 fish ONCE and unlocks theme postcard
+  storyProgress = markBirthdayStoryOrderServed(storyProgress);
+  const eve3 = settleBirthdayChapterAtEvening(storyProgress);
+  assert.equal(eve3.finaleBonusCoins, BIRTHDAY_FINALE_BONUS_COINS);
+  assert.equal(eve3.justCompletedFinale, true);
+  assert.equal(eve3.nextStory.status, 'completed');
+  assert.ok(eve3.nextStory.completedThemes.includes(theme));
+
+  // Idempotent reload check: calling settle again awards 0 bonus!
+  const eve3Reload = settleBirthdayChapterAtEvening(eve3.nextStory);
+  assert.equal(eve3Reload.finaleBonusCoins, 0);
+  assert.equal(eve3Reload.justCompletedFinale, false);
+
+  storyProgress = eve3.nextStory;
+}
+
+// All 3 themes completed & persist cleanly through export/import v5 save
+assert.deepEqual(storyProgress.completedThemes, ['strawberry', 'space', 'forest']);
+const exportedStory = exportSaveJson({
+  ...DEFAULT_SAVE_STATE,
+  coins: 320,
+  puhBirthday: storyProgress,
+});
+const importedStory = importSaveJson(exportedStory);
+assert.equal(importedStory.ok, true);
+if (importedStory.ok) {
+  assert.equal(importedStory.state.version, CURRENT_SAVE_VERSION);
+  assert.deepEqual(importedStory.state.puhBirthday.completedThemes, [
+    'strawberry',
+    'space',
+    'forest',
+  ]);
+  assert.equal(importedStory.state.puhBirthday.status, 'completed');
 }
 
 console.log('ALL_DOMAIN_TESTS_PASSED');

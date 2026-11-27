@@ -130,7 +130,8 @@ export function buildDayMemoryHighlight(day: DayProgressState): string {
 export function completeDayIntoEvening(
   day: DayProgressState,
   history: DayMemoryEntry[],
-  weather: WeatherType
+  weather: WeatherType,
+  highlightOverride?: string | null
 ): {
   nextDay: DayProgressState;
   nextHistory: DayMemoryEntry[];
@@ -163,7 +164,7 @@ export function completeDayIntoEvening(
     coinsEarned: totalDayCoins,
     latteArtCount: day.latteArtToday,
     takeawayCount: day.takeawayToday,
-    highlight: buildDayMemoryHighlight(nextDay),
+    highlight: highlightOverride || buildDayMemoryHighlight(nextDay),
   };
 
   const nextHistory = [newEntry, ...history].slice(0, MAX_DAY_HISTORY);

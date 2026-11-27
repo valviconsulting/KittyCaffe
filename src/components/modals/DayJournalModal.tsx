@@ -1,11 +1,18 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import React, { useEffect, useState } from 'react';
+import {
+  BIRTHDAY_FINALE_BONUS_COINS,
+  BIRTHDAY_STORY_DAYS,
+  BIRTHDAY_THEMES,
+} from '../../data/birthdayStory';
 import { DAY_EVENING_BONUS_COINS, DAY_THEMES } from '../../data/days';
 import { GUESTS } from '../../data/guests';
 import { WEATHER_CONFIG } from '../../data/weather';
 import type {
+  BirthdayThemeId,
   DayMemoryEntry,
   DayProgressState,
+  PuhBirthdayStoryState,
   WeatherType,
 } from '../../types/game';
 import { buildDayMemoryHighlight } from '../../utils/dayDirector';
@@ -18,8 +25,11 @@ interface DayJournalModalProps {
   dayProgress: DayProgressState;
   dayHistory: DayMemoryEntry[];
   weather: WeatherType;
+  puhBirthday: PuhBirthdayStoryState;
   onStartDay: () => void;
   onAdvanceNextDay: () => void;
+  onOpenBirthdayChooser: () => void;
+  onOpenBirthdayPostcard: (theme?: BirthdayThemeId) => void;
   onClose: () => void;
 }
 
@@ -29,8 +39,11 @@ export const DayJournalModal: React.FC<DayJournalModalProps> = ({
   dayProgress,
   dayHistory,
   weather,
+  puhBirthday,
   onStartDay,
   onAdvanceNextDay,
+  onOpenBirthdayChooser,
+  onOpenBirthdayPostcard,
   onClose,
 }) => {
   const [showHistoryInEvening, setShowHistoryInEvening] = useState(false);
@@ -42,6 +55,14 @@ export const DayJournalModal: React.FC<DayJournalModalProps> = ({
   );
   const eveningHighlight =
     latestEntry?.highlight ?? buildDayMemoryHighlight(dayProgress);
+  const activeBirthdayMeta = puhBirthday.theme
+    ? BIRTHDAY_THEMES[puhBirthday.theme]
+    : null;
+  const isEveningOfBirthdayFinale =
+    mode === 'evening' &&
+    puhBirthday.status === 'completed' &&
+    Boolean(activeBirthdayMeta) &&
+    eveningHighlight === activeBirthdayMeta?.postcardMessage;
 
   const canDismissBackdrop = mode === 'diary';
 
@@ -179,6 +200,28 @@ export const DayJournalModal: React.FC<DayJournalModalProps> = ({
                   >
                     ☕ Відкрити кав’ярню!
                   </button>
+
+                  {puhBirthday.status === 'not_started' && (
+                    <button
+                      type="button"
+                      data-birthday-open="chooser"
+                      onClick={() => {
+                        onStartDay();
+                        onOpenBirthdayChooser();
+                      }}
+                      className="w-full min-h-[42px] rounded-2xl border-2 border-[#D2839E] bg-gradient-to-r from-[#FFF0F5] via-[#FFF6E5] to-[#FFF0F5] px-3.5 py-2 text-xs font-bold text-[#832C49] shadow-2xs hover:brightness-98"
+                    >
+                      🎂 Секретна глава: підготувати День народження Пуха! →
+                    </button>
+                  )}
+
+                  {puhBirthday.status === 'active' && activeBirthdayMeta && (
+                    <div className="rounded-2xl border-2 border-[#D89AB0] bg-[#FDF1F5] px-3 py-2 text-xs font-bold text-[#7D2D48]">
+                      🎂 Глава «День народження Пуха» • День {puhBirthday.stageDay}/
+                      {BIRTHDAY_STORY_DAYS} ({activeBirthdayMeta.icon}{' '}
+                      {activeBirthdayMeta.title})
+                    </div>
+                  )}
                 </>
               )}
 
@@ -242,6 +285,28 @@ export const DayJournalModal: React.FC<DayJournalModalProps> = ({
                       )}
                     </div>
                   </div>
+
+                  {/* Special Birthday Finale Postcard Banner */}
+                  {isEveningOfBirthdayFinale && activeBirthdayMeta && (
+                    <button
+                      type="button"
+                      data-birthday-open="postcard"
+                      onClick={() => onOpenBirthdayPostcard(activeBirthdayMeta.id)}
+                      className="w-full flex items-center justify-between gap-2 rounded-2xl border-2 border-[#D37F9B] bg-gradient-to-r from-[#FFF0F5] via-[#FFF7DE] to-[#EFF9F2] px-3.5 py-2.5 text-left shadow-sm transition-transform hover:scale-[1.01]"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-handwriting text-xl leading-none font-bold text-[#7D2B46]">
+                          💌 Отримано пам’ятну листівку Пуха!
+                        </p>
+                        <p className="mt-0.5 text-[11px] font-bold text-[#6E4932]">
+                          {activeBirthdayMeta.icon} {activeBirthdayMeta.title} • Подарунок +{BIRTHDAY_FINALE_BONUS_COINS} 🐟
+                        </p>
+                      </div>
+                      <span className="shrink-0 rounded-full border border-[#C26E8A] bg-[#FFFDF8] px-2.5 py-1 text-[11px] font-bold text-[#832C49]">
+                        Відкрити →
+                      </span>
+                    </button>
+                  )}
 
                   {/* Primary Next-Day Action */}
                   <button
@@ -357,6 +422,81 @@ export const DayJournalModal: React.FC<DayJournalModalProps> = ({
                         }
                       )}
                     </div>
+                  </div>
+
+                  {/* Step 05 Story Chapter Card: Puff's Birthday Invitation / Live Progress / Postcard Shelf */}
+                  <div className="rounded-2xl border-2 border-[#D99BB0] bg-gradient-to-br from-[#FFF3F7] via-[#FFF9EE] to-[#F3FAF5] p-3.5 shadow-2xs space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-handwriting text-xl leading-none font-bold text-[#7C2C47]">
+                        🎂 Історія: День народження Пуха
+                      </span>
+                      {puhBirthday.status === 'active' && activeBirthdayMeta && (
+                        <span className="rounded-full border border-[#C97B95] bg-[#FFFDF8] px-2 py-0.5 text-[10.5px] font-bold text-[#832C49]">
+                          День {puhBirthday.stageDay}/{BIRTHDAY_STORY_DAYS} •{' '}
+                          {activeBirthdayMeta.icon} {activeBirthdayMeta.shortTitle}
+                        </span>
+                      )}
+                    </div>
+
+                    {puhBirthday.status === 'not_started' && (
+                      <>
+                        <p className="text-xs font-semibold leading-snug text-[#6D4735]">
+                          Луна та Мія готують секретне свято для Кошеняти Пуха! Обери
+                          тему декору (полунична, космічна або лісова) на 3 ігрові дні.
+                        </p>
+                        <button
+                          type="button"
+                          data-birthday-open="chooser"
+                          onClick={onOpenBirthdayChooser}
+                          className="min-h-[38px] rounded-xl border-2 border-[#C7728F] border-b-[3px] bg-gradient-to-b from-[#FCE6EE] to-[#F4C4D5] px-3.5 py-1.5 text-xs font-bold text-[#7C2643] hover:brightness-98"
+                        >
+                          ✨ Обрати тему свята →
+                        </button>
+                      </>
+                    )}
+
+                    {puhBirthday.status === 'active' && activeBirthdayMeta && (
+                      <p className="text-xs font-semibold leading-snug text-[#6D4735]">
+                        {puhBirthday.stageDay === 1
+                          ? 'День 1/3 — прикрашаємо залу прапорцями й тестуємо перші святкові смаколики!'
+                          : puhBirthday.stageDay === 2
+                            ? 'День 2/3 — генеральна репетиція меню та святкового декору на стійці!'
+                            : 'День 3/3 — великий День народження Пуха! Іменинник завітає 5-м гостем!'}
+                      </p>
+                    )}
+
+                    {puhBirthday.completedThemes.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                        {puhBirthday.completedThemes.map((tid) => {
+                          const m = BIRTHDAY_THEMES[tid];
+                          return (
+                            <button
+                              key={tid}
+                              type="button"
+                              data-birthday-open={`postcard-${tid}`}
+                              onClick={() => onOpenBirthdayPostcard(tid)}
+                              className="inline-flex items-center gap-1 rounded-full border-2 border-[#C98EA2] bg-[#FFFDF8] px-2.5 py-1 text-[11px] font-bold text-[#7C2C47] shadow-2xs hover:bg-[#FCEAF0]"
+                            >
+                              <span>💌</span>
+                              <span>
+                                {m.icon} {m.shortTitle} листівка
+                              </span>
+                            </button>
+                          );
+                        })}
+                        {puhBirthday.status !== 'active' &&
+                          puhBirthday.completedThemes.length < 3 && (
+                            <button
+                              type="button"
+                              data-birthday-open="chooser"
+                              onClick={onOpenBirthdayChooser}
+                              className="inline-flex items-center gap-1 rounded-full border border-[#B98E62] bg-[#FAF0DE] px-2.5 py-1 text-[11px] font-bold text-[#6F4724] hover:bg-[#F5E4C8]"
+                            >
+                              ✨ Нова тема ({puhBirthday.completedThemes.length}/3)
+                            </button>
+                          )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Past Completed Days */}

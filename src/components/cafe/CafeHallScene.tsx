@@ -13,6 +13,7 @@ import {
   getOrderDrinkTab,
 } from '../../data/recipes';
 import type {
+  BirthdayThemeId,
   CafeDecorId,
   GuestEmotion,
   GuestId,
@@ -25,6 +26,7 @@ import type {
   WeatherType,
 } from '../../types/game';
 import { AssetIllustration } from '../common/AssetIllustration';
+import { BirthdayDecorOverlaySvg } from '../svg/BirthdayDecorOverlaySvg';
 import { CafeBackgroundSvg } from '../svg/CafeBackgroundSvg';
 import {
   CatWallClockSvg,
@@ -65,6 +67,7 @@ interface CafeHallSceneProps {
   celebration: CelebrationBanner | null;
   isLateAfternoon?: boolean;
   isDayComplete?: boolean;
+  birthdayDecor?: { theme: BirthdayThemeId; level: 1 | 2 | 3 } | null;
   onPetMarzipan: () => void;
   onToggleMusicBox: () => void;
   onOpenSecretCreator: () => void;
@@ -95,6 +98,7 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
   celebration,
   isLateAfternoon = false,
   isDayComplete = false,
+  birthdayDecor = null,
   onPetMarzipan,
   onToggleMusicBox,
   onOpenSecretCreator,
@@ -174,6 +178,15 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
                 {order.serviceMode === 'takeaway' && (
                   <span className="inline-flex items-center gap-1 rounded-xl border border-[#DFB257] bg-[#FFF4D1] px-2 py-0.5 text-[10px] sm:text-[11px] font-bold text-[#7A4E14]">
                     🏃 Із собою
+                  </span>
+                )}
+
+                {order.birthdayStoryRole && (
+                  <span className="inline-flex items-center gap-1 rounded-xl border border-[#D4839E] bg-[#FCEAF0] px-2 py-0.5 text-[10px] sm:text-[11px] font-bold text-[#832C49]">
+                    🎂{' '}
+                    {order.birthdayStoryRole === 'finale_party'
+                      ? 'День народження Пуха!'
+                      : 'Свято Пуха'}
                   </span>
                 )}
 
@@ -271,6 +284,14 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
 
       {/* Shop Decor: Twinkling Golden Stars along Top Garland */}
       {hasTwinkleStars && <TwinkleStarsGarlandSvg />}
+
+      {/* Step 05 Story Decor: Real themed Birthday Bunting & Counter Centerpiece */}
+      {birthdayDecor && (
+        <BirthdayDecorOverlaySvg
+          theme={birthdayDecor.theme}
+          level={birthdayDecor.level}
+        />
+      )}
 
       {/* Shop Decor: Wooden Cat Wall Clock on cozy wooden pillar beside window */}
       {hasCatClock && (

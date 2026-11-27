@@ -166,6 +166,26 @@ export type DayThemeId =
 
 export type DayPhase = 'morning' | 'open' | 'evening';
 
+export type BirthdayThemeId = 'strawberry' | 'space' | 'forest';
+
+export type BirthdayStoryStatus = 'not_started' | 'active' | 'completed';
+
+export interface PuhBirthdayStoryState {
+  status: BirthdayStoryStatus;
+  /** Currently chosen (or last celebrated) theme: strawberry | space | forest */
+  theme: BirthdayThemeId | null;
+  /** Current chapter day (1 = prep, 2 = rehearsal, 3 = Puff's Birthday Party!) */
+  stageDay: 1 | 2 | 3;
+  /** Whether today's themed story order has already been served */
+  storyOrderServedToday: boolean;
+  /** All themes completed so far (unlocks their permanent collectible postcards!) */
+  completedThemes: BirthdayThemeId[];
+  /** Allows keeping festive birthday bunting up in the café after completing the chapter */
+  keepDecorEnabled: boolean;
+  /** Idempotent guard preventing duplicate +40 fish finale gift across reloads */
+  finaleRewardClaimed: boolean;
+}
+
 export interface DayProgressState {
   dayNumber: number;
   themeId: DayThemeId;
@@ -221,6 +241,9 @@ export interface Order {
   isTravelerGuest?: boolean;
   /** What category the Traveler Cat kindly asks for */
   travelerWishCategory?: TravelerWishCategory;
+  /** Step 05: Present when this guest's order is part of Puff's Birthday Story Chapter */
+  birthdayStoryRole?: 'prep_day1' | 'prep_day2' | 'finale_party';
+  birthdayTheme?: BirthdayThemeId;
 }
 
 export interface ValidationResult {
@@ -229,7 +252,7 @@ export interface ValidationResult {
   feedback: string;
 }
 
-/** Full localStorage persistence schema (v4: Phase 1–3 + Minimal Day Director) */
+/** Full localStorage persistence schema (v5: Phase 1–3 + Day Director + Puff Birthday Story) */
 export interface CafeSaveState {
   version: number;
   coins: number;
@@ -259,4 +282,6 @@ export interface CafeSaveState {
   /** Step 04: Minimal Day Director — current day progress & evening memory diary */
   dayProgress: DayProgressState;
   dayHistory: DayMemoryEntry[];
+  /** Step 05: First Story Chapter — «День народження Пуха» (3 days, 3 themes) */
+  puhBirthday: PuhBirthdayStoryState;
 }

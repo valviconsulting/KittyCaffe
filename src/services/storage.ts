@@ -1,3 +1,4 @@
+import { BIRTHDAY_THEME_ORDER } from '../data/birthdayStory.ts';
 import {
   DAY_GUEST_TARGET,
   DAY_THEME_ORDER,
@@ -5,6 +6,8 @@ import {
   getThemeForDayNumber,
 } from '../data/days.ts';
 import type {
+  BirthdayStoryStatus,
+  BirthdayThemeId,
   BlenderIngredientId,
   CafeDecorId,
   CafeSaveState,
@@ -19,6 +22,7 @@ import type {
   MarzipanEyesAccessoryId,
   MarzipanHeadAccessoryId,
   MarzipanNeckAccessoryId,
+  PuhBirthdayStoryState,
   RareStickerId,
   RegularGuestId,
   SecretDrinkRecipe,
@@ -26,13 +30,19 @@ import type {
   UnlockableRecipeId,
   WeatherType,
 } from '../types/game';
+import { createInitialBirthdayStoryState } from '../utils/birthdayStory.ts';
 import { createFreshDayProgress } from '../utils/dayDirector.ts';
 
-export const CURRENT_SAVE_VERSION = 4;
+export const CURRENT_SAVE_VERSION = 5;
 export const STORAGE_KEY = 'mur_late_save_v1';
 export const STORAGE_BACKUP_KEY = 'mur_late_save_v1_backup';
 
 const VALID_WEATHERS: WeatherType[] = ['sunny', 'rainy', 'snowy'];
+const VALID_BIRTHDAY_STATUSES: BirthdayStoryStatus[] = [
+  'not_started',
+  'active',
+  'completed',
+];
 const VALID_REGULAR_GUEST_IDS: RegularGuestId[] = [
   'puh',
   'persyk',
@@ -116,6 +126,7 @@ export const DEFAULT_SAVE_STATE: CafeSaveState = {
   travelerVisits: 0,
   dayProgress: createFreshDayProgress(1, 'open'),
   dayHistory: [],
+  puhBirthday: createInitialBirthdayStoryState(),
 };
 
 export type LoadSaveStatus =
@@ -330,6 +341,40 @@ function sanitizeDayHistory(raw: unknown): DayMemoryEntry[] {
   return entries;
 }
 
+function sanitizeBirthdayStory(raw: unknown): PuhBirthdayStoryState {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return createInitialBirthdayStoryState();
+  }
+  const c = raw as Partial<PuhBirthdayStoryState>;
+  const completedThemes = sanitizeStringArray(
+    c.completedThemes,
+    BIRTHDAY_THEME_ORDER
+  );
+  const theme: BirthdayThemeId | null =
+    c.theme && BIRTHDAY_THEME_ORDER.includes(c.theme) ? c.theme : null;
+  let status: BirthdayStoryStatus =
+    c.status && VALID_BIRTHDAY_STATUSES.includes(c.status)
+      ? c.status
+      : 'not_started';
+  // Prevent broken 'active' state without a valid chosen theme
+  if (status === 'active' && !theme) {
+    status = completedThemes.length > 0 ? 'completed' : 'not_started';
+  }
+  const stageDay: 1 | 2 | 3 =
+    c.stageDay === 1 || c.stageDay === 2 || c.stageDay === 3 ? c.stageDay : 1;
+
+  return {
+    status,
+    theme: theme ?? (completedThemes[completedThemes.length - 1] ?? null),
+    stageDay,
+    storyOrderServedToday: Boolean(c.storyOrderServedToday),
+    completedThemes,
+    keepDecorEnabled:
+      typeof c.keepDecorEnabled === 'boolean' ? c.keepDecorEnabled : true,
+    finaleRewardClaimed: Boolean(c.finaleRewardClaimed),
+  };
+}
+
 export function sanitizeSecretDrink(
   raw: unknown,
   unlockedRecipes: UnlockableRecipeId[]
@@ -496,6 +541,7 @@ export function parseAndSanitizeSave(rawObj: unknown): ParseSaveResult {
   );
   const dayProgress = sanitizeDayProgress(parsed.dayProgress, fallbackDayNumber);
   const dayHistory = sanitizeDayHistory(parsed.dayHistory);
+  const puhBirthday = sanitizeBirthdayStory(parsed.puhBirthday);
 
   return {
     ok: true,
@@ -519,6 +565,7 @@ export function parseAndSanitizeSave(rawObj: unknown): ParseSaveResult {
       travelerVisits,
       dayProgress,
       dayHistory,
+      puhBirthday,
     },
   };
 }
