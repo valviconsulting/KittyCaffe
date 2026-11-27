@@ -107,7 +107,7 @@ export function getUnreadLettersCount(
 export async function loadLocalLettersCatalog(): Promise<CafeLetter[]> {
   if (typeof fetch !== 'function') return DEFAULT_CAFE_LETTERS;
   try {
-    const res = await fetch('/content/letters.json', { cache: 'no-cache' });
+    const res = await fetch('./content/letters.json', { cache: 'no-cache' });
     if (!res.ok) return DEFAULT_CAFE_LETTERS;
     const json: unknown = await res.json();
     return sanitizeLettersCatalog(json);

@@ -3,17 +3,24 @@
   "short_name": "Мур-Лате",
   "description": "Затишна акварельна кав’ярня-кондитерська для казкових тваринок українською мовою.",
   "lang": "uk",
-  "start_url": "/",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#FAF4E8",
   "theme_color": "#FAF4E8",
   "icons": [
     {
-      "src": "/favicon.svg",
+      "src": "./favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
+    },
+    {
+      "src": "./assets/cat-marzipan.png",
+      "sizes": "640x560",
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }
