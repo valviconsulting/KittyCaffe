@@ -117,7 +117,7 @@ export const MarzipanCareModal: React.FC<MarzipanCareModalProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#3C281C]/52 p-3 sm:p-4 backdrop-blur-[2px]"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#3C281C]/52 p-3 sm:p-4 sm:backdrop-blur-[2px]"
           onClick={onClose}
         >
           <motion.div
@@ -160,20 +160,19 @@ export const MarzipanCareModal: React.FC<MarzipanCareModalProps> = ({
                   animate={
                     isExcited
                       ? { y: [0, -8, 0], rotate: [-4, 4, 0], scale: [1, 1.07, 1] }
-                      : { scaleY: [1, 1.03, 1] }
+                      : { y: 0, rotate: 0, scale: 1 }
                   }
-                  transition={
-                    isExcited
-                      ? { duration: 0.55 }
-                      : { duration: 3.4, repeat: Infinity, ease: 'easeInOut' }
-                  }
-                  className="relative aspect-[8/7] h-[84px] sm:h-[96px] shrink-0"
+                  transition={{ duration: 0.55 }}
+                  style={{ transformOrigin: 'bottom center' }}
+                  className={`relative aspect-[8/7] h-[84px] sm:h-[96px] shrink-0 ${
+                    isExcited ? '' : 'animate-marzipan-breathe'
+                  }`}
                 >
                   <AssetIllustration
                     src={CAFE_ASSETS.marzipan}
                     alt="Кіт Марципан"
-                    className="h-full w-full drop-shadow-[0_4px_6px_rgba(92,48,18,0.28)]"
-                    imgClassName="h-full w-full object-fill saturate-[1.12]"
+                    className="h-full w-full sm:drop-shadow-[0_4px_6px_rgba(92,48,18,0.28)]"
+                    imgClassName="h-full w-full object-fill sm:saturate-[1.03]"
                     fallback={<MarzipanCatSvg isPurring={isExcited} className="h-full w-full" />}
                   />
                   <MarzipanAccessoriesOverlaySvg equipped={equippedAccessories} />

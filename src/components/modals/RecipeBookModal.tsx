@@ -81,7 +81,7 @@ const RecipeBookModalInner: React.FC<{
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#5A3E32]/45 backdrop-blur-[2px] p-2 sm:p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#5A3E32]/45 sm:backdrop-blur-[2px] p-2 sm:p-4"
       onClick={onClose}
       role="dialog"
       aria-modal="true"

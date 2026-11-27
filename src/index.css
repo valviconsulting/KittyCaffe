@@ -63,31 +63,28 @@
   font-family: 'Caveat', cursive, serif;
 }
 
-/* Warm café-au-lait / kraft paper outer backdrop on ultrawide monitors */
+/* Warm café-au-lait / kraft paper outer backdrop on ultrawide monitors (pure CSS gradients, zero feTurbulence) */
 .cafe-outer-bg {
   background-color: #E4D1BA;
   background-image:
-    radial-gradient(circle at 50% 35%, rgba(250, 240, 224, 0.55) 0%, rgba(196, 162, 128, 0.35) 100%),
-    url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='k'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23k)' opacity='0.045'/%3E%3C/svg%3E");
+    radial-gradient(circle at 50% 35%, rgba(250, 240, 224, 0.58) 0%, rgba(196, 162, 128, 0.36) 100%);
 }
 
-/* Warm handmade watercolor paper texture (CSS radial washes + soft grain) */
+/* Warm handmade watercolor paper wash (GPU-friendly pure radial gradients) */
 .watercolor-paper {
   background-color: #FAF4E8;
   background-image:
     radial-gradient(circle at 12% 18%, rgba(244, 199, 210, 0.28) 0%, transparent 42%),
     radial-gradient(circle at 88% 15%, rgba(191, 216, 196, 0.3) 0%, transparent 44%),
-    radial-gradient(circle at 52% 94%, rgba(231, 184, 104, 0.22) 0%, transparent 48%),
-    url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.032'/%3E%3C/svg%3E");
+    radial-gradient(circle at 52% 94%, rgba(231, 184, 104, 0.22) 0%, transparent 48%);
 }
 
 /* Watercolor postcard card style */
 .watercolor-card {
-  background-color: rgba(255, 252, 246, 0.94);
+  background-color: rgba(255, 252, 246, 0.96);
   background-image:
     radial-gradient(circle at 8% 10%, rgba(255, 240, 218, 0.5) 0%, transparent 46%),
-    radial-gradient(circle at 94% 92%, rgba(246, 220, 227, 0.38) 0%, transparent 46%),
-    url("data:image/svg+xml,%3Csvg viewBox='0 0 140 140' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)' opacity='0.025'/%3E%3C/svg%3E");
+    radial-gradient(circle at 94% 92%, rgba(246, 220, 227, 0.38) 0%, transparent 46%);
   box-shadow:
     0 10px 26px -10px rgba(90, 62, 50, 0.16),
     inset 0 1px 0 rgba(255, 255, 255, 0.85);
@@ -328,6 +325,91 @@
 .animate-sun-shimmer { animation: sun-shimmer 3.8s ease-in-out infinite; }
 .animate-clock-pendulum { animation: clock-pendulum 2.4s ease-in-out infinite; }
 .animate-mote { animation: mote-drift 5.5s ease-in-out infinite; }
+@keyframes guest-breathe {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scaleY(1) rotate(0deg);
+  }
+  25% {
+    transform: translate3d(0, -1px, 0) scaleY(1.012) rotate(0.7deg);
+  }
+  50% {
+    transform: translate3d(0, -2px, 0) scaleY(1.022) rotate(0deg);
+  }
+  75% {
+    transform: translate3d(0, -1px, 0) scaleY(1.012) rotate(-0.7deg);
+  }
+}
+
+@keyframes guest-happy-bounce {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+  }
+  25% {
+    transform: translate3d(0, -7px, 0) scale(1.04) rotate(-1.8deg);
+  }
+  50% {
+    transform: translate3d(0, 0, 0) scale(0.99) rotate(1.6deg);
+  }
+  75% {
+    transform: translate3d(0, -4px, 0) scale(1.02) rotate(-1deg);
+  }
+}
+
+@keyframes marzipan-breathe {
+  0%, 100% {
+    transform: scaleY(1) scaleX(1);
+  }
+  50% {
+    transform: scaleY(1.038) scaleX(0.986);
+  }
+}
+
+@keyframes heart-rise {
+  0% {
+    transform: translate3d(0, 12px, 0) scale(0.55);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(0, -32px, 0) scale(1.12);
+    opacity: 0;
+  }
+}
+
+.animate-guest-breathe {
+  animation: guest-breathe 4.4s ease-in-out infinite;
+  will-change: transform;
+}
+.animate-guest-happy {
+  animation: guest-happy-bounce 0.95s ease-in-out infinite;
+  will-change: transform;
+}
+.animate-marzipan-breathe {
+  animation: marzipan-breathe 3.6s ease-in-out infinite;
+  will-change: transform;
+}
+.animate-heart-rise {
+  animation: heart-rise 1.45s ease-out infinite;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-guest-breathe,
+  .animate-guest-happy,
+  .animate-marzipan-breathe,
+  .animate-heart-rise,
+  .animate-sun-shimmer,
+  .animate-mote,
+  .animate-rain,
+  .animate-snow,
+  .animate-twinkle,
+  .animate-clock-pendulum {
+    animation: none !important;
+  }
+}
+
 .animate-whirl {
   transform-origin: 65px 72px;
   animation: whirl-spin 0.45s linear infinite;

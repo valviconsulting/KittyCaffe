@@ -20,7 +20,7 @@ interface TopBarProps {
   onOpenFriendshipAlbum: () => void;
 }
 
-export const TopBar: React.FC<TopBarProps> = ({
+export const TopBar: React.FC<TopBarProps> = React.memo(({
   coins,
   servedCount,
   weather,
@@ -222,4 +222,4 @@ export const TopBar: React.FC<TopBarProps> = ({
       </div>
     </header>
   );
-};
+});

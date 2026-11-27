@@ -38,14 +38,14 @@ export const GuestCard: React.FC<GuestCardProps> = ({
         transition={{ type: 'spring', stiffness: 230, damping: 22 }}
         className="relative flex shrink-0 flex-col items-center"
       >
-        {/* Soft joyful golden watercolor aura behind guest when happy */}
+        {/* Soft joyful golden aura behind guest when happy (pure radial gradient, zero GPU blur filter) */}
         <AnimatePresence>
           {isHappy && (
             <motion.div
-              initial={{ opacity: 0, scale: 0.7 }}
+              initial={{ opacity: 0, scale: 0.75 }}
               animate={{ opacity: 0.85, scale: 1.08 }}
               exit={{ opacity: 0 }}
-              className="pointer-events-none absolute inset-x-0 bottom-4 top-2 -z-10 rounded-full bg-radial from-[#FFEBA0]/75 via-[#F8CFD9]/45 to-transparent blur-md"
+              className="pointer-events-none absolute inset-x-0 bottom-3 top-1 -z-10 rounded-full bg-radial from-[#FFEBA0]/75 via-[#F8CFD9]/35 to-transparent"
             />
           )}
         </AnimatePresence>
@@ -76,32 +76,24 @@ export const GuestCard: React.FC<GuestCardProps> = ({
           </div>
         )}
 
-        {/* Rising watercolor hearts & awake sparkles on happy emotion */}
-        <AnimatePresence>
-          {isHappy && (
-            <div className="pointer-events-none absolute -top-2 inset-x-0 z-30 flex justify-around">
-              {['♥', '✨', '♥'].map((symbol, idx) => (
-                <motion.span
-                  key={idx}
-                  initial={{ opacity: 0, y: 14, scale: 0.5 }}
-                  animate={{ opacity: [0, 1, 0], y: -34, scale: 1.15 }}
-                  transition={{
-                    duration: 1.45,
-                    delay: idx * 0.22,
-                    repeat: Infinity,
-                  }}
-                  className={
-                    symbol === '✨'
-                      ? 'text-base sm:text-lg text-[#E6AE39]'
-                      : 'text-base sm:text-lg text-[#EC7E9B]'
-                  }
-                >
-                  {symbol}
-                </motion.span>
-              ))}
-            </div>
-          )}
-        </AnimatePresence>
+        {/* Rising watercolor hearts & sparkles on happy emotion (GPU CSS @keyframes) */}
+        {isHappy && (
+          <div className="pointer-events-none absolute -top-2 inset-x-0 z-30 flex justify-around">
+            {['♥', '✨', '♥'].map((symbol, idx) => (
+              <span
+                key={idx}
+                style={{ animationDelay: `${idx * 0.24}s` }}
+                className={`animate-heart-rise ${
+                  symbol === '✨'
+                    ? 'text-base sm:text-lg text-[#E6AE39]'
+                    : 'text-base sm:text-lg text-[#EC7E9B]'
+                }`}
+              >
+                {symbol}
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* Expressive watercolor emotion badge for surprised / Puff no-coffee */}
         <AnimatePresence>
@@ -117,28 +109,26 @@ export const GuestCard: React.FC<GuestCardProps> = ({
           )}
         </AnimatePresence>
 
-        {/* Soft warm golden-afternoon ambient bounce behind guest so fur blends naturally into the café */}
-        <div className="pointer-events-none absolute inset-x-2 bottom-3 top-4 -z-10 rounded-full bg-radial from-[#FFEAB3]/52 via-[#FADBC4]/22 to-transparent blur-md" />
-        <div className="pointer-events-none absolute bottom-1 inset-x-4 h-7 rounded-full bg-[#5A3214]/32 blur-[8px]" />
+        {/* Soft warm golden-afternoon ambient bounce + contact shadow (pure radial gradients, zero blur filter) */}
+        <div className="pointer-events-none absolute inset-x-1 bottom-2 top-3 -z-10 rounded-full bg-radial from-[#FFEAB3]/46 via-[#FADBC4]/18 to-transparent" />
+        <div className="pointer-events-none absolute bottom-0 inset-x-3 h-7 rounded-full bg-radial from-[#5A3214]/32 via-[#5A3214]/12 to-transparent" />
 
-        {/* Portrait Sprite standing behind wooden counter — natural breathing + cute subtle head sway */}
+        {/* Portrait Sprite standing behind wooden counter — pure GPU CSS breathing/bounce + one-shot no_coffee shake */}
         <motion.div
           animate={
             emotion === 'no_coffee'
               ? { x: [0, -7, 7, -6, 6, -3, 3, 0], rotate: [0, -5, 5, -4, 4, 0] }
-              : isHappy
-                ? { y: [0, -8, 0, -4, 0], scale: [1, 1.045, 0.99, 1.025, 1], rotate: [0, -2, 2, -1, 0] }
-                : { scaleY: [1, 1.024, 1], y: [0, -1.8, 0], rotate: [0, 0.85, 0, -0.85, 0] }
+              : { x: 0, rotate: 0 }
           }
-          transition={
-            emotion === 'no_coffee'
-              ? { duration: 0.65, ease: 'easeInOut' }
-              : isHappy
-                ? { duration: 0.95, repeat: Infinity, ease: 'easeInOut' }
-                : { duration: 4.2, repeat: Infinity, ease: 'easeInOut' }
-          }
+          transition={{ duration: 0.65, ease: 'easeInOut' }}
           style={{ transformOrigin: 'bottom center' }}
-          className="relative"
+          className={`relative ${
+            emotion === 'no_coffee'
+              ? ''
+              : isHappy
+                ? 'animate-guest-happy'
+                : 'animate-guest-breathe'
+          }`}
         >
           <AssetIllustration
             src={CAFE_ASSETS.guests[guestId]}
@@ -147,8 +137,8 @@ export const GuestCard: React.FC<GuestCardProps> = ({
               largeMobile
                 ? 'h-[196px] w-[174px] [@media(min-height:760px)]:h-[234px] [@media(min-height:760px)]:w-[206px]'
                 : 'h-[122px] w-[110px]'
-            } sm:h-[148px] sm:w-[138px] md:h-[172px] md:w-[162px] lg:h-[196px] lg:w-[190px] xl:h-[234px] xl:w-[224px] drop-shadow-[0_10px_14px_rgba(90,48,18,0.34)] transition-[width,height] duration-200`}
-            imgClassName="h-full w-full object-contain object-bottom saturate-[1.03] contrast-[1.01]"
+            } sm:h-[148px] sm:w-[138px] md:h-[172px] md:w-[162px] lg:h-[196px] lg:w-[190px] xl:h-[234px] xl:w-[224px] sm:drop-shadow-[0_10px_14px_rgba(90,48,18,0.34)] transition-[width,height] duration-200`}
+            imgClassName="h-full w-full object-contain object-bottom sm:saturate-[1.03] sm:contrast-[1.01]"
             fallback={
               <GuestCharacterSvg
                 guestId={guestId}

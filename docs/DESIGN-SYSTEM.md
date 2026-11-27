@@ -96,7 +96,6 @@
 | `public/manifest.webmanifest` | `0.7 KB` | PWA-маніфест (`standalone`, `start_url: "./"`, іконки `favicon.svg` + `cat-marzipan.png`) |
 | `public/content/letters.json` | `3.6 KB` | Локальний редагований JSON-каталог теплих листів зі стабільними ID |
 | `public/assets/README.md` | `1.2 KB` | Пам’ятка по іменуванню файлів ілюстрацій |
-| `public/icons.svg` | `4.9 KB` | Залишковий шаблонний файл Vite (не використовується у рантаймі; підлягає видаленню) |
 
 ---
 
@@ -164,12 +163,12 @@
 
 ---
 
-## 7. Відомі мобільні performance-вузькі місця (діагностика перед наступною хвилею)
+## 7. Мобільна продуктивність 60 FPS (реалізовано у Хвилі 0)
 
-Зафіксовано під час реального тестування на телефоні (наступний запланований крок — мобільна оптимізація до стабільних 60 FPS):
+Усі 5 виявлених раніше мобільних вузьких місць усунено:
 
-1. **Reflow при відкритті/закритті стійки (`src/App.tsx#L1638-L1646`):** анімація `height: 0 → 'auto'` перераховує flexbox-висоту всієї сторінки й перемальовує `bg-cafe.webp` на кожному кадрі. *План:* перевести виїзд панелі на GPU `transform: translateY(...)` без reflow сцени.
-2. **Повноекранний `backdrop-blur` та `mix-blend-mode` (`CafeHallScene.tsx#L153`, `WindowWeatherOverlay.tsx#L71-L89`, усі модалки):** `backdrop-blur-[2px..3px]` поверх анімованого шару погоди (`screen`/`soft-light`) змушує мобільний GPU робити дорогий blur-прохід на кожному кадрі. *План:* прибрати `backdrop-blur` і `mix-blend-mode` на мобільних екранах, замінивши чистими теплими напівпрозорими тонами.
-3. **Нескінченні JS-анімації Framer Motion + подвійні CSS-фільтри (`GuestCard.tsx#L122-L145`, `MarzipanHelper.tsx#L85-L103`):** `repeat: Infinity` на JS-потоці + `drop-shadow(...)` по альфа-масці + `saturate/contrast/sepia` + `blur-md` постійно навантажують CPU/GPU навіть у простої. *План:* перевести дихання на чисті GPU CSS `@keyframes` (`transform`), а теплу насиченість одноразово запекти у `.webp`-файли.
-4. **Фрактальний SVG-шум `feTurbulence` у CSS (`src/index.css#L71-L91`):** вбудований `<feTurbulence numOctaves="2..3">` у `.watercolor-paper`, `.cafe-outer-bg` та `.watercolor-card` сповільнює перемальовування в мобільному Safari/Chrome. *План:* видалити `feTurbulence`, залишивши легкі акварельні радіальні градієнти.
-5. **Зайві ре-рендери та розмір фонової текстури на вузьких екранах:** додати `React.memo` для `CafeHallScene`, `TopBar`, `WindowWeatherOverlay` та надати легший мобільний варіант `bg-cafe` для вузьких екранів (`<picture media="(max-width: 640px)">`).
+1. **GPU-виїзд стійки (`src/App.tsx`):** прибрано per-frame flexbox reflow `height: 0 → 'auto'`; панель відкривається легким GPU-переходом `transform: translateY + opacity`.
+2. **Нуль `backdrop-blur` і `mix-blend-mode` на телефонах (`CafeHallScene.tsx`, `WindowWeatherOverlay.tsx`, усі 12 модалок):** важкі `mix-blend-mode: screen/soft-light` замінено на чистий альфа-градієнт, а `backdrop-blur` обмежено виключно `sm+` (`>=640px`).
+3. **Чисті GPU CSS `@keyframes` (`src/index.css`, `GuestCard.tsx`, `MarzipanHelper.tsx`, `MarzipanCareModal.tsx`):** усі нескінченні JS-цикли `repeat: Infinity` переведено на `animate-guest-breathe`, `animate-guest-happy`, `animate-marzipan-breathe` та `animate-heart-rise` із підтримкою `prefers-reduced-motion`, а `blur-md`/`blur-[8px]` тіні замінено на чисті радіальні градієнти.
+4. **Нуль `feTurbulence` у CSS (`src/index.css`):** видалено всі 3 фрактальні SVG-шуми з `.cafe-outer-bg`, `.watercolor-paper` і `.watercolor-card`.
+5. **Мемоізація й очищення (`TopBar.tsx`, `WindowWeatherOverlay.tsx`, `CafeHallScene.tsx`):** додано `React.memo`, видалено невикористаний `public/icons.svg`, а сумарну вагу 9 WebP-асетів зменшено до `487.0 KB`.

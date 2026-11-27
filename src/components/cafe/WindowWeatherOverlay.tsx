@@ -51,26 +51,25 @@ const GOLDEN_MOTES = [
  * - Soft storybook golden edge vignette framing the interior naturally
  * - Sunbeams + lazy drifting golden dust motes when sunny, crisp rain/snow outside the window
  */
-export const WindowWeatherOverlay: React.FC<WindowWeatherOverlayProps> = ({
+export const WindowWeatherOverlay: React.FC<WindowWeatherOverlayProps> = React.memo(({
   weather,
   isLateAfternoon = false,
 }) => {
-  const baseLampStrength = weather === 'sunny' ? 0.32 : 0.44;
-  const lampStrength = isLateAfternoon ? baseLampStrength + 0.08 : baseLampStrength;
+  const baseLampStrength = weather === 'sunny' ? 0.24 : 0.34;
+  const lampStrength = isLateAfternoon ? baseLampStrength + 0.06 : baseLampStrength;
 
   return (
     <div
       className="pointer-events-none absolute inset-0 z-[2] overflow-hidden"
       aria-hidden="true"
     >
-      {/* Gentle late-afternoon golden-peach sunset wash as the final guest of the day arrives */}
+      {/* Gentle late-afternoon golden-peach sunset wash (pure alpha, zero mix-blend GPU cost) */}
       {isLateAfternoon && (
         <div
           className="absolute inset-0 transition-opacity duration-700"
           style={{
             backgroundImage:
-              'linear-gradient(to bottom, rgba(255, 166, 92, 0.16) 0%, rgba(235, 132, 98, 0.1) 55%, rgba(164, 96, 86, 0.08) 100%)',
-            mixBlendMode: 'soft-light',
+              'linear-gradient(to bottom, rgba(255, 174, 102, 0.14) 0%, rgba(235, 138, 102, 0.09) 55%, rgba(164, 96, 86, 0.06) 100%)',
           }}
         />
       )}
@@ -79,16 +78,15 @@ export const WindowWeatherOverlay: React.FC<WindowWeatherOverlayProps> = ({
         className="absolute inset-0"
         style={{
           backgroundImage:
-            'radial-gradient(ellipse 76% 84% at 50% 48%, transparent 56%, rgba(88, 48, 22, 0.16) 100%)',
+            'radial-gradient(ellipse 76% 84% at 50% 48%, transparent 56%, rgba(88, 48, 22, 0.15) 100%)',
         }}
       />
 
-      {/* Lush golden-amber light pools aligned with the 3 hanging pendant lamps & warm window bounce */}
+      {/* Warm golden-amber light pools aligned with the 3 hanging pendant lamps (pure alpha glow) */}
       <div
         className="animate-sun-shimmer absolute inset-x-0 top-0 h-[58%]"
         style={{
-          backgroundImage: `radial-gradient(ellipse 24% 62% at 67% 20%, rgba(255, 206, 102, ${lampStrength}) 0%, rgba(255, 184, 78, 0.14) 55%, transparent 100%), radial-gradient(ellipse 28% 58% at 48% 30%, rgba(255, 224, 148, 0.18) 0%, transparent 100%)`,
-          mixBlendMode: 'screen',
+          backgroundImage: `radial-gradient(ellipse 24% 62% at 67% 20%, rgba(255, 222, 132, ${lampStrength}) 0%, rgba(255, 198, 104, 0.1) 55%, transparent 100%), radial-gradient(ellipse 28% 58% at 48% 30%, rgba(255, 232, 168, 0.14) 0%, transparent 100%)`,
         }}
       />
 
@@ -196,4 +194,4 @@ export const WindowWeatherOverlay: React.FC<WindowWeatherOverlayProps> = ({
       </svg>
     </div>
   );
-};
+});

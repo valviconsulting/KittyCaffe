@@ -115,7 +115,7 @@ export const DayJournalModal: React.FC<DayJournalModalProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#3C281C]/48 p-3 sm:p-4 backdrop-blur-[2px]"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#3C281C]/48 p-3 sm:p-4 sm:backdrop-blur-[2px]"
           onClick={canDismissBackdrop ? onClose : undefined}
         >
           <motion.div

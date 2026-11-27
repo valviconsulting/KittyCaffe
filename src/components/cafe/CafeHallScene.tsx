@@ -93,7 +93,7 @@ interface CafeHallSceneProps {
   onNextGuest: () => void;
 }
 
-export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
+export const CafeHallScene: React.FC<CafeHallSceneProps> = React.memo(({
   order,
   weather,
   emotion,
@@ -159,7 +159,7 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.22 }}
       onClick={(e) => e.stopPropagation()}
-      className={`landscape-compact-bubble relative z-20 rounded-2xl sm:rounded-3xl border-2 bg-[#FFFDF8]/88 backdrop-blur-[3px] px-2.5 py-1.5 sm:px-3.5 sm:py-2 shadow-[0_8px_22px_-8px_rgba(74,44,22,0.24)] transition-colors ${
+      className={`landscape-compact-bubble relative z-20 rounded-2xl sm:rounded-3xl border-2 bg-[#FFFDF8]/95 sm:bg-[#FFFDF8]/88 sm:backdrop-blur-[3px] px-2.5 py-1.5 sm:px-3.5 sm:py-2 shadow-[0_8px_22px_-8px_rgba(74,44,22,0.24)] transition-colors ${
         isHappy
           ? 'border-[#96C7A6]'
           : isTraveler
@@ -690,4 +690,4 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
       </div>
     </section>
   );
-};
+});
