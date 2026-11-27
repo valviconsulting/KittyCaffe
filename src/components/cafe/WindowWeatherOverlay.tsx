@@ -110,9 +110,9 @@ export const WindowWeatherOverlay: React.FC<WindowWeatherOverlayProps> = ({
             <stop offset="0%" stopColor="#88B0D6" stopOpacity="0.32" />
             <stop offset="100%" stopColor="#DCEBF8" stopOpacity="0.24" />
           </linearGradient>
-          {/* Matches the central wooden window panes of the 21:9 panoramic bg-cafe.png */}
+          {/* Matches the central wooden window panes of the 21:9 panoramic bg-cafe.webp */}
           <clipPath id="panoramic-window-clip">
-            <rect x="38.8" y="10" width="22.4" height="69" rx="1.5" />
+            <rect x="38.4" y="17.5" width="23.2" height="62" rx="1.5" />
           </clipPath>
         </defs>
 

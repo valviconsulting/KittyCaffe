@@ -23,6 +23,7 @@ import type {
   PreparedPastry,
   RareStickerId,
   SecretDrinkRecipe,
+  StationTab,
   WeatherType,
 } from '../../types/game';
 import { AssetIllustration } from '../common/AssetIllustration';
@@ -67,11 +68,14 @@ interface CafeHallSceneProps {
   celebration: CelebrationBanner | null;
   isLateAfternoon?: boolean;
   isDayComplete?: boolean;
+  isWorkbenchOpen?: boolean;
   birthdayDecor?: { theme: BirthdayThemeId; level: 1 | 2 | 3 } | null;
   onPetMarzipan: () => void;
   onToggleMusicBox: () => void;
   onOpenSecretCreator: () => void;
   onOpenFriendshipAlbum: () => void;
+  onOpenStationForOrder?: (tab: StationTab) => void;
+  onDismissWorkbench?: () => void;
   onServe: () => void;
   onClearTray: () => void;
   onClearTrayDrink: () => void;
@@ -98,11 +102,14 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
   celebration,
   isLateAfternoon = false,
   isDayComplete = false,
+  isWorkbenchOpen = false,
   birthdayDecor = null,
   onPetMarzipan,
   onToggleMusicBox,
   onOpenSecretCreator,
   onOpenFriendshipAlbum,
+  onOpenStationForOrder,
+  onDismissWorkbench,
   onServe,
   onClearTray,
   onClearTrayDrink,
@@ -134,7 +141,8 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
       initial={{ opacity: 0.72, scale: 0.97 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.22 }}
-      className={`watercolor-card landscape-compact-bubble relative z-20 rounded-2xl sm:rounded-3xl border-2 px-3 py-1.5 sm:px-3.5 sm:py-2.5 transition-colors ${
+      onClick={(e) => e.stopPropagation()}
+      className={`landscape-compact-bubble relative z-20 rounded-2xl sm:rounded-3xl border-2 bg-[#FFFDF8]/88 backdrop-blur-[3px] px-2.5 py-1.5 sm:px-3.5 sm:py-2 shadow-[0_8px_22px_-8px_rgba(74,44,22,0.24)] transition-colors ${
         isHappy
           ? 'border-[#96C7A6]'
           : isTraveler
@@ -146,7 +154,7 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
     >
       {/* Tail pointing left toward guest on tablet/desktop */}
       <div
-        className={`hidden sm:block absolute -left-2.5 bottom-6 h-4 w-4 rotate-45 border-b-2 border-l-2 bg-[#FFFDF8] ${
+        className={`hidden sm:block absolute -left-2 bottom-5 h-3.5 w-3.5 rotate-45 border-b-2 border-l-2 bg-[#FFFDF8]/95 ${
           isHappy
             ? 'border-[#96C7A6]'
             : isTraveler
@@ -169,9 +177,21 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
                 <span className="inline-flex items-center gap-1 rounded-xl border border-[#C98E35] bg-[#FFF4D2] px-2 py-0.5 text-[10px] sm:text-[11px] font-bold text-[#6E420A]">
                   🎒 Особливий гість
                 </span>
-                <span className="inline-flex items-center gap-1 rounded-xl border border-[#8EB898] bg-[#ECF7EF] px-2 py-0.5 text-[10px] sm:text-[11px] font-bold text-[#215936]">
-                  💛 {drinkName} (або будь-яке частування!)
-                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    onOpenStationForOrder?.(
+                      order.travelerWishCategory === 'cold'
+                        ? 'cold'
+                        : order.travelerWishCategory === 'pastry'
+                          ? 'pastry'
+                          : 'hot'
+                    )
+                  }
+                  className="inline-flex items-center gap-1 rounded-xl border border-[#8EB898] bg-[#ECF7EF] px-2 py-0.5 text-[10px] sm:text-[11px] font-bold text-[#215936] hover:brightness-97 transition-all"
+                >
+                  💛 {drinkName} (натисни, щоб приготувати →)
+                </button>
               </>
             ) : (
               <>
@@ -190,8 +210,11 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
                   </span>
                 )}
 
-                <span
-                  className={`inline-flex items-center gap-1 rounded-xl border px-2 py-0.5 sm:px-2.5 sm:py-1 text-[10.5px] sm:text-[11px] font-bold ${
+                <button
+                  type="button"
+                  onClick={() => onOpenStationForOrder?.(drinkTab)}
+                  title="Натисни, щоб відкрити станцію приготування цього напою!"
+                  className={`inline-flex items-center gap-1 rounded-xl border px-2 py-0.5 sm:px-2.5 sm:py-0.5 text-[10.5px] sm:text-[11px] font-bold transition-transform hover:scale-[1.03] active:scale-[0.97] ${
                     isSecretOrder
                       ? 'border-[#D9A143] bg-[#FFF4D6] text-[#6C420C]'
                       : 'border-[#DFBE97] bg-[#FBF0DE] text-[#664128]'
@@ -205,13 +228,18 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
                         : '🍹'}
                   </span>
                   <span>{drinkName}</span>
-                </span>
+                </button>
 
                 {pastryRecipe && (
-                  <span className="inline-flex items-center gap-1 rounded-xl border border-[#EAB5C4] bg-[#FDF0F4] px-2 py-0.5 sm:px-2.5 sm:py-1 text-[10.5px] sm:text-[11px] font-bold text-[#883C54]">
+                  <button
+                    type="button"
+                    onClick={() => onOpenStationForOrder?.('pastry')}
+                    title="Натисни, щоб відкрити вітрину випічки!"
+                    className="inline-flex items-center gap-1 rounded-xl border border-[#EAB5C4] bg-[#FDF0F4] px-2 py-0.5 sm:px-2.5 sm:py-0.5 text-[10.5px] sm:text-[11px] font-bold text-[#883C54] transition-transform hover:scale-[1.03] active:scale-[0.97]"
+                  >
                     <span aria-hidden="true">🥐</span>
                     <span>{pastryRecipe.name}</span>
-                  </span>
+                  </button>
                 )}
 
                 {order.wantsLatteArt && (
@@ -223,24 +251,26 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
             )}
           </div>
 
-          <div className="hidden sm:flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] leading-tight font-semibold text-[#8E6950]">
-            {isTraveler ? (
-              <span className="text-[#7C4E12]">
-                🎁 Подарунок за доброту: рідкісний золотий стікер!
-              </span>
-            ) : (
-              <span>
-                {isSecretOrder
-                  ? `Напій дня (+${order.isCombo ? 40 : 25} 🐟)`
-                  : order.isCombo
-                    ? 'Комбо (+30 🐟)'
-                    : 'Замовлення (+15 🐟)'}
-                {order.serviceMode === 'takeaway' ? ' • +5 🐟 за стікер' : ''}
-                {order.wantsLatteArt ? ' • +5 🐟 за лате-арт' : ''}
-                {guestIsBestFriend ? ' • +5 🐟 від друга 💖' : ''}
-              </span>
-            )}
-          </div>
+          {!isWorkbenchOpen && (
+            <div className="hidden sm:flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] leading-tight font-semibold text-[#8E6950]">
+              {isTraveler ? (
+                <span className="text-[#7C4E12]">
+                  🎁 Подарунок за доброту: рідкісний золотий стікер!
+                </span>
+              ) : (
+                <span>
+                  {isSecretOrder
+                    ? `Напій дня (+${order.isCombo ? 40 : 25} 🐟)`
+                    : order.isCombo
+                      ? 'Комбо (+30 🐟)'
+                      : 'Замовлення (+15 🐟)'}
+                  {order.serviceMode === 'takeaway' ? ' • +5 🐟 за стікер' : ''}
+                  {order.wantsLatteArt ? ' • +5 🐟 за лате-арт' : ''}
+                  {guestIsBestFriend ? ' • +5 🐟 від друга 💖' : ''}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       ) : (
         <div className="relative z-10 mt-1.5 flex items-center justify-between gap-2">
@@ -267,15 +297,24 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
 
   return (
     <section
-      className="landscape-compact-scene relative flex h-[38%] sm:h-[42%] lg:h-auto lg:flex-1 min-h-[240px] shrink-0 w-full flex-col justify-between sm:flex-row sm:items-end overflow-hidden border-b-4 border-[#6B4223] px-2 sm:px-4 lg:px-6 pb-1.5 sm:pb-2 pt-1.5 sm:pt-2"
+      onClick={() => {
+        if (isWorkbenchOpen) onDismissWorkbench?.();
+      }}
+      className={`landscape-compact-scene relative flex flex-1 min-h-[215px] w-full flex-col justify-between sm:flex-row sm:items-end overflow-hidden border-b-4 border-[#6B4223] px-2 sm:px-4 lg:px-6 pb-1.5 sm:pb-2 pt-1.5 sm:pt-2 transition-all ${
+        isWorkbenchOpen ? 'cursor-pointer' : ''
+      }`}
       aria-label="Зала кав’ярні та вікно з погодою"
     >
-      {/* Background: Rich vibrant 21:9 panoramic `/assets/bg-cafe.png` with lush warm storybook tone */}
+      {/* Background: Rich vibrant 21:9 panoramic `/assets/bg-cafe.webp` with lush warm storybook tone */}
       <AssetIllustration
         src={CAFE_ASSETS.background}
         alt="Акварельний інтер’єр кав’ярні Мур-Лате"
         className="absolute inset-0 h-full w-full pointer-events-none"
-        imgClassName="h-full w-full object-cover object-[50%_54%] xl:object-[50%_48%] saturate-[1.14] contrast-[1.04] brightness-[0.99]"
+        imgClassName={`h-full w-full object-cover saturate-[1.14] contrast-[1.04] brightness-[0.99] transition-all duration-300 ${
+          isWorkbenchOpen
+            ? 'object-[50%_54%] xl:object-[50%_48%]'
+            : 'object-[50%_46%] sm:object-[50%_48%]'
+        }`}
         fallback={<CafeBackgroundSvg weather={weather} />}
       />
 
@@ -303,7 +342,7 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
         </div>
       )}
 
-      {/* Cozy In-Cafe Chalkboard Plaque displaying current Secret Drink of the Day */}
+      {/* Cozy In-Cafe Chalkboard Plaque displaying current Secret Drink of the Day — compact edge placement */}
       {secretDrink && (
         <motion.button
           type="button"
@@ -311,43 +350,49 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
           animate={{ opacity: 1, y: 0 }}
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.96 }}
-          onClick={onOpenSecretCreator}
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenSecretCreator();
+          }}
           title="Натисни, щоб змінити «Секретний напій дня»"
-          className="hidden sm:flex absolute left-3 top-2.5 z-20 items-center gap-1.5 rounded-2xl border-2 border-[#C89A67] bg-[#4C3629]/92 px-3 py-1 text-left shadow-[0_4px_12px_rgba(48,28,14,0.34)]"
+          className="hidden sm:flex absolute left-2.5 top-2 z-20 items-center gap-1.5 rounded-xl border-[1.5px] border-[#C89A67]/90 bg-[#4C3629]/82 backdrop-blur-[2px] px-2.5 py-0.5 text-left shadow-[0_3px_10px_rgba(48,28,14,0.28)]"
         >
-          <span className="text-base leading-none">{secretDrink.icon}</span>
+          <span className="text-sm leading-none">{secretDrink.icon}</span>
           <div className="leading-tight">
-            <span className="block text-[9px] font-bold uppercase tracking-wider text-[#F4D8A8]">
+            <span className="block text-[8px] font-bold uppercase tracking-wider text-[#F4D8A8]">
               Напій дня
             </span>
-            <span className="font-handwriting block text-base leading-none font-bold text-[#FFF9EE]">
+            <span className="font-handwriting block text-[15px] leading-none font-bold text-[#FFF9EE]">
               {secretDrink.name}
             </span>
           </div>
         </motion.button>
       )}
 
-      {/* Best-Friend Souvenirs Shelf (top-right wooden ledge on sm+, clickable to open Friendship Album) */}
+      {/* Best-Friend Souvenirs Shelf (compact top-right wooden ledge on sm+) */}
       {unlockedFriendSouvenirs.length > 0 && (
         <motion.button
           type="button"
           initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
-          onClick={onOpenFriendshipAlbum}
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenFriendshipAlbum();
+          }}
           title="Сувеніри від найкращих друзів! Натисни, щоб відкрити Альбом дружби."
-          className="hidden sm:flex absolute right-3 top-2.5 z-20 flex-col items-center rounded-2xl border-2 border-[#B6824C] bg-[#FAF0DE]/92 px-2.5 py-1 shadow-[0_4px_12px_rgba(62,36,18,0.24)] hover:brightness-102"
+          className="hidden sm:flex absolute right-2.5 top-2 z-20 flex-col items-center rounded-xl border-[1.5px] border-[#B6824C]/85 bg-[#FAF0DE]/84 backdrop-blur-[2px] px-2 py-0.5 shadow-[0_3px_10px_rgba(62,36,18,0.2)] hover:brightness-102"
         >
-          <span className="text-[8.5px] font-bold uppercase tracking-wider text-[#8C5D34] leading-none mb-0.5">
+          <span className="text-[8px] font-bold uppercase tracking-wider text-[#8C5D34] leading-none mb-0.5">
             💖 Поличка друзів
           </span>
-          <div className="flex items-end gap-1">
+          <div className="flex items-end gap-0.5">
             {unlockedFriendSouvenirs.map((friendId) => (
               <span
                 key={friendId}
                 title={`${GUESTS[friendId].name}: ${GUESTS[friendId].souvenirName}`}
                 className="inline-flex"
               >
-                <SouvenirSvg souvenirId={friendId} className="h-7 w-7" />
+                <SouvenirSvg souvenirId={friendId} className="h-6 w-6" />
               </span>
             ))}
           </div>
@@ -428,7 +473,10 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
           type="button"
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.92 }}
-          onClick={onToggleMusicBox}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleMusicBox();
+          }}
           title={
             musicBoxPlaying && !muted
               ? 'Музична скринька грає! Натисни, щоб поставити на паузу.'
@@ -451,7 +499,10 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
       {/* Bottom Counter Row (mobile) / Full Single Horizontal Row (sm+) */}
       <div className="flex w-full items-end justify-between gap-1.5 sm:gap-3 lg:gap-4 min-w-0">
         {/* Left Edge on Counter: Sleeping Helper Cat Marzipan with Wardrobe Accessories */}
-        <div className="relative z-20 flex shrink-0 items-end pb-0.5">
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="relative z-20 flex shrink-0 items-end pb-0.5"
+        >
           <MarzipanHelper
             isPurring={marzipanPurring}
             equippedAccessories={equippedAccessories}
@@ -460,7 +511,7 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
         </div>
 
         {/* Center: Guest standing cleanly behind counter + Speech Bubble (sm+) */}
-        <div className="flex flex-1 items-end justify-center gap-2 md:gap-3.5 lg:gap-4 min-w-0">
+        <div className="flex flex-1 items-end justify-center gap-2 md:gap-3 lg:gap-3.5 min-w-0">
           {/* Guest portrait tucked behind z-[15] counter, nameplate on counter at z-20 */}
           <div className="relative flex shrink-0 flex-col items-center">
             <div className="relative z-[10] translate-y-2">
@@ -485,14 +536,21 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
             </div>
           </div>
 
-          {/* Speech Bubble beside guest on sm+ */}
-          <div className="hidden sm:block mb-5 md:mb-7 flex-1 min-w-[180px] max-w-[240px] md:max-w-[300px] lg:max-w-[380px] xl:max-w-[430px]">
+          {/* Lighter Speech Bubble beside guest on sm+ — keeps the sunlit window wide open */}
+          <div
+            className={`hidden sm:block flex-1 min-w-[175px] max-w-[235px] md:max-w-[285px] lg:max-w-[345px] xl:max-w-[385px] transition-all ${
+              isWorkbenchOpen ? 'mb-3 md:mb-4' : 'mb-6 md:mb-10'
+            }`}
+          >
             {speechBubbleContent}
           </div>
         </div>
 
-        {/* Right Side on Counter: Serving Tray */}
-        <div className="relative z-20 shrink-0 pb-0.5">
+        {/* Right Side on Counter: Flat Wooden Serving Board */}
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="relative z-20 shrink-0 pb-0.5"
+        >
           <ServingTray
             trayDrink={trayDrink}
             trayPastry={trayPastry}

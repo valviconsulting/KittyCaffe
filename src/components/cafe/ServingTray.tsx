@@ -20,6 +20,11 @@ interface ServingTrayProps {
   onClearTrayPastry: () => void;
 }
 
+/**
+ * Low-profile diegetic honey-wood serving board resting directly on the café counter.
+ * Keeps the watercolor café interior open and uncluttered when empty, and smoothly
+ * reveals the cheerful «🛎️ Подати!» button as soon as an item is placed on the board.
+ */
 export const ServingTray: React.FC<ServingTrayProps> = ({
   trayDrink,
   trayPastry,
@@ -32,30 +37,81 @@ export const ServingTray: React.FC<ServingTrayProps> = ({
   const hasAnythingOnTray = Boolean(trayDrink || trayPastry);
 
   return (
-    <div className="landscape-compact-tray relative z-10 flex shrink-0 flex-col items-center gap-1 rounded-2xl sm:rounded-3xl border-2 border-[#C2905E]/90 bg-[#FBF0DE]/84 backdrop-blur-[3px] px-2 py-1.5 sm:px-2.5 sm:py-1.5 shadow-[0_8px_22px_-6px_rgba(74,44,22,0.3)]">
-      <div className="flex w-full items-center justify-between gap-1.5">
-        <span className="font-handwriting text-sm sm:text-base lg:text-lg leading-none font-bold text-[#5A3E32] whitespace-nowrap">
-          Таця подачі
-        </span>
-        {hasAnythingOnTray && !isHappy && (
-          <button
-            type="button"
-            onClick={onClearTray}
-            className="rounded-full bg-[#F8DDE3] px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-bold text-[#8E3C52] transition-colors hover:bg-[#F3C8D2] whitespace-nowrap"
+    <div
+      data-serving-tray="true"
+      className="landscape-compact-tray relative z-10 flex shrink-0 flex-col items-center gap-1"
+    >
+      {/* Floating Serve / Status Pill directly above or integrated neatly when items are ready */}
+      <AnimatePresence>
+        {(hasAnythingOnTray || isHappy) && (
+          <motion.div
+            initial={{ opacity: 0, y: 8, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 6, scale: 0.92 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 22 }}
+            className="flex items-center gap-1"
           >
-            Очистити
-          </button>
-        )}
-      </div>
+            <motion.button
+              type="button"
+              onClick={onServe}
+              disabled={isHappy}
+              whileHover={isHappy ? undefined : { scale: 1.04, y: -1 }}
+              whileTap={isHappy ? undefined : { scale: 0.94 }}
+              className={`min-h-[38px] sm:min-h-[40px] rounded-full border-2 border-b-[3px] px-3 sm:px-4 py-1 text-[11px] sm:text-xs font-bold shadow-[0_6px_16px_rgba(92,40,56,0.28)] transition-all whitespace-nowrap ${
+                isHappy
+                  ? 'border-[#7DB58F] bg-[#E2F4E7] text-[#28613E] cursor-default'
+                  : 'border-[#B65370] bg-gradient-to-b from-[#F5A1B8] to-[#E67797] text-white hover:brightness-105'
+              }`}
+            >
+              {isHappy ? (
+                '✓ Подано!'
+              ) : (
+                <>
+                  <span className="sm:hidden">🛎️ Подати!</span>
+                  <span className="hidden sm:inline">🛎️ Подати замовлення!</span>
+                </>
+              )}
+            </motion.button>
 
-      {/* Two Compact Warm Translucent Tray Slots */}
-      <div className="flex items-center gap-1.5">
-        {/* Drink Slot */}
+            {hasAnythingOnTray && !isHappy && (
+              <button
+                type="button"
+                onClick={onClearTray}
+                title="Очистити всю тацю"
+                aria-label="Очистити всю тацю"
+                className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-[#DF9FB0] bg-[#FDF1F4]/95 text-[11px] font-bold text-[#8E3C52] shadow-xs hover:bg-[#F7D7E0]"
+              >
+                ✕
+              </button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Sleek Flat Wooden Serving Board resting directly on top of the oak counter */}
+      <div
+        className={`relative flex items-end gap-1.5 sm:gap-2 rounded-2xl border-2 border-b-[4px] border-[#784925]/90 bg-gradient-to-b from-[#E8BD82]/94 via-[#DAA362]/95 to-[#C58746]/96 shadow-[0_6px_14px_-4px_rgba(58,32,12,0.42),inset_0_1.5px_0_rgba(255,248,230,0.65)] transition-all ${
+          hasAnythingOnTray
+            ? 'px-2.5 pt-1.5 pb-1.5 sm:px-3 sm:pt-2 sm:pb-1.5'
+            : 'px-2 py-1 sm:px-2.5 sm:py-1.5'
+        }`}
+      >
+        {/* Subtle carved wooden board side handles */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none hidden sm:block absolute -left-1.5 bottom-2.5 h-3 w-1.5 rounded-l-full border border-r-0 border-[#784925]/80 bg-[#C78D4E]"
+        />
+        <span
+          aria-hidden="true"
+          className="pointer-events-none hidden sm:block absolute -right-1.5 bottom-2.5 h-3 w-1.5 rounded-r-full border border-l-0 border-[#784925]/80 bg-[#C78D4E]"
+        />
+
+        {/* Drink Coaster Spot */}
         <div
-          className={`relative flex h-[54px] w-[54px] sm:h-[70px] sm:w-[74px] lg:h-[80px] lg:w-[86px] xl:h-[90px] xl:w-[96px] flex-col items-center justify-center rounded-xl sm:rounded-2xl border-2 transition-all ${
+          className={`relative flex flex-col items-center justify-center rounded-xl transition-all ${
             trayDrink
-              ? 'border-[#BA895A] bg-[#FFFDF8]/95 shadow-inner'
-              : 'border-dashed border-[#C9A37C]/90 bg-[#F7E8D2]/75'
+              ? 'h-[54px] w-[54px] sm:h-[68px] sm:w-[72px] lg:h-[76px] lg:w-[82px] border border-[#FFF6E5]/85 bg-[#FFFDF8]/72 shadow-inner'
+              : 'h-[36px] w-[48px] sm:h-[42px] sm:w-[62px] border border-dashed border-[#7A4D2A]/45 bg-[#F8E7CA]/52'
           }`}
         >
           <AnimatePresence mode="wait">
@@ -74,18 +130,18 @@ export const ServingTray: React.FC<ServingTrayProps> = ({
                     onClick={onClearTrayDrink}
                     title="Прибрати напій із таці"
                     aria-label="Прибрати напій із таці"
-                    className="absolute -right-1.5 -top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-[#DF99AC] bg-[#FDF0F3] text-[10px] font-bold text-[#9A4058] shadow-xs hover:bg-[#F7D7DF] after:content-[''] after:absolute after:-inset-2"
+                    className="absolute -right-1.5 -top-1.5 z-10 flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full border border-[#DF99AC] bg-[#FDF0F3] text-[9.5px] sm:text-[10px] font-bold text-[#9A4058] shadow-xs hover:bg-[#F7D7DF] after:content-[''] after:absolute after:-inset-2"
                   >
                     ✕
                   </button>
                 )}
                 <DrinkPreviewSvg
                   drink={trayDrink}
-                  className="h-10 w-10 sm:h-13 sm:w-13 lg:h-16 lg:w-16"
+                  className="h-9 w-9 sm:h-12 sm:w-12 lg:h-14 lg:w-14"
                 />
                 <span
                   title={describePreparedDrink(trayDrink)}
-                  className="max-w-[94%] truncate text-[8.5px] sm:text-[10px] font-bold text-[#6E4934]"
+                  className="max-w-[96%] truncate text-[8px] sm:text-[9.5px] font-bold text-[#5A3720]"
                 >
                   {shortTrayDrinkLabel(trayDrink)}
                 </span>
@@ -95,12 +151,12 @@ export const ServingTray: React.FC<ServingTrayProps> = ({
                 key="tray-drink-empty"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex flex-col items-center text-center px-1"
+                className="flex items-center justify-center gap-0.5 text-[#6D4423]/75"
               >
-                <span className="text-sm sm:text-lg opacity-45" aria-hidden="true">
+                <span className="text-xs sm:text-sm" aria-hidden="true">
                   ☕
                 </span>
-                <span className="text-[9px] sm:text-[10px] font-semibold text-[#A78466]">
+                <span className="hidden sm:inline text-[9.5px] font-bold">
                   Напій
                 </span>
               </motion.div>
@@ -108,12 +164,12 @@ export const ServingTray: React.FC<ServingTrayProps> = ({
           </AnimatePresence>
         </div>
 
-        {/* Pastry Slot */}
+        {/* Pastry Coaster Spot */}
         <div
-          className={`relative flex h-[54px] w-[54px] sm:h-[70px] sm:w-[74px] lg:h-[80px] lg:w-[86px] xl:h-[90px] xl:w-[96px] flex-col items-center justify-center rounded-xl sm:rounded-2xl border-2 transition-all ${
+          className={`relative flex flex-col items-center justify-center rounded-xl transition-all ${
             trayPastry
-              ? 'border-[#D18BA0] bg-[#FFFDF8]/95 shadow-inner'
-              : 'border-dashed border-[#C9A37C]/90 bg-[#F7E8D2]/75'
+              ? 'h-[54px] w-[54px] sm:h-[68px] sm:w-[72px] lg:h-[76px] lg:w-[82px] border border-[#FFF6E5]/85 bg-[#FFFDF8]/72 shadow-inner'
+              : 'h-[36px] w-[48px] sm:h-[42px] sm:w-[62px] border border-dashed border-[#7A4D2A]/45 bg-[#F8E7CA]/52'
           }`}
         >
           <AnimatePresence mode="wait">
@@ -132,7 +188,7 @@ export const ServingTray: React.FC<ServingTrayProps> = ({
                     onClick={onClearTrayPastry}
                     title="Прибрати випічку з таці"
                     aria-label="Прибрати випічку з таці"
-                    className="absolute -right-1.5 -top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-[#DF99AC] bg-[#FDF0F3] text-[10px] font-bold text-[#9A4058] shadow-xs hover:bg-[#F7D7DF] after:content-[''] after:absolute after:-inset-2"
+                    className="absolute -right-1.5 -top-1.5 z-10 flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full border border-[#DF99AC] bg-[#FDF0F3] text-[9.5px] sm:text-[10px] font-bold text-[#9A4058] shadow-xs hover:bg-[#F7D7DF] after:content-[''] after:absolute after:-inset-2"
                   >
                     ✕
                   </button>
@@ -140,11 +196,11 @@ export const ServingTray: React.FC<ServingTrayProps> = ({
                 <PastrySvg
                   pastry={trayPastry}
                   showPlate={true}
-                  className="h-9 w-12 sm:h-12 sm:w-16 lg:h-15 lg:w-20"
+                  className="h-8 w-11 sm:h-11 sm:w-14 lg:h-13 lg:w-17"
                 />
                 <span
                   title={describePreparedPastry(trayPastry)}
-                  className="max-w-[94%] truncate text-[8.5px] sm:text-[10px] font-bold text-[#86455A]"
+                  className="max-w-[96%] truncate text-[8px] sm:text-[9.5px] font-bold text-[#6E3446]"
                 >
                   {shortTrayPastryLabel(trayPastry)}
                 </span>
@@ -154,42 +210,19 @@ export const ServingTray: React.FC<ServingTrayProps> = ({
                 key="tray-pastry-empty"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex flex-col items-center text-center px-1"
+                className="flex items-center justify-center gap-0.5 text-[#6D4423]/75"
               >
-                <span className="text-sm sm:text-lg opacity-45" aria-hidden="true">
+                <span className="text-xs sm:text-sm" aria-hidden="true">
                   🥐
                 </span>
-                <span className="text-[9px] sm:text-[10px] font-semibold text-[#A78466]">
-                  Випічка
+                <span className="hidden sm:inline text-[9.5px] font-bold">
+                  Десерт
                 </span>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
       </div>
-
-      {/* Touch-Friendly Springy Serve Order Button */}
-      <motion.button
-        type="button"
-        onClick={onServe}
-        disabled={isHappy}
-        whileHover={isHappy ? undefined : { scale: 1.02 }}
-        whileTap={isHappy ? undefined : { scale: 0.95 }}
-        className={`w-full min-h-[42px] sm:min-h-[40px] rounded-xl sm:rounded-2xl border-2 px-2 sm:px-3.5 py-1 text-[11px] sm:text-xs font-bold shadow-xs transition-colors whitespace-nowrap ${
-          isHappy
-            ? 'border-[#9CCAA9] bg-[#DCEFE1] text-[#356A48] cursor-default'
-            : hasAnythingOnTray
-              ? 'border-[#C96B84] bg-gradient-to-r from-[#F29CB3] to-[#E9809D] text-white hover:brightness-105'
-              : 'border-[#D9BE9F] bg-[#F2E3CE] text-[#8E6748] hover:bg-[#ECE0CE]'
-        }`}
-      >
-        {isHappy ? '✓ Подано!' : (
-          <>
-            <span className="sm:hidden">🛎️ Подати!</span>
-            <span className="hidden sm:inline">🛎️ Подати замовлення!</span>
-          </>
-        )}
-      </motion.button>
     </div>
   );
 };

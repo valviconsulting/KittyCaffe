@@ -1,4 +1,4 @@
-import { MotionConfig } from 'framer-motion';
+import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
 import {
   Suspense,
   lazy,
@@ -29,6 +29,7 @@ import {
   HOT_INGREDIENTS,
   canDoLatteArt,
   getOrderDrinkName,
+  getOrderDrinkTab,
   hasBlenderIngredients,
   hasHotIngredients,
   hasTallIngredients,
@@ -239,6 +240,7 @@ export function App() {
   >(null);
 
   const [activeTab, setActiveTab] = useState<StationTab>('hot');
+  const [isWorkbenchOpen, setIsWorkbenchOpen] = useState<boolean>(false);
   const [marzipanPurring, setMarzipanPurring] = useState<boolean>(false);
 
   // Serving Tray
@@ -915,6 +917,12 @@ export function App() {
     setHotLatteArtUrl(undefined);
     if (emotion !== 'happy') setEmotion('waiting');
     sound.playTrayPlace();
+
+    if (order.isCombo && !order.isTravelerGuest && !trayPastry) {
+      setActiveTab('pastry');
+    } else {
+      setIsWorkbenchOpen(false);
+    }
   };
 
   // --- Station 2: Cold Drinks & Blender ---
@@ -1029,6 +1037,12 @@ export function App() {
     setColdGlassMode('empty');
     if (emotion !== 'happy') setEmotion('waiting');
     sound.playTrayPlace();
+
+    if (order.isCombo && !order.isTravelerGuest && !trayPastry) {
+      setActiveTab('pastry');
+    } else {
+      setIsWorkbenchOpen(false);
+    }
   };
 
   // Complete «Із собою» sticker cup decoration
@@ -1050,6 +1064,12 @@ export function App() {
     setPendingTakeawayDrink(null);
     setPendingTakeawaySource(null);
     if (emotion !== 'happy') setEmotion('waiting');
+
+    if (order.isCombo && !order.isTravelerGuest && !trayPastry) {
+      setActiveTab('pastry');
+    } else {
+      setIsWorkbenchOpen(false);
+    }
   };
 
   // --- Station 3: Pastries ---
@@ -1127,6 +1147,12 @@ export function App() {
     setSelectedPastry(null);
     if (emotion !== 'happy') setEmotion('waiting');
     sound.playTrayPlace();
+
+    if (!order.isTravelerGuest && !trayDrink) {
+      setActiveTab(getOrderDrinkTab(order));
+    } else {
+      setIsWorkbenchOpen(false);
+    }
   };
 
   // --- Serve Order (Atomic single-reward guard + StrictMode-pure) ---
@@ -1142,6 +1168,7 @@ export function App() {
     }
 
     servedOrderIdRef.current = order.id;
+    setIsWorkbenchOpen(false);
     canAutoSaveRef.current = true;
     const nextServedCount = saveState.servedCount + 1;
     const nextWeather =
@@ -1325,6 +1352,38 @@ export function App() {
     (id) => (saveState.friendship[id] ?? 0) >= BEST_FRIEND_THRESHOLD
   ).length;
 
+  const suggestedTabs: StationTab[] = [];
+  if (emotion !== 'happy') {
+    if (order.isTravelerGuest) {
+      suggestedTabs.push(
+        order.travelerWishCategory === 'cold'
+          ? 'cold'
+          : order.travelerWishCategory === 'pastry'
+            ? 'pastry'
+            : 'hot'
+      );
+    } else {
+      if (!trayDrink) suggestedTabs.push(getOrderDrinkTab(order));
+      if (order.isCombo && !trayPastry) suggestedTabs.push('pastry');
+    }
+  }
+
+  const handleOpenStationTab = (tab: StationTab) => {
+    sound.playPop();
+    if (isWorkbenchOpen && activeTab === tab) {
+      setIsWorkbenchOpen(false);
+      return;
+    }
+    setActiveTab(tab);
+    setIsWorkbenchOpen(true);
+  };
+
+  const handleOpenStationFromOrder = (tab: StationTab) => {
+    sound.playPop();
+    setActiveTab(tab);
+    setIsWorkbenchOpen(true);
+  };
+
   return (
     <MotionConfig reducedMotion="user">
       <div className="cafe-outer-bg flex h-[100dvh] w-full justify-center overflow-hidden">
@@ -1387,6 +1446,7 @@ export function App() {
             celebration={celebration}
             isLateAfternoon={isLateAfternoon(saveState.dayProgress)}
             isDayComplete={isDayTargetReached(saveState.dayProgress)}
+            isWorkbenchOpen={isWorkbenchOpen}
             birthdayDecor={getActiveBirthdayDecor(saveState.puhBirthday)}
             onPetMarzipan={handlePetMarzipan}
             onToggleMusicBox={handleToggleMusicBox}
@@ -1398,6 +1458,11 @@ export function App() {
               sound.playPop();
               setHasNewBestFriend(false);
               setIsFriendshipAlbumOpen(true);
+            }}
+            onOpenStationForOrder={handleOpenStationFromOrder}
+            onDismissWorkbench={() => {
+              sound.playPop();
+              setIsWorkbenchOpen(false);
             }}
             onServe={handleServe}
             onClearTray={handleClearTray}
@@ -1412,15 +1477,18 @@ export function App() {
             onNextGuest={goToNextGuest}
           />
 
-          {/* 3. Lower Barista Workbench (3 Cozy Kraft/Wood Menu Tabs) */}
-          <main className="landscape-compact-main flex flex-1 min-h-0 lg:flex-none lg:shrink-0 flex-col bg-gradient-to-b from-[#DFC5A2] via-[#E7D2B6] to-[#DCBF9A] px-2 sm:px-4 lg:px-5 pb-2 sm:pb-2.5 pt-1.5 overflow-hidden">
+          {/* 3. Collapsible Slide-Up Barista Workbench Dock (85% panoramic café when closed!) */}
+          <main className="landscape-compact-main relative z-20 flex shrink-0 flex-col bg-gradient-to-b from-[#DFC5A2] via-[#E7D2B6] to-[#DCBF9A] px-2 sm:px-4 lg:px-5 py-1.5 sm:py-2 shadow-[0_-8px_24px_rgba(68,38,18,0.16)]">
             <StationTabs
               activeTab={activeTab}
+              isOpen={isWorkbenchOpen}
+              suggestedTabs={suggestedTabs}
               dayProgress={saveState.dayProgress}
               puhBirthday={saveState.puhBirthday}
-              onSelectTab={(tab) => {
-                setActiveTab(tab);
+              onSelectTab={handleOpenStationTab}
+              onToggleOpen={() => {
                 sound.playPop();
+                setIsWorkbenchOpen((prev) => !prev);
               }}
               onOpenDayJournal={() => {
                 sound.playPop();
@@ -1428,64 +1496,80 @@ export function App() {
               }}
             />
 
-            <div className="barista-workbench relative flex-1 min-h-0 lg:flex-none lg:shrink-0 lg:h-[265px] rounded-b-2xl sm:rounded-b-3xl rounded-tr-2xl sm:rounded-tr-3xl border-2 border-[#8C6248] p-2 sm:p-2.5 overflow-hidden">
-              {activeTab === 'hot' && (
-                <HotDrinksStation
-                  ingredients={hotIngredients}
-                  latteArtDataUrl={hotLatteArtUrl}
-                  isTakeawayOrder={
-                    order.serviceMode === 'takeaway' && !order.isTravelerGuest
-                  }
-                  unlockedRecipes={saveState.unlockedRecipes}
-                  onAddIngredient={handleAddHotIngredient}
-                  onSetWarmMilkCount={handleSetWarmMilkCount}
-                  onRemoveIngredient={handleRemoveHotIngredient}
-                  onOpenLatteArt={() => {
-                    sound.playPop();
-                    setIsLatteArtOpen(true);
-                  }}
-                  onClear={handleClearHot}
-                  onPutOnTray={handlePutHotOnTray}
-                />
-              )}
+            <AnimatePresence initial={false}>
+              {isWorkbenchOpen && (
+                <motion.div
+                  key="barista-drawer"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+                  className="overflow-hidden"
+                >
+                  <div
+                    data-workbench-drawer="open"
+                    className="barista-workbench relative h-[320px] min-[390px]:h-[340px] sm:h-[268px] lg:h-[262px] rounded-b-2xl sm:rounded-b-3xl rounded-tr-2xl sm:rounded-tr-3xl border-2 border-[#8C6248] p-2 sm:p-2.5 overflow-hidden"
+                  >
+                    {activeTab === 'hot' && (
+                      <HotDrinksStation
+                        ingredients={hotIngredients}
+                        latteArtDataUrl={hotLatteArtUrl}
+                        isTakeawayOrder={
+                          order.serviceMode === 'takeaway' && !order.isTravelerGuest
+                        }
+                        unlockedRecipes={saveState.unlockedRecipes}
+                        onAddIngredient={handleAddHotIngredient}
+                        onSetWarmMilkCount={handleSetWarmMilkCount}
+                        onRemoveIngredient={handleRemoveHotIngredient}
+                        onOpenLatteArt={() => {
+                          sound.playPop();
+                          setIsLatteArtOpen(true);
+                        }}
+                        onClear={handleClearHot}
+                        onPutOnTray={handlePutHotOnTray}
+                      />
+                    )}
 
-              {activeTab === 'cold' && (
-                <ColdDrinksStation
-                  glassMode={coldGlassMode}
-                  cocktailIngredients={cocktailIngredients}
-                  blenderIngredients={blenderIngredients}
-                  pouredMilkshakeIngredients={pouredMilkshakeIngredients}
-                  whippedCream={whippedCream}
-                  isBlending={isBlending}
-                  isTakeawayOrder={
-                    order.serviceMode === 'takeaway' && !order.isTravelerGuest
-                  }
-                  onAddCocktailIngredient={handleAddCocktailIngredient}
-                  onRemoveCocktailIngredient={handleRemoveCocktailIngredient}
-                  onAddBlenderIngredient={handleAddBlenderIngredient}
-                  onRemoveBlenderIngredient={handleRemoveBlenderIngredient}
-                  onBlend={handleBlend}
-                  onToggleWhippedCream={handleToggleWhippedCream}
-                  onClearAll={handleClearCold}
-                  onPutOnTray={handlePutColdOnTray}
-                />
-              )}
+                    {activeTab === 'cold' && (
+                      <ColdDrinksStation
+                        glassMode={coldGlassMode}
+                        cocktailIngredients={cocktailIngredients}
+                        blenderIngredients={blenderIngredients}
+                        pouredMilkshakeIngredients={pouredMilkshakeIngredients}
+                        whippedCream={whippedCream}
+                        isBlending={isBlending}
+                        isTakeawayOrder={
+                          order.serviceMode === 'takeaway' && !order.isTravelerGuest
+                        }
+                        onAddCocktailIngredient={handleAddCocktailIngredient}
+                        onRemoveCocktailIngredient={handleRemoveCocktailIngredient}
+                        onAddBlenderIngredient={handleAddBlenderIngredient}
+                        onRemoveBlenderIngredient={handleRemoveBlenderIngredient}
+                        onBlend={handleBlend}
+                        onToggleWhippedCream={handleToggleWhippedCream}
+                        onClearAll={handleClearCold}
+                        onPutOnTray={handlePutColdOnTray}
+                      />
+                    )}
 
-              {activeTab === 'pastry' && (
-                <PastryStation
-                  selectedPastry={selectedPastry}
-                  isOvenWarming={isOvenWarming}
-                  ovenProgress={ovenProgress}
-                  unlockedRecipes={saveState.unlockedRecipes}
-                  onSelectBase={handleSelectPastryBase}
-                  onWarmCroissant={handleWarmCroissant}
-                  onSetDonutGlaze={handleSetDonutGlaze}
-                  onToggleDonutSprinkles={handleToggleDonutSprinkles}
-                  onClear={handleClearPastry}
-                  onPutOnTray={handlePutPastryOnTray}
-                />
+                    {activeTab === 'pastry' && (
+                      <PastryStation
+                        selectedPastry={selectedPastry}
+                        isOvenWarming={isOvenWarming}
+                        ovenProgress={ovenProgress}
+                        unlockedRecipes={saveState.unlockedRecipes}
+                        onSelectBase={handleSelectPastryBase}
+                        onWarmCroissant={handleWarmCroissant}
+                        onSetDonutGlaze={handleSetDonutGlaze}
+                        onToggleDonutSprinkles={handleToggleDonutSprinkles}
+                        onClear={handleClearPastry}
+                        onPutOnTray={handlePutPastryOnTray}
+                      />
+                    )}
+                  </div>
+                </motion.div>
               )}
-            </div>
+            </AnimatePresence>
           </main>
 
           {/* Lazy-Loaded Modals — chunks load only on demand for snappy mobile startup */}
