@@ -42,6 +42,7 @@ import { GuestCard } from './GuestCard';
 import { MarzipanHelper } from './MarzipanHelper';
 import { ServingTray } from './ServingTray';
 import { WindowWeatherOverlay } from './WindowWeatherOverlay';
+import type { GuidedHintState } from '../../utils/guidedHints';
 
 export interface CelebrationBanner {
   id: number;
@@ -73,6 +74,10 @@ interface CafeHallSceneProps {
   isWorkbenchOpen?: boolean;
   birthdayDecor?: { theme: BirthdayThemeId; level: 1 | 2 | 3 } | null;
   wallArt?: WallArtState;
+  guidedHint?: GuidedHintState | null;
+  hintsActive?: boolean;
+  onToggleHints?: () => void;
+  onOpenHowToPlay?: () => void;
   onPetMarzipan: () => void;
   onOpenMarzipanCare?: () => void;
   onOpenWallArt?: () => void;
@@ -110,6 +115,10 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
   isWorkbenchOpen = false,
   birthdayDecor = null,
   wallArt,
+  guidedHint = null,
+  hintsActive = false,
+  onToggleHints,
+  onOpenHowToPlay,
   onPetMarzipan,
   onOpenMarzipanCare,
   onOpenWallArt,
@@ -257,9 +266,62 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
                 )}
               </>
             )}
+
+            {/* Friendly on-demand Hint & How-to-Play buttons grouped together so `?` never wraps alone */}
+            {(onToggleHints || onOpenHowToPlay) && (
+              <div className="ml-auto inline-flex shrink-0 items-center gap-1">
+                {onToggleHints && (
+                  <button
+                    type="button"
+                    data-hints-toggle="true"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleHints();
+                    }}
+                    title={
+                      hintsActive
+                        ? 'Вимкнути покрокову підказку'
+                        : 'Увімкнути покрокову підказку для цього замовлення'
+                    }
+                    className={`inline-flex min-h-[28px] items-center gap-0.5 rounded-xl border px-2 py-0.5 text-[10px] font-bold transition-colors whitespace-nowrap ${
+                      hintsActive
+                        ? 'border-[#D99B38] bg-[#FFF0BE] text-[#663C07]'
+                        : 'border-[#DFC6A6] bg-[#FFF8EB] text-[#7D583B] hover:bg-[#FCEFD6]'
+                    }`}
+                  >
+                    <span aria-hidden="true">💡</span>
+                    <span>{hintsActive ? 'Підказка ✓' : 'Підказка'}</span>
+                  </button>
+                )}
+                {onOpenHowToPlay && (
+                  <button
+                    type="button"
+                    data-howtoplay-open="true"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenHowToPlay();
+                    }}
+                    title="Як грати? (коротка інструкція)"
+                    aria-label="Відкрити коротку інструкцію «Як грати»"
+                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#D4B188] bg-[#FFFDF8] text-[11px] font-bold text-[#6F4B32] hover:bg-[#F9EBD5]"
+                  >
+                    ?
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
-          {!isWorkbenchOpen && (
+          {hintsActive && guidedHint && (
+            <div
+              data-guided-hint-banner="true"
+              className="mt-0.5 flex items-center gap-1 rounded-xl border border-[#DFB054] bg-[#FFF4CF] px-2 py-1 text-[10.5px] sm:text-[11px] font-bold leading-tight text-[#5E3709] shadow-2xs"
+            >
+              <span>{guidedHint.hallText}</span>
+            </div>
+          )}
+
+          {!isWorkbenchOpen && !hintsActive && (
             <div className="hidden sm:flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] leading-tight font-semibold text-[#8E6950]">
               {isTraveler ? (
                 <span className="text-[#7C4E12]">
@@ -303,27 +365,46 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
     </motion.div>
   );
 
+  const isMobileOpenCafe = !isWorkbenchOpen;
+
   return (
     <section
       onClick={() => {
         if (isWorkbenchOpen) onDismissWorkbench?.();
       }}
-      className={`landscape-compact-scene relative flex flex-1 min-h-[215px] w-full flex-col justify-between sm:flex-row sm:items-end overflow-hidden border-b-4 border-[#6B4223] px-2 sm:px-4 lg:px-6 pb-1.5 sm:pb-2 pt-1.5 sm:pt-2 transition-all ${
+      className={`landscape-compact-scene relative flex flex-1 min-h-[215px] w-full flex-col justify-between sm:flex-row sm:items-end overflow-hidden border-b-4 border-[#6B4223] bg-gradient-to-b from-[#E1C9A7] via-[#E8D5B8] to-[#A86B36] px-2 sm:px-4 lg:px-6 pb-1.5 sm:pb-2 pt-1.5 sm:pt-2 transition-all ${
         isWorkbenchOpen ? 'cursor-pointer' : ''
       }`}
       aria-label="Зала кав’ярні та вікно з погодою"
     >
-      {/* Background: Cozy digital gouache interior `/assets/bg-cafe.webp` with warm golden-hour palette */}
-      <AssetIllustration
-        src={CAFE_ASSETS.background}
-        alt="Ілюстрований інтер’єр кав’ярні Мур-Лате"
-        className="absolute inset-0 h-full w-full pointer-events-none"
-        imgClassName="h-full w-full object-cover object-[50%_54%] saturate-[1.03] contrast-[1.01] transition-all duration-300"
-        fallback={<CafeBackgroundSvg weather={weather} />}
-      />
+      {/* Background + Window Weather locked in ONE container so portrait phones show the FULL cozy interior (chalkboard, pastry display, window, lamps & shelves) AND aligned rain/snow! */}
+      <div
+        data-cafe-backdrop="true"
+        className={`pointer-events-none absolute inset-x-0 overflow-hidden transition-all duration-300 sm:inset-0 sm:h-auto ${
+          isMobileOpenCafe
+            ? 'bottom-[74px] h-[320px] [@media(min-height:760px)]:bottom-[152px] [@media(min-height:760px)]:h-[396px]'
+            : 'inset-y-0'
+        }`}
+      >
+        <AssetIllustration
+          src={CAFE_ASSETS.background}
+          alt="Ілюстрований інтер’єр кав’ярні Мур-Лате"
+          className="absolute inset-0 h-full w-full pointer-events-none"
+          imgClassName="h-full w-full object-cover object-center saturate-[1.03] contrast-[1.01] transition-all duration-300"
+          fallback={<CafeBackgroundSvg weather={weather} />}
+        />
 
-      {/* Warm amber lamp glow + live weather effects over central window */}
-      <WindowWeatherOverlay weather={weather} isLateAfternoon={isLateAfternoon} />
+        {/* Warm amber lamp glow + live weather effects over central window */}
+        <WindowWeatherOverlay weather={weather} isLateAfternoon={isLateAfternoon} />
+
+        {/* Seamless top plaster fade on portrait phones so upper speech-bubble area melts gently into the café wall */}
+        {isMobileOpenCafe && (
+          <div
+            aria-hidden="true"
+            className="sm:hidden absolute inset-x-0 top-0 z-[3] h-9 bg-gradient-to-b from-[#E3CCA9] to-transparent"
+          />
+        )}
+      </div>
 
       {/* Shop Decor: Twinkling Golden Stars along Top Garland */}
       {hasTwinkleStars && <TwinkleStarsGarlandSvg />}
@@ -440,7 +521,11 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
 
       {/* 3D Dimensional Honey-Oak Cafe Counter with wood grain, bevel highlight & unlockable counter items */}
       <div
-        className="landscape-compact-counter pointer-events-none absolute inset-x-0 bottom-0 z-[15] h-9 sm:h-11 lg:h-12"
+        className={`landscape-compact-counter pointer-events-none absolute inset-x-0 bottom-0 z-[15] transition-[height] duration-200 ${
+          isMobileOpenCafe
+            ? 'h-[88px] [@media(min-height:760px)]:h-[164px] sm:h-11 lg:h-12'
+            : 'h-9 sm:h-11 lg:h-12'
+        }`}
         aria-hidden="true"
       >
         {/* Top horizontal wooden countertop slab */}
@@ -505,8 +590,31 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
         {speechBubbleContent}
       </div>
 
+      {/* Portrait Mobile Large Guest Standing Behind Wooden Counter (3D depth: behind z-15 bar while Marzipan & Tray sit on front z-20 bar!) */}
+      {isMobileOpenCafe && (
+        <div
+          data-mobile-guest-stage="true"
+          className="sm:hidden pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-[74px] [@media(min-height:760px)]:bottom-[150px] z-[10] flex flex-col items-center"
+        >
+          <GuestCard
+            orderId={order.id}
+            guestId={order.guestId}
+            emotion={emotion}
+            lastReward={lastReward}
+            isBestFriend={guestIsBestFriend}
+            largeMobile={true}
+          />
+        </div>
+      )}
+
       {/* Bottom Counter Row (mobile) / Full Single Horizontal Row (sm+) */}
-      <div className="flex w-full items-end justify-between gap-1.5 sm:gap-3 lg:gap-4 min-w-0">
+      <div
+        className={`flex w-full items-end justify-between gap-1.5 sm:gap-3 lg:gap-4 min-w-0 ${
+          isMobileOpenCafe
+            ? 'mb-[34px] [@media(min-height:760px)]:mb-[98px] sm:mb-0'
+            : ''
+        }`}
+      >
         {/* Left Edge on Counter: Sleeping Helper Cat Marzipan with Wardrobe Accessories */}
         <div
           onClick={(e) => e.stopPropagation()}
@@ -515,6 +623,7 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
           <MarzipanHelper
             isPurring={marzipanPurring}
             equippedAccessories={equippedAccessories}
+            largeMobile={isMobileOpenCafe}
             onPet={onPetMarzipan}
             onOpenCare={onOpenMarzipanCare}
           />
@@ -524,7 +633,11 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
         <div className="flex flex-1 items-end justify-center gap-2 md:gap-3 lg:gap-3.5 min-w-0">
           {/* Guest portrait tucked behind z-[15] counter, nameplate on counter at z-20 */}
           <div className="relative flex shrink-0 flex-col items-center">
-            <div className="relative z-[10] translate-y-2">
+            <div
+              className={`relative z-[10] translate-y-2 ${
+                isMobileOpenCafe ? 'hidden sm:block' : ''
+              }`}
+            >
               <GuestCard
                 orderId={order.id}
                 guestId={order.guestId}
@@ -534,7 +647,9 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
               />
             </div>
             <div
-              className="relative z-20 -mt-4 sm:-mt-5 flex items-center gap-1 rounded-full border-2 px-2.5 sm:px-3.5 py-0.5 text-[10px] sm:text-[11px] font-bold text-[#5A3E32] shadow-sm whitespace-nowrap"
+              className={`relative z-20 ${
+                isMobileOpenCafe ? 'mb-1 sm:-mt-5 sm:mb-0' : '-mt-4 sm:-mt-5'
+              } flex items-center gap-1 rounded-full border-2 px-2.5 sm:px-3.5 py-0.5 text-[10px] sm:text-[11px] font-bold text-[#5A3E32] shadow-sm whitespace-nowrap`}
               style={{
                 backgroundColor: guest.accentBg,
                 borderColor: guest.accentBorder,
@@ -565,6 +680,7 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = ({
             trayDrink={trayDrink}
             trayPastry={trayPastry}
             isHappy={isHappy}
+            highlightServe={Boolean(hintsActive && guidedHint?.highlightServe)}
             onServe={onServe}
             onClearTray={onClearTray}
             onClearTrayDrink={onClearTrayDrink}

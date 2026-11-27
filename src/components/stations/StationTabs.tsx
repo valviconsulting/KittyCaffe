@@ -11,6 +11,7 @@ interface StationTabsProps {
   activeTab: StationTab;
   isOpen: boolean;
   suggestedTabs?: StationTab[];
+  highlightTab?: StationTab | null;
   dayProgress: DayProgressState;
   puhBirthday?: PuhBirthdayStoryState;
   unreadLettersCount?: number;
@@ -53,6 +54,7 @@ export const StationTabs: React.FC<StationTabsProps> = ({
   activeTab,
   isOpen,
   suggestedTabs = [],
+  highlightTab = null,
   dayProgress,
   puhBirthday,
   unreadLettersCount = 0,
@@ -73,6 +75,7 @@ export const StationTabs: React.FC<StationTabsProps> = ({
         {TABS.map((tab) => {
           const isActive = isOpen && activeTab === tab.id;
           const isSuggested = !isOpen && suggestedTabs.includes(tab.id);
+          const isGuidedTarget = highlightTab === tab.id && !isActive;
 
           return (
             <motion.button
@@ -86,12 +89,24 @@ export const StationTabs: React.FC<StationTabsProps> = ({
                 isOpen
                   ? isActive
                     ? 'z-10 -mb-[2px] rounded-t-2xl border-2 border-b-0 border-[#8C6248] bg-gradient-to-b from-[#FBF2E2] via-[#F2E2C9] to-[#EAD7BE] pb-2 text-[#4A2E1D] shadow-[0_-3px_10px_rgba(90,56,32,0.12),inset_0_1px_0_rgba(255,252,245,0.9)]'
-                    : 'rounded-t-2xl border-2 border-b-0 border-[#7A523B]/80 bg-gradient-to-b from-[#DFC19C] to-[#CEAA81] text-[#5B3C28] shadow-[inset_0_-2px_5px_rgba(90,56,32,0.14)] hover:from-[#E7CCA9] hover:to-[#D8B68E]'
-                  : isSuggested
-                    ? 'rounded-2xl border-2 border-b-[3px] border-[#B47A38] bg-gradient-to-b from-[#FFF9EA] to-[#F7E0B5] text-[#4F2F18] shadow-[0_3px_12px_rgba(216,154,60,0.34)] ring-2 ring-[#F2C464]/65 hover:brightness-103'
-                    : 'rounded-2xl border-2 border-b-[3px] border-[#8A5F42] bg-gradient-to-b from-[#FBF1DF] to-[#EBD3B1] text-[#553623] shadow-xs hover:brightness-102'
+                    : isGuidedTarget
+                      ? 'rounded-t-2xl border-2 border-b-0 border-[#C9892B] bg-gradient-to-b from-[#FFF7DE] to-[#F5D99B] text-[#532E08] ring-2 ring-[#F2C464]/80'
+                      : 'rounded-t-2xl border-2 border-b-0 border-[#7A523B]/80 bg-gradient-to-b from-[#DFC19C] to-[#CEAA81] text-[#5B3C28] shadow-[inset_0_-2px_5px_rgba(90,56,32,0.14)] hover:from-[#E7CCA9] hover:to-[#D8B68E]'
+                  : isGuidedTarget
+                    ? 'rounded-2xl border-2 border-b-[3px] border-[#C27D24] bg-gradient-to-b from-[#FFFBEB] to-[#F9DC96] text-[#4C2A07] shadow-[0_4px_14px_rgba(222,150,42,0.48)] ring-2 ring-[#F2BA49]'
+                    : isSuggested
+                      ? 'rounded-2xl border-2 border-b-[3px] border-[#B47A38] bg-gradient-to-b from-[#FFF9EA] to-[#F7E0B5] text-[#4F2F18] shadow-[0_3px_12px_rgba(216,154,60,0.34)] ring-2 ring-[#F2C464]/65 hover:brightness-103'
+                      : 'rounded-2xl border-2 border-b-[3px] border-[#8A5F42] bg-gradient-to-b from-[#FBF1DF] to-[#EBD3B1] text-[#553623] shadow-xs hover:brightness-102'
               }`}
             >
+              {isGuidedTarget && (
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full border border-[#C98828] bg-[#FFF8DB] px-1.5 text-[10px] leading-tight shadow-xs animate-bounce"
+                >
+                  👇
+                </span>
+              )}
               <span aria-hidden="true" className="text-xs sm:text-sm leading-none">
                 {tab.icon}
               </span>
@@ -104,7 +119,7 @@ export const StationTabs: React.FC<StationTabsProps> = ({
                   aria-hidden="true"
                 />
               )}
-              {isSuggested && (
+              {isSuggested && !isGuidedTarget && (
                 <span
                   className="hidden sm:inline text-[9.5px] leading-none text-[#B47024] animate-bounce"
                   aria-hidden="true"

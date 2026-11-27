@@ -12,6 +12,7 @@ import type {
 } from '../../types/game';
 import { BlenderSvg, TallGlassSvg } from '../svg/DrinkVisualSvg';
 import { BaristaCoasterSvg, IngredientIconSvg } from '../svg/UiIconsSvg';
+import type { GuidedHintState } from '../../utils/guidedHints';
 
 interface ColdDrinksStationProps {
   glassMode: 'empty' | 'cocktail' | 'milkshake';
@@ -21,6 +22,7 @@ interface ColdDrinksStationProps {
   whippedCream: boolean;
   isBlending: boolean;
   isTakeawayOrder?: boolean;
+  guidedHint?: GuidedHintState | null;
   onAddCocktailIngredient: (id: TallGlassIngredientId) => void;
   onRemoveCocktailIngredient: (id: TallGlassIngredientId) => void;
   onAddBlenderIngredient: (id: BlenderIngredientId) => void;
@@ -39,6 +41,7 @@ export const ColdDrinksStation: React.FC<ColdDrinksStationProps> = ({
   whippedCream,
   isBlending,
   isTakeawayOrder = false,
+  guidedHint = null,
   onAddCocktailIngredient,
   onRemoveCocktailIngredient,
   onAddBlenderIngredient,
@@ -152,11 +155,19 @@ export const ColdDrinksStation: React.FC<ColdDrinksStationProps> = ({
               disabled={!glassReady || isBlending}
               className={`min-h-[40px] lg:min-h-[36px] flex-1 rounded-2xl border-2 px-2 py-1 text-xs font-bold transition-all whitespace-nowrap ${
                 glassReady && !isBlending
-                  ? 'border-[#3E7A56] border-b-4 bg-gradient-to-b from-[#94D3AA] to-[#6CB889] text-[#143D24] shadow-[0_4px_14px_rgba(78,150,104,0.38)] hover:brightness-105 active:translate-y-[2px] active:border-b-2'
+                  ? guidedHint?.highlightPutOnTray
+                    ? 'border-[#3E7A56] border-b-4 bg-gradient-to-b from-[#94D3AA] to-[#6CB889] text-[#143D24] shadow-[0_4px_14px_rgba(78,150,104,0.48)] ring-2 ring-[#F2BA49] hover:brightness-105 active:translate-y-[2px] active:border-b-2'
+                    : 'border-[#3E7A56] border-b-4 bg-gradient-to-b from-[#94D3AA] to-[#6CB889] text-[#143D24] shadow-[0_4px_14px_rgba(78,150,104,0.38)] hover:brightness-105 active:translate-y-[2px] active:border-b-2'
                   : 'border-[#C4D3C7] border-b-[3px] bg-[#E8EFE9] text-[#8FA596] cursor-not-allowed'
               }`}
             >
-              {isTakeawayOrder && glassReady ? '🏃 Із собою →' : '✓ На тацю'}
+              {guidedHint?.highlightPutOnTray && glassReady
+                ? isTakeawayOrder
+                  ? '👆 🏃 Із собою →'
+                  : '👆 ✓ На тацю'
+                : isTakeawayOrder && glassReady
+                  ? '🏃 Із собою →'
+                  : '✓ На тацю'}
             </button>
             <button
               type="button"
@@ -198,16 +209,27 @@ export const ColdDrinksStation: React.FC<ColdDrinksStationProps> = ({
               {TALL_GLASS_INGREDIENTS.map((item) => {
                 const added =
                   glassMode === 'cocktail' && (cocktailIngredients[item.id] ?? 0) > 0;
+                const isHinted = Boolean(
+                  guidedHint?.highlightCocktailIngredients.includes(item.id)
+                );
                 return (
                   <button
                     key={item.id}
                     type="button"
                     disabled={isBlending}
                     onClick={() => onAddCocktailIngredient(item.id)}
-                    className="barista-tile relative flex h-full min-h-[36px] sm:min-h-0 items-center justify-center gap-1.5 sm:gap-2 rounded-2xl px-2 sm:px-2.5 py-1 sm:py-1.5 text-left disabled:opacity-60"
+                    className={`barista-tile relative flex h-full min-h-[36px] sm:min-h-0 items-center justify-center gap-1.5 sm:gap-2 rounded-2xl px-2 sm:px-2.5 py-1 sm:py-1.5 text-left disabled:opacity-60 ${
+                      isHinted
+                        ? 'ring-2 ring-[#E89B2D] shadow-[0_0_10px_rgba(232,155,45,0.45)]'
+                        : ''
+                    }`}
                     style={{
                       backgroundImage: item.buttonGradient,
-                      borderColor: added ? '#3F8058' : item.buttonBorder,
+                      borderColor: isHinted
+                        ? '#C27D2C'
+                        : added
+                          ? '#3F8058'
+                          : item.buttonBorder,
                     }}
                   >
                     <IngredientIconSvg
@@ -293,16 +315,27 @@ export const ColdDrinksStation: React.FC<ColdDrinksStationProps> = ({
             <div className="flex flex-1 min-w-0 min-h-0 flex-col justify-between gap-1.5">
               {BLENDER_INGREDIENTS.map((item) => {
                 const added = (blenderIngredients[item.id] ?? 0) > 0;
+                const isHinted = Boolean(
+                  guidedHint?.highlightBlenderIngredients.includes(item.id)
+                );
                 return (
                   <button
                     key={item.id}
                     type="button"
                     disabled={isBlending}
                     onClick={() => onAddBlenderIngredient(item.id)}
-                    className="barista-tile flex flex-1 min-h-[34px] lg:min-h-0 items-center justify-between gap-1.5 rounded-xl px-2.5 py-1 text-left disabled:opacity-60"
+                    className={`barista-tile flex flex-1 min-h-[34px] lg:min-h-0 items-center justify-between gap-1.5 rounded-xl px-2.5 py-1 text-left disabled:opacity-60 ${
+                      isHinted
+                        ? 'ring-2 ring-[#E89B2D] shadow-[0_0_10px_rgba(232,155,45,0.45)]'
+                        : ''
+                    }`}
                     style={{
                       backgroundImage: item.buttonGradient,
-                      borderColor: added ? '#3F8058' : item.buttonBorder,
+                      borderColor: isHinted
+                        ? '#C27D2C'
+                        : added
+                          ? '#3F8058'
+                          : item.buttonBorder,
                     }}
                   >
                     <span className="flex items-center gap-1.5 min-w-0">
@@ -327,7 +360,9 @@ export const ColdDrinksStation: React.FC<ColdDrinksStationProps> = ({
                   onClick={onBlend}
                   className={`flex-1 rounded-xl border-2 px-2 py-1.5 text-[11px] font-bold transition-all whitespace-nowrap ${
                     blenderHasItems && !isBlending
-                      ? 'border-[#A34561] border-b-4 bg-gradient-to-b from-[#F49AB3] to-[#DF6E8E] text-white shadow-[0_4px_12px_rgba(204,96,128,0.34)] hover:brightness-105 active:translate-y-[2px] active:border-b-2'
+                      ? guidedHint?.highlightBlendButton
+                        ? 'border-[#A34561] border-b-4 bg-gradient-to-b from-[#F49AB3] to-[#DF6E8E] text-white ring-2 ring-[#F2BA49] shadow-[0_4px_12px_rgba(204,96,128,0.42)] hover:brightness-105 active:translate-y-[2px] active:border-b-2'
+                        : 'border-[#A34561] border-b-4 bg-gradient-to-b from-[#F49AB3] to-[#DF6E8E] text-white shadow-[0_4px_12px_rgba(204,96,128,0.34)] hover:brightness-105 active:translate-y-[2px] active:border-b-2'
                       : 'border-[#D5BCC4] border-b-[3px] bg-[#EFE3E7] text-[#A88B94] cursor-not-allowed'
                   }`}
                 >
@@ -342,7 +377,9 @@ export const ColdDrinksStation: React.FC<ColdDrinksStationProps> = ({
                     glassMode === 'milkshake' && !isBlending
                       ? whippedCream
                         ? 'border-[#4B8B63] border-b-4 bg-gradient-to-b from-[#E3F5E8] to-[#C2E6CE] text-[#1A4E2F] active:translate-y-[2px] active:border-b-2'
-                        : 'border-[#A9793E] border-b-4 bg-gradient-to-b from-[#FFF9E8] to-[#F4DFAF] text-[#6B4316] shadow-xs hover:brightness-105 active:translate-y-[2px] active:border-b-2'
+                        : guidedHint?.highlightWhippedCream
+                          ? 'border-[#C27D2C] border-b-4 bg-gradient-to-b from-[#FFF9E8] to-[#F4DFAF] text-[#6B4316] ring-2 ring-[#E89B2D] shadow-xs hover:brightness-105 active:translate-y-[2px] active:border-b-2'
+                          : 'border-[#A9793E] border-b-4 bg-gradient-to-b from-[#FFF9E8] to-[#F4DFAF] text-[#6B4316] shadow-xs hover:brightness-105 active:translate-y-[2px] active:border-b-2'
                       : 'border-[#D4C4B2] border-b-[3px] bg-[#EFE6DA] text-[#AD9B89] cursor-not-allowed'
                   }`}
                   title={

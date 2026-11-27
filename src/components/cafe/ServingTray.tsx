@@ -14,6 +14,7 @@ interface ServingTrayProps {
   trayDrink: PreparedDrink | null;
   trayPastry: PreparedPastry | null;
   isHappy: boolean;
+  highlightServe?: boolean;
   onServe: () => void;
   onClearTray: () => void;
   onClearTrayDrink: () => void;
@@ -29,6 +30,7 @@ export const ServingTray: React.FC<ServingTrayProps> = ({
   trayDrink,
   trayPastry,
   isHappy,
+  highlightServe = false,
   onServe,
   onClearTray,
   onClearTrayDrink,
@@ -60,15 +62,23 @@ export const ServingTray: React.FC<ServingTrayProps> = ({
               className={`min-h-[38px] sm:min-h-[40px] rounded-full border-2 border-b-[3px] px-3 sm:px-4 py-1 text-[11px] sm:text-xs font-bold shadow-[0_6px_16px_rgba(92,40,56,0.28)] transition-all whitespace-nowrap ${
                 isHappy
                   ? 'border-[#7DB58F] bg-[#E2F4E7] text-[#28613E] cursor-default'
-                  : 'border-[#B65370] bg-gradient-to-b from-[#F5A1B8] to-[#E67797] text-white hover:brightness-105'
+                  : highlightServe
+                    ? 'border-[#B65370] bg-gradient-to-b from-[#F5A1B8] to-[#E67797] text-white ring-3 ring-[#F4C452] ring-offset-1 ring-offset-[#FFF7E6] animate-pulse hover:brightness-105'
+                    : 'border-[#B65370] bg-gradient-to-b from-[#F5A1B8] to-[#E67797] text-white hover:brightness-105'
               }`}
             >
               {isHappy ? (
                 '✓ Подано!'
               ) : (
                 <>
-                  <span className="sm:hidden">🛎️ Подати!</span>
-                  <span className="hidden sm:inline">🛎️ Подати замовлення!</span>
+                  <span className="sm:hidden">
+                    {highlightServe ? '👆 🛎️ Подати!' : '🛎️ Подати!'}
+                  </span>
+                  <span className="hidden sm:inline">
+                    {highlightServe
+                      ? '👆 🛎️ Подати замовлення!'
+                      : '🛎️ Подати замовлення!'}
+                  </span>
                 </>
               )}
             </motion.button>

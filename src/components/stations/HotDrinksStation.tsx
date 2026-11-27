@@ -18,12 +18,14 @@ import {
 } from '../../utils/milkPour';
 import { HotCupSvg } from '../svg/DrinkVisualSvg';
 import { BaristaCoasterSvg, IngredientIconSvg } from '../svg/UiIconsSvg';
+import type { GuidedHintState } from '../../utils/guidedHints';
 
 interface HotDrinksStationProps {
   ingredients: Partial<Record<HotIngredientId, number>>;
   latteArtDataUrl?: string;
   isTakeawayOrder?: boolean;
   unlockedRecipes?: UnlockableRecipeId[];
+  guidedHint?: GuidedHintState | null;
   onAddIngredient: (id: HotIngredientId) => void;
   onSetWarmMilkCount: (count: number) => void;
   onRemoveIngredient: (id: HotIngredientId) => void;
@@ -55,6 +57,7 @@ export const HotDrinksStation: React.FC<HotDrinksStationProps> = ({
   latteArtDataUrl,
   isTakeawayOrder = false,
   unlockedRecipes = [],
+  guidedHint = null,
   onAddIngredient,
   onSetWarmMilkCount,
   onRemoveIngredient,
@@ -387,10 +390,17 @@ export const HotDrinksStation: React.FC<HotDrinksStationProps> = ({
               className:
                 'border-[#D49744] bg-[#FFF5D8] text-[#73450F] shadow-xs',
             }
-    : {
-        text: '💡 Лате = 2× Тепле молоко',
-        className: 'border-[#C89B58] bg-[#FDF1D4] text-[#7A4F1C]',
-      };
+    : guidedHint?.stationText
+      ? {
+          text: guidedHint.stationText,
+          className: guidedHint.highlightPutOnTray
+            ? 'border-[#589C70] bg-[#DEF4E6] text-[#174D2B] shadow-xs'
+            : 'border-[#D99B38] bg-[#FFF1C2] text-[#613808] shadow-xs',
+        }
+      : {
+          text: '💡 Лате = 2× Тепле молоко',
+          className: 'border-[#C89B58] bg-[#FDF1D4] text-[#7A4F1C]',
+        };
 
   return (
     <div className="flex h-full min-h-0 flex-col sm:grid sm:grid-cols-12 gap-2 sm:gap-2.5 lg:gap-3">
@@ -553,11 +563,19 @@ export const HotDrinksStation: React.FC<HotDrinksStationProps> = ({
               disabled={!hasAny}
               className={`min-h-[40px] sm:min-h-[36px] flex-1 rounded-2xl border-2 px-2 sm:px-2.5 py-1 text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap ${
                 hasAny
-                  ? 'border-[#3E7A56] border-b-4 bg-gradient-to-b from-[#94D3AA] to-[#6CB889] text-[#143D24] shadow-[0_4px_14px_rgba(78,150,104,0.38)] hover:brightness-105 active:translate-y-[2px] active:border-b-2'
+                  ? guidedHint?.highlightPutOnTray
+                    ? 'border-[#3E7A56] border-b-4 bg-gradient-to-b from-[#94D3AA] to-[#6CB889] text-[#143D24] shadow-[0_4px_14px_rgba(78,150,104,0.48)] ring-2 ring-[#F2BA49] ring-offset-1 ring-offset-[#FAF0DC] hover:brightness-105 active:translate-y-[2px] active:border-b-2'
+                    : 'border-[#3E7A56] border-b-4 bg-gradient-to-b from-[#94D3AA] to-[#6CB889] text-[#143D24] shadow-[0_4px_14px_rgba(78,150,104,0.38)] hover:brightness-105 active:translate-y-[2px] active:border-b-2'
                   : 'border-[#CBB49B] border-b-[3px] bg-[#ECE0CF] text-[#9E8772] cursor-not-allowed'
               }`}
             >
-              {isTakeawayOrder && hasAny ? '🏃 Із собою →' : '✓ На тацю'}
+              {guidedHint?.highlightPutOnTray && hasAny
+                ? isTakeawayOrder
+                  ? '👆 🏃 Із собою →'
+                  : '👆 ✓ На тацю'
+                : isTakeawayOrder && hasAny
+                  ? '🏃 Із собою →'
+                  : '✓ На тацю'}
             </button>
             <button
               type="button"
@@ -569,7 +587,9 @@ export const HotDrinksStation: React.FC<HotDrinksStationProps> = ({
               title="Вилити (почати спочатку)"
               className={`min-h-[40px] sm:min-h-[36px] rounded-2xl border-2 px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap ${
                 hasAny || isPouringMilk
-                  ? 'border-[#A85F73] border-b-[3px] bg-gradient-to-b from-[#FCEEF2] to-[#F4D3DD] text-[#83344A] shadow-xs hover:brightness-[0.98] active:translate-y-[2px] active:border-b-2'
+                  ? guidedHint?.highlightClear
+                    ? 'border-[#B64865] border-b-[3px] bg-gradient-to-b from-[#FCEEF2] to-[#F4D3DD] text-[#83344A] ring-2 ring-[#E89B2D] shadow-xs active:translate-y-[2px] active:border-b-2'
+                    : 'border-[#A85F73] border-b-[3px] bg-gradient-to-b from-[#FCEEF2] to-[#F4D3DD] text-[#83344A] shadow-xs hover:brightness-[0.98] active:translate-y-[2px] active:border-b-2'
                   : 'border-[#D1BFA9] border-b-[3px] bg-[#EFE5D7] text-[#B09B86] cursor-not-allowed'
               }`}
             >
@@ -593,7 +613,7 @@ export const HotDrinksStation: React.FC<HotDrinksStationProps> = ({
             Обери інгредієнти:
           </h2>
           <span
-            className={`rounded-full border px-2 sm:px-2.5 py-0.5 text-[9.5px] sm:text-[11px] font-bold shadow-2xs whitespace-nowrap transition-colors ${pourHintBadge.className}`}
+            className={`max-w-[65%] truncate rounded-full border px-2 sm:px-2.5 py-0.5 text-[9.5px] sm:text-[11px] font-bold shadow-2xs transition-colors ${pourHintBadge.className}`}
           >
             {pourHintBadge.text}
           </span>
@@ -607,6 +627,9 @@ export const HotDrinksStation: React.FC<HotDrinksStationProps> = ({
               const max = item.maxCount ?? 1;
               const isFull = count >= max;
               const isWarmMilk = item.id === 'warmMilk';
+              const isHinted = Boolean(
+                guidedHint?.highlightHotIngredients.includes(item.id)
+              );
               const milkFillPercent = isWarmMilk
                 ? Math.round((displayMilkLevel / MILK_MAX_PORTIONS) * 100)
                 : 0;
@@ -617,6 +640,7 @@ export const HotDrinksStation: React.FC<HotDrinksStationProps> = ({
                     key={item.id}
                     type="button"
                     data-milk-pour-btn="true"
+                    data-hinted-tile={isHinted ? 'true' : undefined}
                     aria-label="Тепле молоко: натисни для однієї порції або затисни, щоб наливати з пітчера"
                     title="Затисни, щоб наливати з пітчера (або просто клікни для +1 порції)"
                     onPointerDown={handleMilkPointerDown}
@@ -625,17 +649,29 @@ export const HotDrinksStation: React.FC<HotDrinksStationProps> = ({
                     onClick={handleMilkClick}
                     onContextMenu={(e) => e.preventDefault()}
                     className={`barista-tile group relative flex h-full min-h-0 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl sm:rounded-2xl px-1 sm:px-2 py-1 sm:py-1.5 text-center touch-none select-none ${
-                      isPouringMilk ? 'ring-2 ring-[#D69B46]/80' : ''
+                      isPouringMilk
+                        ? 'ring-2 ring-[#D69B46]/80'
+                        : isHinted
+                          ? 'ring-2 ring-[#E89B2D] shadow-[0_0_10px_rgba(232,155,45,0.45)]'
+                          : ''
                     }`}
                     style={{
                       backgroundImage: item.buttonGradient,
-                      borderColor: isPouringMilk
+                      borderColor: isPouringMilk || isHinted
                         ? '#C27D2C'
                         : count > 0
                           ? '#4B8B63'
                           : item.buttonBorder,
                     }}
                   >
+                    {isHinted && !isPouringMilk && (
+                      <span
+                        aria-hidden="true"
+                        className="absolute left-1 top-0.5 z-10 text-[9.5px] leading-none"
+                      >
+                        ✨
+                      </span>
+                    )}
                     {/* Live creamy tactile pour progress gauge behind label */}
                     <span
                       aria-hidden="true"
@@ -702,13 +738,30 @@ export const HotDrinksStation: React.FC<HotDrinksStationProps> = ({
                 <button
                   key={item.id}
                   type="button"
+                  data-hinted-tile={isHinted ? 'true' : undefined}
                   onClick={() => onAddIngredient(item.id)}
-                  className="barista-tile group relative flex h-full min-h-0 flex-col items-center justify-center gap-0.5 rounded-xl sm:rounded-2xl px-1 sm:px-2 py-1 sm:py-1.5 text-center"
+                  className={`barista-tile group relative flex h-full min-h-0 flex-col items-center justify-center gap-0.5 rounded-xl sm:rounded-2xl px-1 sm:px-2 py-1 sm:py-1.5 text-center ${
+                    isHinted
+                      ? 'ring-2 ring-[#E89B2D] shadow-[0_0_10px_rgba(232,155,45,0.45)]'
+                      : ''
+                  }`}
                   style={{
                     backgroundImage: item.buttonGradient,
-                    borderColor: count > 0 ? '#4B8B63' : item.buttonBorder,
+                    borderColor: isHinted
+                      ? '#C27D2C'
+                      : count > 0
+                        ? '#4B8B63'
+                        : item.buttonBorder,
                   }}
                 >
+                  {isHinted && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute left-1 top-0.5 text-[9.5px] leading-none"
+                    >
+                      ✨
+                    </span>
+                  )}
                   {count > 0 && (
                     <span className="absolute right-1 top-0.5 sm:right-1.5 sm:top-1 rounded-full border border-[#4B8B63]/40 bg-[#A7DCB8] px-1 sm:px-1.5 py-0.2 text-[8.5px] sm:text-[9.5px] font-bold text-[#174A2C]">
                       {max > 1 ? `×${count}` : '✓'}

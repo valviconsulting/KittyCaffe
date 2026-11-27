@@ -13,6 +13,8 @@ interface GuestCardProps {
   emotion: GuestEmotion;
   lastReward: number | null;
   isBestFriend?: boolean;
+  /** Larger portrait on portrait mobile when workbench is collapsed so guests feel warm & prominent */
+  largeMobile?: boolean;
 }
 
 export const GuestCard: React.FC<GuestCardProps> = ({
@@ -21,6 +23,7 @@ export const GuestCard: React.FC<GuestCardProps> = ({
   emotion,
   lastReward,
   isBestFriend = false,
+  largeMobile = false,
 }) => {
   const guest = GUESTS[guestId];
   const isHappy = emotion === 'happy';
@@ -140,7 +143,11 @@ export const GuestCard: React.FC<GuestCardProps> = ({
           <AssetIllustration
             src={CAFE_ASSETS.guests[guestId]}
             alt={guest.name}
-            className="h-[116px] w-[104px] sm:h-[146px] sm:w-[136px] md:h-[172px] md:w-[162px] lg:h-[196px] lg:w-[190px] xl:h-[234px] xl:w-[224px] drop-shadow-[0_10px_14px_rgba(90,48,18,0.34)]"
+            className={`${
+              largeMobile
+                ? 'h-[196px] w-[174px] [@media(min-height:760px)]:h-[234px] [@media(min-height:760px)]:w-[206px]'
+                : 'h-[122px] w-[110px]'
+            } sm:h-[148px] sm:w-[138px] md:h-[172px] md:w-[162px] lg:h-[196px] lg:w-[190px] xl:h-[234px] xl:w-[224px] drop-shadow-[0_10px_14px_rgba(90,48,18,0.34)] transition-[width,height] duration-200`}
             imgClassName="h-full w-full object-contain object-bottom saturate-[1.03] contrast-[1.01]"
             fallback={
               <GuestCharacterSvg

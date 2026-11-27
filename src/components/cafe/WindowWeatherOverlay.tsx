@@ -7,42 +7,42 @@ interface WindowWeatherOverlayProps {
 }
 
 const RAIN_STREAKS = [
-  { x: 36.2, delay: '0s', dur: '1.05s' },
-  { x: 39.0, delay: '0.35s', dur: '1.22s' },
-  { x: 42.0, delay: '0.15s', dur: '1.08s' },
-  { x: 45.2, delay: '0.6s', dur: '1.18s' },
-  { x: 48.5, delay: '0.25s', dur: '1.14s' },
-  { x: 51.8, delay: '0.75s', dur: '1.28s' },
-  { x: 55.0, delay: '0.45s', dur: '1.06s' },
-  { x: 58.2, delay: '0.88s', dur: '1.2s' },
-  { x: 61.2, delay: '0.52s', dur: '1.12s' },
-  { x: 43.6, delay: '0.92s', dur: '1.16s' },
-  { x: 53.4, delay: '0.08s', dur: '1.25s' },
+  { x: 61, delay: '0s', dur: '1.05s' },
+  { x: 66, delay: '0.35s', dur: '1.22s' },
+  { x: 71, delay: '0.15s', dur: '1.08s' },
+  { x: 76, delay: '0.6s', dur: '1.18s' },
+  { x: 81.5, delay: '0.25s', dur: '1.14s' },
+  { x: 87, delay: '0.75s', dur: '1.28s' },
+  { x: 92, delay: '0.45s', dur: '1.06s' },
+  { x: 97.5, delay: '0.88s', dur: '1.2s' },
+  { x: 103, delay: '0.52s', dur: '1.12s' },
+  { x: 73.5, delay: '0.92s', dur: '1.16s' },
+  { x: 89.5, delay: '0.08s', dur: '1.25s' },
 ];
 
 const SNOWFLAKES = [
-  { x: 36.5, size: 5, delay: '0s', dur: '4.1s' },
-  { x: 39.5, size: 3.5, delay: '1.2s', dur: '4.7s' },
-  { x: 42.8, size: 5.5, delay: '0.5s', dur: '3.9s' },
-  { x: 46.0, size: 4, delay: '2.1s', dur: '4.4s' },
-  { x: 49.2, size: 5, delay: '0.9s', dur: '4.2s' },
-  { x: 52.5, size: 3.5, delay: '1.7s', dur: '4.9s' },
-  { x: 55.8, size: 5.2, delay: '0.3s', dur: '4.0s' },
-  { x: 59.0, size: 4.2, delay: '2.5s', dur: '4.5s' },
-  { x: 61.5, size: 3.8, delay: '1.5s', dur: '4.3s' },
-  { x: 44.5, size: 3.5, delay: '3.0s', dur: '4.6s' },
-  { x: 54.0, size: 4.5, delay: '2.7s', dur: '4.3s' },
+  { x: 61.5, size: 5.5, delay: '0s', dur: '4.1s' },
+  { x: 66.5, size: 4, delay: '1.2s', dur: '4.7s' },
+  { x: 72, size: 6, delay: '0.5s', dur: '3.9s' },
+  { x: 77, size: 4.5, delay: '2.1s', dur: '4.4s' },
+  { x: 82.5, size: 5.5, delay: '0.9s', dur: '4.2s' },
+  { x: 88, size: 4, delay: '1.7s', dur: '4.9s' },
+  { x: 93.5, size: 5.8, delay: '0.3s', dur: '4.0s' },
+  { x: 99, size: 4.8, delay: '2.5s', dur: '4.5s' },
+  { x: 103.5, size: 4.2, delay: '1.5s', dur: '4.3s' },
+  { x: 74.5, size: 4, delay: '3.0s', dur: '4.6s' },
+  { x: 90.5, size: 5, delay: '2.7s', dur: '4.3s' },
 ];
 
 const GOLDEN_MOTES = [
-  { cx: 45, cy: 36, r: 0.42, delay: '0s', dur: '5.2s' },
-  { cx: 52, cy: 48, r: 0.52, delay: '1.1s', dur: '6.0s' },
-  { cx: 48.5, cy: 62, r: 0.36, delay: '2.3s', dur: '4.8s' },
-  { cx: 57, cy: 58, r: 0.45, delay: '0.7s', dur: '5.8s' },
-  { cx: 43, cy: 54, r: 0.35, delay: '3.1s', dur: '5.5s' },
-  { cx: 61, cy: 70, r: 0.4, delay: '1.8s', dur: '6.2s' },
-  { cx: 34, cy: 42, r: 0.32, delay: '2.6s', dur: '5.6s' },
-  { cx: 68, cy: 44, r: 0.34, delay: '0.4s', dur: '6.4s' },
+  { cx: 76, cy: 36, r: 0.55, delay: '0s', dur: '5.2s' },
+  { cx: 88, cy: 46, r: 0.65, delay: '1.1s', dur: '6.0s' },
+  { cx: 81, cy: 58, r: 0.48, delay: '2.3s', dur: '4.8s' },
+  { cx: 96, cy: 54, r: 0.58, delay: '0.7s', dur: '5.8s' },
+  { cx: 72, cy: 52, r: 0.46, delay: '3.1s', dur: '5.5s' },
+  { cx: 102, cy: 65, r: 0.52, delay: '1.8s', dur: '6.2s' },
+  { cx: 58, cy: 42, r: 0.44, delay: '2.6s', dur: '5.6s' },
+  { cx: 114, cy: 44, r: 0.48, delay: '0.4s', dur: '6.4s' },
 ];
 
 /**
@@ -92,10 +92,10 @@ export const WindowWeatherOverlay: React.FC<WindowWeatherOverlayProps> = ({
         }}
       />
 
-      {/* Focused window weather atmosphere + drifting sunlit dust motes */}
+      {/* Focused window weather atmosphere locked 1:1 to bg-cafe.webp (1680×938) via xMidYMid slice */}
       <svg
-        viewBox="0 0 100 100"
-        preserveAspectRatio="none"
+        viewBox="0 0 168 93.8"
+        preserveAspectRatio="xMidYMid slice"
         className="h-full w-full"
       >
         <defs>
@@ -112,17 +112,17 @@ export const WindowWeatherOverlay: React.FC<WindowWeatherOverlayProps> = ({
             <stop offset="0%" stopColor="#88B0D6" stopOpacity="0.32" />
             <stop offset="100%" stopColor="#DCEBF8" stopOpacity="0.24" />
           </linearGradient>
-          {/* Matches the central wooden window panes of the gouache bg-cafe.webp */}
+          {/* Exact wooden window inner glass panes of bg-cafe.webp (1680×938) — matches object-cover at EVERY aspect ratio! */}
           <clipPath id="panoramic-window-clip">
-            <rect x="34.0" y="13.5" width="29.5" height="64.5" rx="0.8" />
+            <rect x="57.2" y="20.0" width="49.5" height="51.2" rx="0.8" />
           </clipPath>
         </defs>
 
         {weather === 'sunny' && (
           <g>
             <g className="animate-sun-shimmer">
-              <polygon points="36,14 54,14 72,96 48,96" fill="url(#ghibli-sunbeam)" />
-              <polygon points="34,20 43,20 54,96 39,96" fill="url(#ghibli-sunbeam)" />
+              <polygon points="60,20 91,20 120,93 80,93" fill="url(#ghibli-sunbeam)" />
+              <polygon points="57,26 73,26 91,93 66,93" fill="url(#ghibli-sunbeam)" />
             </g>
             {/* Cozy golden sunlit dust motes floating lazily in the warm beam */}
             <g fill="#FFF7CC">
@@ -142,8 +142,8 @@ export const WindowWeatherOverlay: React.FC<WindowWeatherOverlayProps> = ({
 
         {weather === 'rainy' && (
           <g clipPath="url(#panoramic-window-clip)">
-            <rect x="34.0" y="13.5" width="29.5" height="64.5" fill="url(#rain-window-tint)" />
-            <g stroke="#E5F3FF" strokeWidth="0.42" strokeLinecap="round">
+            <rect x="57.2" y="20.0" width="49.5" height="51.2" fill="url(#rain-window-tint)" />
+            <g stroke="#E5F3FF" strokeWidth="0.52" strokeLinecap="round">
               {RAIN_STREAKS.map((drop, idx) => (
                 <line
                   key={idx}
@@ -153,29 +153,29 @@ export const WindowWeatherOverlay: React.FC<WindowWeatherOverlayProps> = ({
                     animationDuration: drop.dur,
                   }}
                   x1={drop.x}
-                  y1={12}
-                  x2={drop.x - 1.3}
-                  y2={22}
+                  y1={18}
+                  x2={drop.x - 1.8}
+                  y2={27}
                 />
               ))}
             </g>
             {/* Shimmering raindrops on window glass */}
             <g fill="#EEF8FF" opacity="0.86">
-              <circle cx="38.5" cy="40" r="0.52" />
-              <circle cx="45.5" cy="56" r="0.58" />
-              <circle cx="54.5" cy="36" r="0.46" />
-              <circle cx="59.5" cy="60" r="0.54" />
-              <circle cx="42.5" cy="68" r="0.45" />
-              <circle cx="51" cy="48" r="0.42" />
+              <circle cx="64.5" cy="40" r="0.62" />
+              <circle cx="76.5" cy="54" r="0.68" />
+              <circle cx="91.5" cy="37" r="0.56" />
+              <circle cx="100" cy="57" r="0.64" />
+              <circle cx="71.5" cy="64" r="0.54" />
+              <circle cx="85.5" cy="47" r="0.52" />
             </g>
           </g>
         )}
 
         {weather === 'snowy' && (
           <g clipPath="url(#panoramic-window-clip)">
-            <rect x="34.0" y="13.5" width="29.5" height="64.5" fill="url(#snow-window-tint)" />
+            <rect x="57.2" y="20.0" width="49.5" height="51.2" fill="url(#snow-window-tint)" />
             {/* Soft frosted snow sill along bottom of panes */}
-            <ellipse cx="48.75" cy="77.8" rx="15" ry="2.6" fill="#FFFFFF" opacity="0.58" />
+            <ellipse cx="82" cy="70.8" rx="25" ry="2.4" fill="#FFFFFF" opacity="0.58" />
             <g fill="#FFFFFF">
               {SNOWFLAKES.map((flake, idx) => (
                 <circle
@@ -186,8 +186,8 @@ export const WindowWeatherOverlay: React.FC<WindowWeatherOverlayProps> = ({
                     animationDuration: flake.dur,
                   }}
                   cx={flake.x}
-                  cy={12}
-                  r={flake.size * 0.14}
+                  cy={19}
+                  r={flake.size * 0.16}
                 />
               ))}
             </g>

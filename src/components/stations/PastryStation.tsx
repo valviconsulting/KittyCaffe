@@ -7,12 +7,14 @@ import type {
   UnlockableRecipeId,
 } from '../../types/game';
 import { MiniOvenSvg, PastrySvg } from '../svg/PastryVisualSvg';
+import type { GuidedHintState } from '../../utils/guidedHints';
 
 interface PastryStationProps {
   selectedPastry: PreparedPastry | null;
   isOvenWarming: boolean;
   ovenProgress: number;
   unlockedRecipes?: UnlockableRecipeId[];
+  guidedHint?: GuidedHintState | null;
   onSelectBase: (type: PreparedPastry['type']) => void;
   onWarmCroissant: () => void;
   onSetDonutGlaze: (glaze: DonutGlaze) => void;
@@ -26,6 +28,7 @@ export const PastryStation: React.FC<PastryStationProps> = ({
   isOvenWarming,
   ovenProgress,
   unlockedRecipes = [],
+  guidedHint = null,
   onSelectBase,
   onWarmCroissant,
   onSetDonutGlaze,
@@ -163,11 +166,15 @@ export const PastryStation: React.FC<PastryStationProps> = ({
               disabled={!selectedPastry || isOvenWarming}
               className={`min-h-[40px] sm:min-h-[36px] flex-1 rounded-2xl border-2 px-2.5 py-1 text-xs font-bold transition-all whitespace-nowrap ${
                 selectedPastry && !isOvenWarming
-                  ? 'border-[#3E7A56] border-b-4 bg-gradient-to-b from-[#94D3AA] to-[#6CB889] text-[#143D24] shadow-[0_4px_14px_rgba(78,150,104,0.38)] hover:brightness-105 active:translate-y-[2px] active:border-b-2'
+                  ? guidedHint?.highlightPutOnTray
+                    ? 'border-[#3E7A56] border-b-4 bg-gradient-to-b from-[#94D3AA] to-[#6CB889] text-[#143D24] ring-2 ring-[#F2BA49] shadow-[0_4px_14px_rgba(78,150,104,0.48)] hover:brightness-105 active:translate-y-[2px] active:border-b-2'
+                    : 'border-[#3E7A56] border-b-4 bg-gradient-to-b from-[#94D3AA] to-[#6CB889] text-[#143D24] shadow-[0_4px_14px_rgba(78,150,104,0.38)] hover:brightness-105 active:translate-y-[2px] active:border-b-2'
                   : 'border-[#CBB49B] border-b-[3px] bg-[#ECE0CF] text-[#9E8772] cursor-not-allowed'
               }`}
             >
-              ✓ На тацю
+              {guidedHint?.highlightPutOnTray && selectedPastry
+                ? '👆 ✓ На тацю'
+                : '✓ На тацю'}
             </button>
             <button
               type="button"
@@ -198,9 +205,15 @@ export const PastryStation: React.FC<PastryStationProps> = ({
           <h2 className="font-handwriting text-xl sm:text-2xl leading-none font-bold text-[#4F3323]">
             Вітрина кондитерської:
           </h2>
-          <span className="hidden md:inline rounded-full border border-[#CFA97F] bg-[#FCF2DC] px-2.5 py-0.5 text-[10px] font-bold text-[#7C522B]">
-            Свіжа випічка щодня 🥐
-          </span>
+          {guidedHint?.stationText ? (
+            <span className="max-w-[60%] truncate rounded-full border border-[#D99B38] bg-[#FFF1C2] px-2.5 py-0.5 text-[10px] font-bold text-[#613808] shadow-2xs">
+              {guidedHint.stationText}
+            </span>
+          ) : (
+            <span className="hidden md:inline rounded-full border border-[#CFA97F] bg-[#FCF2DC] px-2.5 py-0.5 text-[10px] font-bold text-[#7C522B]">
+              Свіжа випічка щодня 🥐
+            </span>
+          )}
         </div>
 
         {/* Compact Top Row: 3 (or 4 with Carrot Cake!) Tactile Pastry Showcase Cards in 1 clean row */}
@@ -211,6 +224,7 @@ export const PastryStation: React.FC<PastryStationProps> = ({
         >
           {showcaseCards.map((card) => {
             const active = selectedPastry?.type === card.type;
+            const isHinted = guidedHint?.highlightPastryBase === card.type;
             return (
               <button
                 key={card.type}
@@ -218,11 +232,19 @@ export const PastryStation: React.FC<PastryStationProps> = ({
                 disabled={isOvenWarming}
                 onClick={() => onSelectBase(card.type)}
                 className={`barista-tile flex flex-col items-center justify-center rounded-2xl px-1.5 py-1.5 sm:py-2 disabled:opacity-60 ${
-                  active ? 'ring-2 ring-[#C96B84] ring-offset-1 ring-offset-[#F4E6D0]' : ''
+                  isHinted
+                    ? 'ring-2 ring-[#E89B2D] shadow-[0_0_10px_rgba(232,155,45,0.45)]'
+                    : active
+                      ? 'ring-2 ring-[#C96B84] ring-offset-1 ring-offset-[#F4E6D0]'
+                      : ''
                 }`}
                 style={{
                   backgroundImage: card.grad,
-                  borderColor: active ? '#A84E68' : '#7A523B',
+                  borderColor: isHinted
+                    ? '#C27D2C'
+                    : active
+                      ? '#A84E68'
+                      : '#7A523B',
                 }}
               >
                 <PastrySvg
@@ -275,7 +297,9 @@ export const PastryStation: React.FC<PastryStationProps> = ({
                       className={`min-h-[34px] w-full rounded-xl border-2 px-3 py-1 text-xs font-bold transition-all ${
                         isOvenWarming
                           ? 'border-[#C9854B] border-b-[3px] bg-[#FBE0BE] text-[#834618]'
-                          : 'border-[#9E5621] border-b-4 bg-gradient-to-b from-[#F4B465] to-[#DF8238] text-white shadow-[0_4px_12px_rgba(186,104,38,0.34)] hover:brightness-105 active:translate-y-[2px] active:border-b-2'
+                          : guidedHint?.highlightWarmCroissant
+                            ? 'border-[#9E5621] border-b-4 bg-gradient-to-b from-[#F4B465] to-[#DF8238] text-white ring-2 ring-[#F2BA49] shadow-[0_4px_12px_rgba(186,104,38,0.44)] hover:brightness-105 active:translate-y-[2px] active:border-b-2'
+                            : 'border-[#9E5621] border-b-4 bg-gradient-to-b from-[#F4B465] to-[#DF8238] text-white shadow-[0_4px_12px_rgba(186,104,38,0.34)] hover:brightness-105 active:translate-y-[2px] active:border-b-2'
                       }`}
                     >
                       {isOvenWarming
@@ -343,14 +367,22 @@ export const PastryStation: React.FC<PastryStationProps> = ({
                 <button
                   type="button"
                   onClick={() => onSetDonutGlaze('pink')}
-                  className="barista-tile flex min-h-[34px] items-center justify-center gap-1.5 rounded-xl px-2 py-1 text-[11px] font-bold text-[#73263E]"
+                  className={`barista-tile flex min-h-[34px] items-center justify-center gap-1.5 rounded-xl px-2 py-1 text-[11px] font-bold text-[#73263E] ${
+                    guidedHint?.highlightDonutGlaze === 'pink'
+                      ? 'ring-2 ring-[#E89B2D]'
+                      : ''
+                  }`}
                   style={{
                     backgroundImage:
                       selectedPastry.glaze === 'pink'
                         ? 'linear-gradient(155deg, #FBD9E3 0%, #F2B5C7 100%)'
                         : 'linear-gradient(155deg, #FFF5F8 0%, #F9DCE5 100%)',
                     borderColor:
-                      selectedPastry.glaze === 'pink' ? '#B34869' : '#B6778B',
+                      guidedHint?.highlightDonutGlaze === 'pink'
+                        ? '#C27D2C'
+                        : selectedPastry.glaze === 'pink'
+                          ? '#B34869'
+                          : '#B6778B',
                   }}
                 >
                   <span className="h-3 w-3 shrink-0 rounded-full bg-[#F59DB6] border border-[#9E4563]" />
@@ -360,14 +392,22 @@ export const PastryStation: React.FC<PastryStationProps> = ({
                 <button
                   type="button"
                   onClick={() => onSetDonutGlaze('chocolate')}
-                  className="barista-tile flex min-h-[34px] items-center justify-center gap-1.5 rounded-xl px-2 py-1 text-[11px] font-bold text-[#482612]"
+                  className={`barista-tile flex min-h-[34px] items-center justify-center gap-1.5 rounded-xl px-2 py-1 text-[11px] font-bold text-[#482612] ${
+                    guidedHint?.highlightDonutGlaze === 'chocolate'
+                      ? 'ring-2 ring-[#E89B2D]'
+                      : ''
+                  }`}
                   style={{
                     backgroundImage:
                       selectedPastry.glaze === 'chocolate'
                         ? 'linear-gradient(155deg, #E8CEB8 0%, #CFA889 100%)'
                         : 'linear-gradient(155deg, #FAF0E6 0%, #E7D0BA 100%)',
                     borderColor:
-                      selectedPastry.glaze === 'chocolate' ? '#5E331A' : '#8C6347',
+                      guidedHint?.highlightDonutGlaze === 'chocolate'
+                        ? '#C27D2C'
+                        : selectedPastry.glaze === 'chocolate'
+                          ? '#5E331A'
+                          : '#8C6347',
                   }}
                 >
                   <span className="h-3 w-3 shrink-0 rounded-full bg-[#6F3D22] border border-[#3E1F0D]" />
@@ -377,12 +417,20 @@ export const PastryStation: React.FC<PastryStationProps> = ({
                 <button
                   type="button"
                   onClick={onToggleDonutSprinkles}
-                  className="barista-tile flex min-h-[34px] items-center justify-center gap-1.5 rounded-xl px-2 py-1 text-[11px] font-bold text-[#4D3418]"
+                  className={`barista-tile flex min-h-[34px] items-center justify-center gap-1.5 rounded-xl px-2 py-1 text-[11px] font-bold text-[#4D3418] ${
+                    guidedHint?.highlightDonutSprinkles
+                      ? 'ring-2 ring-[#E89B2D]'
+                      : ''
+                  }`}
                   style={{
                     backgroundImage: selectedPastry.sprinkles
                       ? 'linear-gradient(155deg, #E3F5E8 0%, #BEE5CA 100%)'
                       : 'linear-gradient(155deg, #FFFBEF 0%, #F7E4B2 100%)',
-                    borderColor: selectedPastry.sprinkles ? '#43825A' : '#A98444',
+                    borderColor: guidedHint?.highlightDonutSprinkles
+                      ? '#C27D2C'
+                      : selectedPastry.sprinkles
+                        ? '#43825A'
+                        : '#A98444',
                   }}
                 >
                   <span aria-hidden="true">✨</span>

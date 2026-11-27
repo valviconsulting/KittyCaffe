@@ -9,6 +9,8 @@ import { MarzipanCatSvg } from '../svg/MarzipanCatSvg';
 interface MarzipanHelperProps {
   isPurring: boolean;
   equippedAccessories?: MarzipanEquipped;
+  /** Larger scale on portrait mobile when workbench is collapsed */
+  largeMobile?: boolean;
   onPet: () => void;
   onOpenCare?: () => void;
 }
@@ -22,6 +24,7 @@ const EMPTY_EQUIPPED: MarzipanEquipped = {
 export const MarzipanHelper: React.FC<MarzipanHelperProps> = ({
   isPurring,
   equippedAccessories = EMPTY_EQUIPPED,
+  largeMobile = false,
   onPet,
   onOpenCare,
 }) => {
@@ -94,7 +97,11 @@ export const MarzipanHelper: React.FC<MarzipanHelperProps> = ({
             : { duration: 3.6, repeat: Infinity, ease: 'easeInOut' }
         }
         style={{ transformOrigin: 'bottom center' }}
-        className="relative z-10 aspect-[8/7] h-[64px] sm:h-[78px] md:h-[88px] lg:h-[104px] xl:h-[118px]"
+        className={`relative z-10 aspect-[8/7] ${
+          largeMobile
+            ? 'h-[84px] [@media(min-height:760px)]:h-[96px]'
+            : 'h-[64px]'
+        } sm:h-[78px] md:h-[88px] lg:h-[104px] xl:h-[118px] transition-[height] duration-200`}
       >
         <AssetIllustration
           src={CAFE_ASSETS.marzipan}

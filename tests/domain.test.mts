@@ -69,6 +69,7 @@ import {
   getUnreadLettersCount,
   sanitizeLettersCatalog,
 } from '../src/utils/letters.ts';
+import { computeGuidedHint } from '../src/utils/guidedHints.ts';
 import {
   MILK_POUR_DURATION_PER_PORTION_MS,
   MILK_POUR_HOLD_THRESHOLD_MS,
@@ -565,5 +566,74 @@ if (v6Import.ok) {
   assert.equal(v6Import.state.marzipanCare.treatsGiven, 4);
   assert.equal(v6Import.state.marzipanCare.lastPlayRewardDay, 6);
 }
+
+// 14. Child Guided Step-by-Step Hints (`computeGuidedHint`)
+const firstOrder = generateOrder(1, 'sunny'); // Puff: cocoa_marshmallow
+const hintClosed = computeGuidedHint({
+  order: firstOrder,
+  emotion: 'waiting',
+  isWorkbenchOpen: false,
+  activeTab: 'hot',
+  trayDrink: null,
+  trayPastry: null,
+  hotIngredients: {},
+  coldGlassMode: 'empty',
+  cocktailIngredients: {},
+  blenderIngredients: {},
+  whippedCream: false,
+  selectedPastry: null,
+});
+assert.equal(hintClosed.highlightTab, 'hot');
+assert.equal(hintClosed.highlightServe, false);
+
+const hintPartialHot = computeGuidedHint({
+  order: firstOrder,
+  emotion: 'waiting',
+  isWorkbenchOpen: true,
+  activeTab: 'hot',
+  trayDrink: null,
+  trayPastry: null,
+  hotIngredients: { cocoa: 1 },
+  coldGlassMode: 'empty',
+  cocktailIngredients: {},
+  blenderIngredients: {},
+  whippedCream: false,
+  selectedPastry: null,
+});
+assert.deepEqual(hintPartialHot.highlightHotIngredients, ['warmMilk', 'marshmallow']);
+assert.equal(hintPartialHot.highlightPutOnTray, false);
+
+const hintReadyHot = computeGuidedHint({
+  order: firstOrder,
+  emotion: 'waiting',
+  isWorkbenchOpen: true,
+  activeTab: 'hot',
+  trayDrink: null,
+  trayPastry: null,
+  hotIngredients: { cocoa: 1, warmMilk: 1, marshmallow: 1 },
+  coldGlassMode: 'empty',
+  cocktailIngredients: {},
+  blenderIngredients: {},
+  whippedCream: false,
+  selectedPastry: null,
+});
+assert.equal(hintReadyHot.highlightPutOnTray, true);
+assert.deepEqual(hintReadyHot.highlightHotIngredients, []);
+
+const hintServeNow = computeGuidedHint({
+  order: firstOrder,
+  emotion: 'waiting',
+  isWorkbenchOpen: false,
+  activeTab: 'hot',
+  trayDrink: { category: 'hot', ingredients: { cocoa: 1, warmMilk: 1, marshmallow: 1 } },
+  trayPastry: null,
+  hotIngredients: {},
+  coldGlassMode: 'empty',
+  cocktailIngredients: {},
+  blenderIngredients: {},
+  whippedCream: false,
+  selectedPastry: null,
+});
+assert.equal(hintServeNow.highlightServe, true);
 
 console.log('ALL_DOMAIN_TESTS_PASSED');

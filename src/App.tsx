@@ -95,6 +95,25 @@ import {
   getUnreadLettersCount,
   loadLocalLettersCatalog,
 } from './utils/letters';
+import { computeGuidedHint } from './utils/guidedHints';
+
+const INTRO_SEEN_STORAGE_KEY = 'mur_late_intro_seen_v1';
+
+function hasSeenIntroFlag(): boolean {
+  try {
+    return window.localStorage.getItem(INTRO_SEEN_STORAGE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function markIntroSeenFlag(): void {
+  try {
+    window.localStorage.setItem(INTRO_SEEN_STORAGE_KEY, '1');
+  } catch {
+    // Ignore storage quota / private-mode restrictions
+  }
+}
 
 // Lazy-loaded modal flows so initial mobile bundle stays light & fast
 const RecipeBookModal = lazy(() =>
@@ -150,6 +169,11 @@ const WallArtModal = lazy(() =>
 const MarzipanCareModal = lazy(() =>
   import('./components/modals/MarzipanCareModal').then((m) => ({
     default: m.MarzipanCareModal,
+  }))
+);
+const HowToPlayModal = lazy(() =>
+  import('./components/modals/HowToPlayModal').then((m) => ({
+    default: m.HowToPlayModal,
   }))
 );
 
@@ -255,6 +279,13 @@ export function App() {
     useState<BirthdayThemeId | null>(null);
   const [isWallArtOpen, setIsWallArtOpen] = useState<boolean>(false);
   const [isMarzipanCareOpen, setIsMarzipanCareOpen] = useState<boolean>(false);
+  const [isHowToPlayOpen, setIsHowToPlayOpen] = useState<boolean>(
+    () => initialLoad.state.servedCount === 0 && !hasSeenIntroFlag()
+  );
+  const [hintsOverride, setHintsOverride] = useState<{
+    orderId: number;
+    enabled: boolean;
+  } | null>(null);
   const [lettersCatalog, setLettersCatalog] =
     useState<CafeLetter[]>(DEFAULT_CAFE_LETTERS);
   const [pendingTakeawayDrink, setPendingTakeawayDrink] =
@@ -1495,6 +1526,39 @@ export function App() {
     }
   }
 
+  const hintsActive =
+    hintsOverride && hintsOverride.orderId === order.id
+      ? hintsOverride.enabled
+      : saveState.servedCount < 2;
+
+  const activeGuidedHint = hintsActive
+    ? computeGuidedHint({
+        order,
+        emotion,
+        isWorkbenchOpen,
+        activeTab,
+        trayDrink,
+        trayPastry,
+        hotIngredients,
+        coldGlassMode,
+        cocktailIngredients,
+        blenderIngredients,
+        whippedCream,
+        selectedPastry,
+      })
+    : null;
+
+  const handleToggleHints = () => {
+    sound.playPop();
+    setHintsOverride({ orderId: order.id, enabled: !hintsActive });
+  };
+
+  const handleCloseHowToPlay = () => {
+    sound.playPop();
+    markIntroSeenFlag();
+    setIsHowToPlayOpen(false);
+  };
+
   const handleOpenStationTab = (tab: StationTab) => {
     sound.playPop();
     if (isWorkbenchOpen && activeTab === tab) {
@@ -1576,6 +1640,13 @@ export function App() {
             isWorkbenchOpen={isWorkbenchOpen}
             birthdayDecor={getActiveBirthdayDecor(saveState.puhBirthday)}
             wallArt={saveState.wallArt}
+            guidedHint={activeGuidedHint}
+            hintsActive={hintsActive}
+            onToggleHints={handleToggleHints}
+            onOpenHowToPlay={() => {
+              sound.playPop();
+              setIsHowToPlayOpen(true);
+            }}
             onPetMarzipan={handlePetMarzipan}
             onOpenMarzipanCare={() => {
               sound.playPop();
@@ -1619,6 +1690,7 @@ export function App() {
               activeTab={activeTab}
               isOpen={isWorkbenchOpen}
               suggestedTabs={suggestedTabs}
+              highlightTab={activeGuidedHint?.highlightTab ?? null}
               dayProgress={saveState.dayProgress}
               puhBirthday={saveState.puhBirthday}
               unreadLettersCount={unreadLettersCount}
@@ -1655,6 +1727,7 @@ export function App() {
                           order.serviceMode === 'takeaway' && !order.isTravelerGuest
                         }
                         unlockedRecipes={saveState.unlockedRecipes}
+                        guidedHint={activeGuidedHint}
                         onAddIngredient={handleAddHotIngredient}
                         onSetWarmMilkCount={handleSetWarmMilkCount}
                         onRemoveIngredient={handleRemoveHotIngredient}
@@ -1678,6 +1751,7 @@ export function App() {
                         isTakeawayOrder={
                           order.serviceMode === 'takeaway' && !order.isTravelerGuest
                         }
+                        guidedHint={activeGuidedHint}
                         onAddCocktailIngredient={handleAddCocktailIngredient}
                         onRemoveCocktailIngredient={handleRemoveCocktailIngredient}
                         onAddBlenderIngredient={handleAddBlenderIngredient}
@@ -1695,6 +1769,7 @@ export function App() {
                         isOvenWarming={isOvenWarming}
                         ovenProgress={ovenProgress}
                         unlockedRecipes={saveState.unlockedRecipes}
+                        guidedHint={activeGuidedHint}
                         onSelectBase={handleSelectPastryBase}
                         onWarmCroissant={handleWarmCroissant}
                         onSetDonutGlaze={handleSetDonutGlaze}
@@ -1899,6 +1974,20 @@ export function App() {
                 onClose={() => {
                   sound.playPop();
                   setIsMarzipanCareOpen(false);
+                }}
+              />
+            )}
+
+            {isHowToPlayOpen && (
+              <HowToPlayModal
+                isOpen={isHowToPlayOpen}
+                isFirstVisit={saveState.servedCount === 0}
+                onClose={handleCloseHowToPlay}
+                onStartWithHints={() => {
+                  markIntroSeenFlag();
+                  sound.playPop();
+                  setIsHowToPlayOpen(false);
+                  setHintsOverride({ orderId: order.id, enabled: true });
                 }}
               />
             )}
