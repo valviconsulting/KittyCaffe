@@ -99,6 +99,7 @@ export type DrinkRecipeId =
   | 'babyccino'
   | 'cocoa_marshmallow'
   | 'matcha_latte'
+  | 'golden_cocoa'
   | 'strawberry_milkshake'
   | 'kids_mojito'
   | 'sunrise';
@@ -184,6 +185,42 @@ export interface PuhBirthdayStoryState {
   keepDecorEnabled: boolean;
   /** Idempotent guard preventing duplicate +40 fish finale gift across reloads */
   finaleRewardClaimed: boolean;
+}
+
+export type RecipeMysteryStatus = 'not_started' | 'active' | 'completed';
+
+export type MysteryDay1ChoiceId =
+  | 'sweet_cocoa'
+  | 'spiced_cozy'
+  | 'fluffy_cloud';
+
+export type MysteryDay2ChoiceId =
+  | 'starlight_name'
+  | 'warm_paw_name'
+  | 'golden_mur_name';
+
+export type RecipeMysteryRole =
+  | 'mystery_day1_marsel'
+  | 'mystery_day2_sofiya'
+  | 'mystery_day2_persyk'
+  | 'mystery_day3_finale';
+
+export interface RecipeMysteryStoryState {
+  status: RecipeMysteryStatus;
+  /** 1 = Marsel's torn page (Clue 1), 2 = Sofiya & Persyk (Clues 2 & 3), 3 = Detective Finale! */
+  stageDay: 1 | 2 | 3;
+  /** Discovered clue numbers (1..3) */
+  discoveredClues: number[];
+  /** Scripted mystery roles already served during the current day */
+  servedStepsToday: RecipeMysteryRole[];
+  /** Remembered player intuition choice from Day 1 dialogue with Marsel */
+  day1Choice: MysteryDay1ChoiceId | null;
+  /** Remembered player nickname choice from Day 2 dialogue with Sofiya */
+  day2Choice: MysteryDay2ChoiceId | null;
+  /** Idempotent guard preventing duplicate +45 fish finale bonus across reloads */
+  finaleRewardClaimed: boolean;
+  /** Shows the permanent Golden Recipe Book & Magnifier souvenir on the counter */
+  showCounterSouvenir: boolean;
 }
 
 export type WallFrameStyle = 'honey_wood' | 'blush_ribbon' | 'golden_stars';
@@ -277,6 +314,8 @@ export interface Order {
   /** Step 05: Present when this guest's order is part of Puff's Birthday Story Chapter */
   birthdayStoryRole?: 'prep_day1' | 'prep_day2' | 'finale_party';
   birthdayTheme?: BirthdayThemeId;
+  /** Chapter 2: Present when this guest's visit is part of «Таємниця загубленого рецепта» */
+  mysteryRole?: RecipeMysteryRole;
 }
 
 export interface ValidationResult {
@@ -317,6 +356,8 @@ export interface CafeSaveState {
   dayHistory: DayMemoryEntry[];
   /** Step 05: First Story Chapter — «День народження Пуха» (3 days, 3 themes) */
   puhBirthday: PuhBirthdayStoryState;
+  /** Chapter 2: Detective Story — «Таємниця загубленого рецепта» (3 days + choices + Golden Cocoa) */
+  recipeMystery: RecipeMysteryStoryState;
   /** Step 06: Personalization — read letter IDs, child's framed wall art & Marzipan care */
   readLetterIds: string[];
   wallArt: WallArtState;

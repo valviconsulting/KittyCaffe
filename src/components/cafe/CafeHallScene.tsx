@@ -12,16 +12,24 @@ import {
   getOrderDrinkName,
   getOrderDrinkTab,
 } from '../../data/recipes';
+import {
+  MYSTERY_DAY1_CHOICES,
+  MYSTERY_DAY2_CHOICES,
+} from '../../data/recipeMystery';
 import type {
   BirthdayThemeId,
   CafeDecorId,
   GuestEmotion,
   GuestId,
   MarzipanEquipped,
+  MysteryDay1ChoiceId,
+  MysteryDay2ChoiceId,
   Order,
   PreparedDrink,
   PreparedPastry,
+  PuhBirthdayStoryState,
   RareStickerId,
+  RecipeMysteryStoryState,
   SecretDrinkRecipe,
   StationTab,
   WallArtState,
@@ -33,10 +41,12 @@ import { CafeBackgroundSvg } from '../svg/CafeBackgroundSvg';
 import {
   CatWallClockSvg,
   DaisyVaseSvg,
+  GoldenRecipeBookCounterSvg,
   MusicBoxCounterSvg,
   SouvenirSvg,
   TwinkleStarsGarlandSvg,
 } from '../svg/CafeDecorAndSouvenirsSvg';
+import type { DayJournalTab } from '../modals/DayJournalModal';
 import { CafeWallArtFrame } from './CafeWallArtFrame';
 import { GuestCard } from './GuestCard';
 import { MarzipanHelper } from './MarzipanHelper';
@@ -76,11 +86,19 @@ interface CafeHallSceneProps {
   isDayComplete?: boolean;
   isWorkbenchOpen?: boolean;
   birthdayDecor?: { theme: BirthdayThemeId; level: 1 | 2 | 3 } | null;
+  puhBirthday?: PuhBirthdayStoryState;
+  recipeMystery?: RecipeMysteryStoryState;
+  unreadLettersCount?: number;
+  canOfferMysteryInvite?: boolean;
   wallArt?: WallArtState;
   guidedHint?: GuidedHintState | null;
   hintsActive?: boolean;
   onToggleHints?: () => void;
   onOpenHowToPlay?: () => void;
+  onOpenStoryHub?: (tab?: DayJournalTab) => void;
+  onOpenMysteryModal?: (mode: 'intro' | 'clues' | 'solved') => void;
+  onSelectMysteryDay1Choice?: (choice: MysteryDay1ChoiceId) => void;
+  onSelectMysteryDay2Choice?: (choice: MysteryDay2ChoiceId) => void;
   onPetMarzipan: () => void;
   onOpenMarzipanCare?: () => void;
   onOpenWallArt?: () => void;
@@ -120,11 +138,19 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = React.memo(({
   isDayComplete = false,
   isWorkbenchOpen = false,
   birthdayDecor = null,
+  puhBirthday,
+  recipeMystery,
+  unreadLettersCount = 0,
+  canOfferMysteryInvite = false,
   wallArt,
   guidedHint = null,
   hintsActive = false,
   onToggleHints,
   onOpenHowToPlay,
+  onOpenStoryHub,
+  onOpenMysteryModal,
+  onSelectMysteryDay1Choice,
+  onSelectMysteryDay2Choice,
   onPetMarzipan,
   onOpenMarzipanCare,
   onOpenWallArt,
@@ -153,6 +179,22 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = React.memo(({
   const hasCatClock = enabledDecor.includes('cat_clock');
   const hasMusicBox = enabledDecor.includes('music_box');
   const hasLuckyPinecone = unlockedRareStickers.includes('pinecone');
+  const showGoldenBookSouvenir = Boolean(
+    recipeMystery?.status === 'completed' && recipeMystery.showCounterSouvenir
+  );
+  const needsMysteryDay1Choice = Boolean(
+    !isHappy &&
+      order.mysteryRole === 'mystery_day1_marsel' &&
+      recipeMystery?.status === 'active' &&
+      !recipeMystery.day1Choice
+  );
+  const needsMysteryDay2Choice = Boolean(
+    !isHappy &&
+      order.mysteryRole === 'mystery_day2_sofiya' &&
+      recipeMystery?.status === 'active' &&
+      !recipeMystery.day2Choice
+  );
+  const isWaitingForChoice = needsMysteryDay1Choice || needsMysteryDay2Choice;
 
   const unlockedFriendSouvenirs = REGULAR_GUEST_IDS.filter(
     (id) => (friendship[id] ?? 0) >= BEST_FRIEND_THRESHOLD
@@ -192,7 +234,49 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = React.memo(({
         {speechText}
       </p>
 
+      {/* Live Interactive Detective Dialogue Choices (Chapter 2, Day 1 & Day 2) */}
+      {needsMysteryDay1Choice && onSelectMysteryDay1Choice && (
+        <div
+          data-mystery-choices="day1"
+          className="relative z-10 mt-1.5 flex flex-wrap gap-1.5"
+        >
+          {MYSTERY_DAY1_CHOICES.map((ch) => (
+            <button
+              key={ch.id}
+              type="button"
+              data-mystery-choice={ch.id}
+              onClick={() => onSelectMysteryDay1Choice(ch.id)}
+              className="inline-flex min-h-[30px] items-center gap-1 rounded-xl border-2 border-[#C88E38] border-b-[3px] bg-gradient-to-b from-[#FFF8E0] to-[#F7DB98] px-2.5 py-0.5 text-[10.5px] sm:text-[11px] font-bold text-[#593308] shadow-2xs transition-transform hover:scale-[1.02] active:translate-y-[1px]"
+            >
+              <span aria-hidden="true">{ch.emoji}</span>
+              <span>{ch.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {needsMysteryDay2Choice && onSelectMysteryDay2Choice && (
+        <div
+          data-mystery-choices="day2"
+          className="relative z-10 mt-1.5 flex flex-wrap gap-1.5"
+        >
+          {MYSTERY_DAY2_CHOICES.map((ch) => (
+            <button
+              key={ch.id}
+              type="button"
+              data-mystery-choice={ch.id}
+              onClick={() => onSelectMysteryDay2Choice(ch.id)}
+              className="inline-flex min-h-[30px] items-center gap-1 rounded-xl border-2 border-[#9B7CC4] border-b-[3px] bg-gradient-to-b from-[#F7F1FE] to-[#E2D3F7] px-2.5 py-0.5 text-[10.5px] sm:text-[11px] font-bold text-[#44286E] shadow-2xs transition-transform hover:scale-[1.02] active:translate-y-[1px]"
+            >
+              <span aria-hidden="true">{ch.emoji}</span>
+              <span>{ch.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {!isHappy ? (
+        isWaitingForChoice ? null : (
         <div className="relative z-10 mt-1.5 flex flex-col gap-1">
           <div className="flex flex-wrap items-center gap-1.5">
             {isTraveler ? (
@@ -233,24 +317,48 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = React.memo(({
                   </span>
                 )}
 
+                {order.mysteryRole && onOpenMysteryModal && (
+                  <button
+                    type="button"
+                    data-mystery-clues-btn="true"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenMysteryModal('clues');
+                    }}
+                    className="inline-flex items-center gap-1 rounded-xl border border-[#C6892C] bg-[#FFF2C9] px-2 py-0.5 text-[10px] sm:text-[11px] font-bold text-[#5E3608] hover:brightness-97"
+                  >
+                    📜 Підказки ({recipeMystery?.discoveredClues.length ?? 0}/3)
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={() => onOpenStationForOrder?.(drinkTab)}
                   title="Натисни, щоб відкрити станцію приготування цього напою!"
                   className={`inline-flex items-center gap-1 rounded-xl border px-2 py-0.5 sm:px-2.5 sm:py-0.5 text-[10.5px] sm:text-[11px] font-bold transition-transform hover:scale-[1.03] active:scale-[0.97] ${
-                    isSecretOrder
-                      ? 'border-[#D9A143] bg-[#FFF4D6] text-[#6C420C]'
-                      : 'border-[#DFBE97] bg-[#FBF0DE] text-[#664128]'
+                    order.mysteryRole === 'mystery_day3_finale'
+                      ? 'border-[#C6892C] bg-[#FFF0BE] text-[#5C3406]'
+                      : isSecretOrder || order.drinkId === 'golden_cocoa'
+                        ? 'border-[#D9A143] bg-[#FFF4D6] text-[#6C420C]'
+                        : 'border-[#DFBE97] bg-[#FBF0DE] text-[#664128]'
                   }`}
                 >
                   <span aria-hidden="true">
-                    {isSecretOrder
-                      ? (order.secretDrink?.icon ?? '⭐')
-                      : drinkTab === 'hot'
-                        ? '☕'
-                        : '🍹'}
+                    {order.mysteryRole === 'mystery_day3_finale'
+                      ? '🔍'
+                      : isSecretOrder
+                        ? (order.secretDrink?.icon ?? '⭐')
+                        : order.drinkId === 'golden_cocoa'
+                          ? '⭐'
+                          : drinkTab === 'hot'
+                            ? '☕'
+                            : '🍹'}
                   </span>
-                  <span>{drinkName}</span>
+                  <span>
+                    {order.mysteryRole === 'mystery_day3_finale'
+                      ? 'Відновити «Золоте какао»'
+                      : drinkName}
+                  </span>
                 </button>
 
                 {pastryRecipe && (
@@ -337,9 +445,11 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = React.memo(({
                 <span>
                   {isSecretOrder
                     ? `Напій дня (+${order.isCombo ? 40 : 25} 🐟)`
-                    : order.isCombo
-                      ? 'Комбо (+30 🐟)'
-                      : 'Замовлення (+15 🐟)'}
+                    : order.drinkId === 'golden_cocoa'
+                      ? `Легендарний напій (+${order.isCombo ? 40 : 25} 🐟)`
+                      : order.isCombo
+                        ? 'Комбо (+30 🐟)'
+                        : 'Замовлення (+15 🐟)'}
                   {order.serviceMode === 'takeaway' ? ' • +5 🐟 за стікер' : ''}
                   {order.wantsLatteArt ? ' • +5 🐟 за лате-арт' : ''}
                   {guestIsBestFriend ? ' • +5 🐟 від друга 💖' : ''}
@@ -348,6 +458,7 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = React.memo(({
             </div>
           )}
         </div>
+        )
       ) : (
         <div className="relative z-10 mt-1.5 flex items-center justify-between gap-2">
           <span className="inline-flex items-center gap-1 rounded-full bg-[#E3F2E7] px-2 py-0.5 text-[10px] sm:text-[11px] font-bold text-[#2F6A44]">
@@ -444,32 +555,106 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = React.memo(({
         </div>
       )}
 
-      {/* Cozy In-Cafe Chalkboard Plaque displaying current Secret Drink of the Day — compact edge placement */}
-      {secretDrink && (
-        <motion.button
-          type="button"
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.96 }}
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpenSecretCreator();
-          }}
-          title="Натисни, щоб змінити «Секретний напій дня»"
-          className="hidden sm:flex absolute left-2.5 top-2 z-20 items-center gap-1.5 rounded-xl border-[1.5px] border-[#C89A67]/90 bg-[#4C3629]/82 backdrop-blur-[2px] px-2.5 py-0.5 text-left shadow-[0_3px_10px_rgba(48,28,14,0.28)]"
-        >
-          <span className="text-sm leading-none">{secretDrink.icon}</span>
-          <div className="leading-tight">
-            <span className="block text-[8px] font-bold uppercase tracking-wider text-[#F4D8A8]">
-              Напій дня
+      {/* Top-Left Diegetic Stack (sm+): Secret Drink Chalkboard + Visible Story Book & Mailbox Hub */}
+      <div className="hidden sm:flex absolute left-2.5 top-2 z-20 flex-col items-start gap-1.5">
+        {secretDrink && (
+          <motion.button
+            type="button"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.96 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenSecretCreator();
+            }}
+            title="Натисни, щоб змінити «Секретний напій дня»"
+            className="flex items-center gap-1.5 rounded-xl border-[1.5px] border-[#C89A67]/90 bg-[#4C3629]/82 backdrop-blur-[2px] px-2.5 py-0.5 text-left shadow-[0_3px_10px_rgba(48,28,14,0.28)]"
+          >
+            <span className="text-sm leading-none">{secretDrink.icon}</span>
+            <div className="leading-tight">
+              <span className="block text-[8px] font-bold uppercase tracking-wider text-[#F4D8A8]">
+                Напій дня
+              </span>
+              <span className="font-handwriting block text-[15px] leading-none font-bold text-[#FFF9EE]">
+                {secretDrink.name}
+              </span>
+            </div>
+          </motion.button>
+        )}
+
+        {onOpenStoryHub && (
+          <motion.button
+            type="button"
+            data-hall-story-hub="true"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.96 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenStoryHub(unreadLettersCount > 0 ? 'letters' : 'stories');
+            }}
+            title="Відкрити Книгу Історій, Поштову скриньку та Щоденник днів"
+            className={`relative flex items-center gap-1.5 rounded-xl border-[1.5px] px-2.5 py-1 text-left shadow-[0_3px_10px_rgba(48,28,14,0.22)] backdrop-blur-[2px] ${
+              unreadLettersCount > 0
+                ? 'border-[#D87E9C] bg-[#FFF2F6]/92 text-[#7A2843]'
+                : recipeMystery?.status === 'active'
+                  ? 'border-[#CFA044] bg-[#FFF6DA]/92 text-[#5D3507]'
+                  : 'border-[#C8A170] bg-[#FAF0DC]/90 text-[#5A3E32]'
+            }`}
+          >
+            <span className="text-sm leading-none" aria-hidden="true">
+              {unreadLettersCount > 0
+                ? '💌'
+                : recipeMystery?.status === 'active'
+                  ? '🔍'
+                  : puhBirthday?.status === 'active'
+                    ? '🎂'
+                    : '📖'}
             </span>
-            <span className="font-handwriting block text-[15px] leading-none font-bold text-[#FFF9EE]">
-              {secretDrink.name}
-            </span>
-          </div>
-        </motion.button>
-      )}
+            <div className="leading-tight">
+              <span className="block text-[8.5px] font-bold uppercase tracking-wider opacity-80">
+                {unreadLettersCount > 0
+                  ? `Пошта: +${unreadLettersCount} нових`
+                  : recipeMystery?.status === 'active'
+                    ? `Глава 2 • День ${recipeMystery.stageDay}/3`
+                    : puhBirthday?.status === 'active'
+                      ? `Глава 1 • День ${puhBirthday.stageDay}/3`
+                      : 'Історії та пошта'}
+              </span>
+              <span className="block text-[10.5px] font-bold leading-none mt-0.5">
+                {unreadLettersCount > 0
+                  ? 'Прочитати листи →'
+                  : recipeMystery?.status === 'active'
+                    ? `Підказки: ${recipeMystery.discoveredClues.length}/3`
+                    : puhBirthday?.status === 'active'
+                      ? 'Свято Пуха'
+                      : 'Книга Історій →'}
+              </span>
+            </div>
+          </motion.button>
+        )}
+
+        {canOfferMysteryInvite && onOpenMysteryModal && (
+          <motion.button
+            type="button"
+            data-hall-mystery-invite="true"
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1 }}
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenMysteryModal('intro');
+            }}
+            className="flex items-center gap-1.5 rounded-xl border-2 border-[#C88E35] bg-gradient-to-r from-[#FFF4CC] to-[#FCE4A6] px-2.5 py-1 text-left text-[10.5px] font-bold text-[#5A3407] shadow-sm"
+          >
+            <span aria-hidden="true">🔍</span>
+            <span>Марсель знайшов загадку!</span>
+          </motion.button>
+        )}
+      </div>
 
       {/* Best-Friend Souvenirs Shelf (compact top-right wooden ledge on sm+) */}
       {unlockedFriendSouvenirs.length > 0 && (
@@ -573,6 +758,25 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = React.memo(({
         </div>
       </div>
 
+      {/* Clickable Chapter 2 Trophy: Golden Recipe Book & Magnifier resting cleanly on the right counter */}
+      {showGoldenBookSouvenir && (
+        <motion.button
+          type="button"
+          data-golden-book-souvenir="true"
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.92 }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenMysteryModal?.('solved');
+          }}
+          aria-label="Золота книга рецептів «Мур-Лате»"
+          title="Золота книга рецептів «Мур-Лате» — натисни, щоб переглянути пам’ятну картку!"
+          className="hidden sm:flex absolute bottom-7 lg:bottom-8 right-[27%] xl:right-[25.5%] z-20 items-center justify-center rounded-xl focus:outline-none"
+        >
+          <GoldenRecipeBookCounterSvg className="h-10 w-12 drop-shadow-[0_3px_5px_rgba(70,40,18,0.32)]" />
+        </motion.button>
+      )}
+
       {/* Clickable Music Box resting on the counter when purchased & enabled */}
       {hasMusicBox && (
         <motion.button
@@ -597,9 +801,23 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = React.memo(({
         </motion.button>
       )}
 
-      {/* PORTRAIT PHONE (<640px) Top Row: Speech Bubble cleanly positioned at top */}
-      <div className="relative z-20 w-full max-w-[368px] mx-auto sm:hidden">
+      {/* PORTRAIT PHONE (<640px) Top Row: Speech Bubble + compact Story Invite chip when Chapter 2 awaits */}
+      <div className="relative z-20 w-full max-w-[368px] mx-auto sm:hidden space-y-1">
         {speechBubbleContent}
+        {isMobileOpenCafe && canOfferMysteryInvite && onOpenMysteryModal && (
+          <button
+            type="button"
+            data-mobile-mystery-invite="true"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenMysteryModal('intro');
+            }}
+            className="mx-auto flex items-center gap-1.5 rounded-full border-2 border-[#C88E35] bg-gradient-to-r from-[#FFF5CF] to-[#FADFA0] px-3 py-0.5 text-[10.5px] font-bold text-[#5A3407] shadow-xs"
+          >
+            <span aria-hidden="true">🔍</span>
+            <span>Нова пригода: загадка Марселя! →</span>
+          </button>
+        )}
       </div>
 
       {/* Portrait Mobile Large Guest Standing Behind Wooden Counter (3D depth: behind z-15 bar while Marzipan & Tray sit on front z-20 bar!) */}

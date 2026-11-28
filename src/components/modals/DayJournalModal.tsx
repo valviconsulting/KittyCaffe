@@ -7,6 +7,12 @@ import {
 } from '../../data/birthdayStory';
 import { DAY_EVENING_BONUS_COINS, DAY_THEMES } from '../../data/days';
 import { GUESTS } from '../../data/guests';
+import {
+  MYSTERY_CLUES,
+  MYSTERY_FINALE_BONUS_COINS,
+  MYSTERY_STORY_DAYS,
+  getDay2ChoiceMeta,
+} from '../../data/recipeMystery';
 import { WEATHER_CONFIG } from '../../data/weather';
 import type {
   BirthdayThemeId,
@@ -14,20 +20,24 @@ import type {
   DayMemoryEntry,
   DayProgressState,
   PuhBirthdayStoryState,
+  RecipeMysteryStoryState,
   WallArtState,
   WeatherType,
 } from '../../types/game';
 import { buildDayMemoryHighlight } from '../../utils/dayDirector';
 
 export type DayJournalMode = 'morning' | 'evening' | 'diary';
+export type DayJournalTab = 'stories' | 'letters' | 'days';
 
 interface DayJournalModalProps {
   isOpen: boolean;
   mode: DayJournalMode;
+  initialDiaryTab?: DayJournalTab;
   dayProgress: DayProgressState;
   dayHistory: DayMemoryEntry[];
   weather: WeatherType;
   puhBirthday: PuhBirthdayStoryState;
+  recipeMystery: RecipeMysteryStoryState;
   unlockedLetters: CafeLetter[];
   readLetterIds: string[];
   wallArt: WallArtState;
@@ -35,6 +45,7 @@ interface DayJournalModalProps {
   onAdvanceNextDay: () => void;
   onOpenBirthdayChooser: () => void;
   onOpenBirthdayPostcard: (theme?: BirthdayThemeId) => void;
+  onOpenMysteryModal: (mode: 'intro' | 'clues' | 'solved') => void;
   onMarkLetterRead: (id: string) => void;
   onOpenWallArt: () => void;
   onClose: () => void;
@@ -53,10 +64,12 @@ const LETTER_TINT_STYLES: Record<
 export const DayJournalModal: React.FC<DayJournalModalProps> = ({
   isOpen,
   mode,
+  initialDiaryTab = 'stories',
   dayProgress,
   dayHistory,
   weather,
   puhBirthday,
+  recipeMystery,
   unlockedLetters,
   readLetterIds,
   wallArt,
@@ -64,15 +77,17 @@ export const DayJournalModal: React.FC<DayJournalModalProps> = ({
   onAdvanceNextDay,
   onOpenBirthdayChooser,
   onOpenBirthdayPostcard,
+  onOpenMysteryModal,
   onMarkLetterRead,
   onOpenWallArt,
   onClose,
 }) => {
   const [showHistoryInEvening, setShowHistoryInEvening] = useState(false);
-  const [diaryTab, setDiaryTab] = useState<'memories' | 'letters'>('memories');
+  const [diaryTab, setDiaryTab] = useState<DayJournalTab>(initialDiaryTab);
   const [openLetterId, setOpenLetterId] = useState<string | null>(null);
   const readSet = new Set(readLetterIds);
   const unreadCount = unlockedLetters.filter((l) => !readSet.has(l.id)).length;
+  const mysteryDay2Meta = getDay2ChoiceMeta(recipeMystery.day2Choice);
 
   const theme = DAY_THEMES[dayProgress.themeId];
   const weatherMeta = WEATHER_CONFIG[weather];
@@ -89,6 +104,10 @@ export const DayJournalModal: React.FC<DayJournalModalProps> = ({
     puhBirthday.status === 'completed' &&
     Boolean(activeBirthdayMeta) &&
     eveningHighlight === activeBirthdayMeta?.postcardMessage;
+  const isEveningOfMysterySolved =
+    mode === 'evening' &&
+    recipeMystery.status === 'completed' &&
+    recipeMystery.servedStepsToday.includes('mystery_day3_finale');
 
   const canDismissBackdrop = mode === 'diary';
 
@@ -150,14 +169,14 @@ export const DayJournalModal: React.FC<DayJournalModalProps> = ({
                     ? 'Ранок у кав’ярні «Мур-Лате»'
                     : mode === 'evening'
                       ? 'Вечірній щоденник спогадів'
-                      : 'Живий щоденник «Мур-Лате»'}
+                      : 'Книга Історій, Пошта і Щоденник'}
                 </p>
                 <h2 className="font-handwriting text-2xl sm:text-3xl leading-tight font-bold">
                   {mode === 'morning'
                     ? `${theme.icon} День ${dayProgress.dayNumber}: ${theme.title}`
                     : mode === 'evening'
                       ? `🌙 День ${dayProgress.dayNumber} завершено!`
-                      : `📖 Щоденник • День ${dayProgress.dayNumber}`}
+                      : `📖 Історії «Мур-Лате» • День ${dayProgress.dayNumber}`}
                 </h2>
               </div>
 
@@ -227,23 +246,47 @@ export const DayJournalModal: React.FC<DayJournalModalProps> = ({
                     ☕ Відкрити кав’ярню!
                   </button>
 
-                  {puhBirthday.status === 'not_started' && (
-                    <button
-                      type="button"
-                      data-birthday-open="chooser"
-                      onClick={() => {
-                        onStartDay();
-                        onOpenBirthdayChooser();
-                      }}
-                      className="w-full min-h-[42px] rounded-2xl border-2 border-[#D2839E] bg-gradient-to-r from-[#FFF0F5] via-[#FFF6E5] to-[#FFF0F5] px-3.5 py-2 text-xs font-bold text-[#832C49] shadow-2xs hover:brightness-98"
-                    >
-                      🎂 Секретна глава: підготувати День народження Пуха! →
-                    </button>
+                  {recipeMystery.status === 'not_started' &&
+                    puhBirthday.status !== 'active' && (
+                      <button
+                        type="button"
+                        data-mystery-open="intro"
+                        onClick={() => {
+                          onStartDay();
+                          onOpenMysteryModal('intro');
+                        }}
+                        className="w-full min-h-[42px] rounded-2xl border-2 border-[#C88E38] bg-gradient-to-r from-[#FFF6D8] via-[#FFFBF0] to-[#FCEFD2] px-3.5 py-2 text-xs font-bold text-[#663C09] shadow-2xs hover:brightness-98"
+                      >
+                        🔍 Глава 2: Таємниця загубленого рецепта (Марсель знайшов аркуш!) →
+                      </button>
+                    )}
+
+                  {recipeMystery.status === 'active' && (
+                    <div className="rounded-2xl border-2 border-[#D49F4A] bg-[#FFF7DF] px-3 py-2 text-xs font-bold text-[#683E0A]">
+                      🔍 Глава 2 «Таємниця загубленого рецепта» • День{' '}
+                      {recipeMystery.stageDay}/{MYSTERY_STORY_DAYS} • Підказок:{' '}
+                      {recipeMystery.discoveredClues.length}/3
+                    </div>
                   )}
+
+                  {puhBirthday.status === 'not_started' &&
+                    recipeMystery.status !== 'active' && (
+                      <button
+                        type="button"
+                        data-birthday-open="chooser"
+                        onClick={() => {
+                          onStartDay();
+                          onOpenBirthdayChooser();
+                        }}
+                        className="w-full min-h-[42px] rounded-2xl border-2 border-[#D2839E] bg-gradient-to-r from-[#FFF0F5] via-[#FFF6E5] to-[#FFF0F5] px-3.5 py-2 text-xs font-bold text-[#832C49] shadow-2xs hover:brightness-98"
+                      >
+                        🎂 Глава 1: підготувати День народження Пуха! →
+                      </button>
+                    )}
 
                   {puhBirthday.status === 'active' && activeBirthdayMeta && (
                     <div className="rounded-2xl border-2 border-[#D89AB0] bg-[#FDF1F5] px-3 py-2 text-xs font-bold text-[#7D2D48]">
-                      🎂 Глава «День народження Пуха» • День {puhBirthday.stageDay}/
+                      🎂 Глава 1 «День народження Пуха» • День {puhBirthday.stageDay}/
                       {BIRTHDAY_STORY_DAYS} ({activeBirthdayMeta.icon}{' '}
                       {activeBirthdayMeta.title})
                     </div>
@@ -311,6 +354,29 @@ export const DayJournalModal: React.FC<DayJournalModalProps> = ({
                       )}
                     </div>
                   </div>
+
+                  {/* Special Chapter 2 Mystery Solved Banner */}
+                  {isEveningOfMysterySolved && (
+                    <button
+                      type="button"
+                      data-mystery-open="solved"
+                      onClick={() => onOpenMysteryModal('solved')}
+                      className="w-full flex items-center justify-between gap-2 rounded-2xl border-2 border-[#D4972C] bg-gradient-to-r from-[#FFF6D6] via-[#FFFDF5] to-[#FCEEF3] px-3.5 py-2.5 text-left shadow-sm transition-transform hover:scale-[1.01]"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-handwriting text-xl leading-none font-bold text-[#663A08]">
+                          ⭐ Розгадано «Золоте какао «Мур-Лате»»!
+                        </p>
+                        <p className="mt-0.5 text-[11px] font-bold text-[#6E4932]">
+                          Легендарний рецепт у книзі + Золота книга на стійці (+
+                          {MYSTERY_FINALE_BONUS_COINS} 🐟)
+                        </p>
+                      </div>
+                      <span className="shrink-0 rounded-full border border-[#B87D20] bg-[#FFFDF8] px-2.5 py-1 text-[11px] font-bold text-[#663A08]">
+                        Відкрити →
+                      </span>
+                    </button>
+                  )}
 
                   {/* Special Birthday Finale Postcard Banner */}
                   {isEveningOfBirthdayFinale && activeBirthdayMeta && (
@@ -390,46 +456,62 @@ export const DayJournalModal: React.FC<DayJournalModalProps> = ({
                 </>
               )}
 
-              {/* MODE 3: DIARY & LOCAL LETTERS MAILBOX OPENED MID-DAY */}
+              {/* MODE 3: 3-TAB STORY BOOK, MAILBOX & DAY JOURNAL */}
               {mode === 'diary' && (
                 <>
-                  {/* Sub-Tabs: Memories/Creative vs Local Letters Mailbox */}
-                  <div className="grid grid-cols-2 gap-2">
+                  {/* Clear 3-Tab Hub: Stories | Mailbox | Days */}
+                  <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
                     <button
                       type="button"
-                      data-diary-tab="memories"
-                      onClick={() => setDiaryTab('memories')}
-                      className={`min-h-[38px] rounded-2xl border-2 px-3 py-1.5 text-xs font-bold transition-all ${
-                        diaryTab === 'memories'
-                          ? 'border-[#8F6549] bg-[#F7E5C8] text-[#4E2F18] shadow-2xs'
+                      data-diary-tab="stories"
+                      onClick={() => setDiaryTab('stories')}
+                      className={`relative min-h-[38px] rounded-2xl border-2 px-2 py-1.5 text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap ${
+                        diaryTab === 'stories'
+                          ? 'border-[#B87F2E] bg-[#FFF2CC] text-[#593409] shadow-2xs'
                           : 'border-[#DFC6A6] bg-[#FFFDF8] text-[#7D593D] hover:bg-[#FAF1E2]'
                       }`}
                     >
-                      📖 Спогади й історії
+                      ✨ Історії
+                      {(recipeMystery.status === 'active' ||
+                        puhBirthday.status === 'active') && (
+                        <span className="ml-1 inline-block h-2 w-2 rounded-full bg-[#E69A28]" />
+                      )}
                     </button>
                     <button
                       type="button"
                       data-diary-tab="letters"
                       onClick={() => setDiaryTab('letters')}
-                      className={`relative min-h-[38px] rounded-2xl border-2 px-3 py-1.5 text-xs font-bold transition-all ${
+                      className={`relative min-h-[38px] rounded-2xl border-2 px-2 py-1.5 text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap ${
                         diaryTab === 'letters'
                           ? 'border-[#C26E8A] bg-[#FCE8EF] text-[#7D2B46] shadow-2xs'
                           : 'border-[#DFC6A6] bg-[#FFFDF8] text-[#7D593D] hover:bg-[#FAF1E2]'
                       }`}
                     >
-                      💌 Теплі листи ({unlockedLetters.length})
+                      💌 Пошта
                       {unreadCount > 0 && (
-                        <span className="ml-1.5 inline-flex items-center rounded-full bg-[#E85C84] px-1.5 py-0.2 text-[9.5px] font-bold text-white">
+                        <span className="ml-1 inline-flex items-center rounded-full bg-[#E85C84] px-1.5 py-0.2 text-[9px] font-bold text-white">
                           +{unreadCount}
                         </span>
                       )}
+                    </button>
+                    <button
+                      type="button"
+                      data-diary-tab="days"
+                      onClick={() => setDiaryTab('days')}
+                      className={`min-h-[38px] rounded-2xl border-2 px-2 py-1.5 text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap ${
+                        diaryTab === 'days'
+                          ? 'border-[#8F6549] bg-[#F7E5C8] text-[#4E2F18] shadow-2xs'
+                          : 'border-[#DFC6A6] bg-[#FFFDF8] text-[#7D593D] hover:bg-[#FAF1E2]'
+                      }`}
+                    >
+                      📖 Дні ({dayHistory.length})
                     </button>
                   </div>
 
                   {diaryTab === 'letters' ? (
                     <div className="space-y-2.5">
                       <p className="text-[11px] font-semibold text-[#7D583C]">
-                        У поштовій скриньці «Мур-Лате» зберігаються листи від друзів та особливі записки. Натисни на конверт, щоб прочитати!
+                        У поштовій скриньці «Мур-Лате» зберігаються листи від друзів ({unlockedLetters.length}). Натисни на конверт, щоб прочитати!
                       </p>
 
                       {unlockedLetters.map((letter) => {
@@ -492,6 +574,203 @@ export const DayJournalModal: React.FC<DayJournalModalProps> = ({
                         );
                       })}
                     </div>
+                  ) : diaryTab === 'stories' ? (
+                    <div className="space-y-3">
+                      {/* CHAPTER 2 CARD: DETECTIVE MYSTERY */}
+                      <div
+                        data-story-card="recipe-mystery"
+                        className="rounded-2xl border-2 border-[#D49E48] bg-gradient-to-br from-[#FFF9E4] via-[#FFFDF7] to-[#FCEFD4] p-3.5 shadow-2xs space-y-2.5"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="font-handwriting text-xl leading-none font-bold text-[#663A08]">
+                            🔍 Глава 2: Таємниця загубленого рецепта
+                          </span>
+                          {recipeMystery.status === 'active' && (
+                            <span className="rounded-full border border-[#C6892C] bg-[#FFFDF8] px-2 py-0.5 text-[10.5px] font-bold text-[#6E400A]">
+                              День {recipeMystery.stageDay}/{MYSTERY_STORY_DAYS} •{' '}
+                              {recipeMystery.discoveredClues.length}/3 підказки
+                            </span>
+                          )}
+                          {recipeMystery.status === 'completed' && (
+                            <span className="rounded-full border border-[#5D9B73] bg-[#E3F5E9] px-2 py-0.5 text-[10.5px] font-bold text-[#1D5632]">
+                              ⭐ Розгадано!
+                            </span>
+                          )}
+                        </div>
+
+                        {recipeMystery.status === 'not_started' && (
+                          <>
+                            <p className="text-xs font-semibold leading-snug text-[#6D4735]">
+                              Ведмедик Марсель знайшов потертий аркуш легендарного напою «Мур-Лате»! Збери за 3 дні 3 підказки від друзів, зроби власний вибір у діалогах і відкрий рецепт назавжди!
+                            </p>
+                            {puhBirthday.status === 'active' ? (
+                              <p className="rounded-xl border border-[#DFC092] bg-[#FFFDF8] px-2.5 py-1.5 text-[11px] font-bold text-[#855A2A]">
+                                🎂 Спочатку заверши свято Пуха (День {puhBirthday.stageDay}/3), а потім одразу почнемо розслідування з Марселем!
+                              </p>
+                            ) : (
+                              <button
+                                type="button"
+                                data-mystery-open="intro"
+                                onClick={() => onOpenMysteryModal('intro')}
+                                className="min-h-[38px] rounded-xl border-2 border-[#B37524] border-b-[3px] bg-gradient-to-b from-[#FFE69F] to-[#F3BE5B] px-3.5 py-1.5 text-xs font-bold text-[#5C3508] hover:brightness-98"
+                              >
+                                🔍 Почати детективну історію →
+                              </button>
+                            )}
+                          </>
+                        )}
+
+                        {recipeMystery.status === 'active' && (
+                          <>
+                            <div className="grid grid-cols-3 gap-1.5">
+                              {MYSTERY_CLUES.map((clue) => {
+                                const found =
+                                  recipeMystery.discoveredClues.includes(
+                                    clue.id
+                                  );
+                                return (
+                                  <div
+                                    key={clue.id}
+                                    className={`rounded-xl border px-2 py-1.5 text-center text-[10px] font-bold ${
+                                      found
+                                        ? 'border-[#82B892] bg-[#EAF7EE] text-[#1D5632]'
+                                        : 'border-dashed border-[#D4B68C] bg-[#FAF2E3] text-[#8A674B]'
+                                    }`}
+                                  >
+                                    <span className="block text-xs">
+                                      {found ? `${clue.finderEmoji} ✓` : '🔒'}
+                                    </span>
+                                    <span>Уривок {clue.id}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <p className="text-[11px] font-semibold leading-snug text-[#6D4735]">
+                              {recipeMystery.stageDay === 1
+                                ? 'День 1/3 — поговори з Ведмедиком Марселем у залі й отримай Уривок №1!'
+                                : recipeMystery.stageDay === 2
+                                  ? 'День 2/3 — Сова Софія та Кіт Персик принесуть Уривки №2 і №3!'
+                                  : 'День 3/3 — усі підказки зібрано! Приготуй «Золоте какао» для Марселя!'}
+                            </p>
+                            <button
+                              type="button"
+                              data-mystery-open="clues"
+                              onClick={() => onOpenMysteryModal('clues')}
+                              className="min-h-[36px] rounded-xl border-2 border-[#B88032] bg-[#FFFDF8] px-3 py-1 text-xs font-bold text-[#663C09] hover:bg-[#FFF3D4]"
+                            >
+                              📜 Відкрити дошку підказок ({recipeMystery.discoveredClues.length}/3) →
+                            </button>
+                          </>
+                        )}
+
+                        {recipeMystery.status === 'completed' && (
+                          <div className="space-y-2">
+                            <p className="text-xs font-semibold leading-snug text-[#6D4735]">
+                              Ти розкрила таємницю та повернула легендарне{' '}
+                              <strong>
+                                «Золоте какао «Мур-Лате»»
+                                {mysteryDay2Meta
+                                  ? ` (${mysteryDay2Meta.commemorativeLabel})`
+                                  : ''}
+                              </strong>{' '}
+                              у Книгу рецептів!
+                            </p>
+                            <button
+                              type="button"
+                              data-mystery-open="solved"
+                              onClick={() => onOpenMysteryModal('solved')}
+                              className="min-h-[36px] rounded-xl border-2 border-[#C88E35] bg-[#FFFDF8] px-3 py-1 text-xs font-bold text-[#663A08] hover:bg-[#FFF2CC]"
+                            >
+                              ⭐ Пам’ятна картка та сувенір →
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* CHAPTER 1 CARD: PUFF'S BIRTHDAY */}
+                      <div
+                        data-story-card="puh-birthday"
+                        className="rounded-2xl border-2 border-[#D99BB0] bg-gradient-to-br from-[#FFF3F7] via-[#FFF9EE] to-[#F3FAF5] p-3.5 shadow-2xs space-y-2"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="font-handwriting text-xl leading-none font-bold text-[#7C2C47]">
+                            🎂 Глава 1: День народження Пуха
+                          </span>
+                          {puhBirthday.status === 'active' && activeBirthdayMeta && (
+                            <span className="rounded-full border border-[#C97B95] bg-[#FFFDF8] px-2 py-0.5 text-[10.5px] font-bold text-[#832C49]">
+                              День {puhBirthday.stageDay}/{BIRTHDAY_STORY_DAYS} •{' '}
+                              {activeBirthdayMeta.icon} {activeBirthdayMeta.shortTitle}
+                            </span>
+                          )}
+                        </div>
+
+                        {puhBirthday.status === 'not_started' && (
+                          <>
+                            <p className="text-xs font-semibold leading-snug text-[#6D4735]">
+                              Луна та Мія готують секретне свято для Кошеняти Пуха! Обери тему декору (полунична, космічна або лісова) на 3 ігрові дні.
+                            </p>
+                            {recipeMystery.status === 'active' ? (
+                              <p className="rounded-xl border border-[#E5B8C7] bg-[#FFFDF8] px-2.5 py-1.5 text-[11px] font-bold text-[#832C49]">
+                                🔍 Спочатку заверши розслідування рецепта (День {recipeMystery.stageDay}/3), а потім влаштуємо свято Пуха!
+                              </p>
+                            ) : (
+                              <button
+                                type="button"
+                                data-birthday-open="chooser"
+                                onClick={onOpenBirthdayChooser}
+                                className="min-h-[38px] rounded-xl border-2 border-[#C7728F] border-b-[3px] bg-gradient-to-b from-[#FCE6EE] to-[#F4C4D5] px-3.5 py-1.5 text-xs font-bold text-[#7C2643] hover:brightness-98"
+                              >
+                                ✨ Обрати тему свята →
+                              </button>
+                            )}
+                          </>
+                        )}
+
+                        {puhBirthday.status === 'active' && activeBirthdayMeta && (
+                          <p className="text-xs font-semibold leading-snug text-[#6D4735]">
+                            {puhBirthday.stageDay === 1
+                              ? 'День 1/3 — прикрашаємо залу прапорцями й тестуємо перші святкові смаколики!'
+                              : puhBirthday.stageDay === 2
+                                ? 'День 2/3 — генеральна репетиція меню та святкового декору на стійці!'
+                                : 'День 3/3 — великий День народження Пуха! Іменинник завітає 5-м гостем!'}
+                          </p>
+                        )}
+
+                        {puhBirthday.completedThemes.length > 0 && (
+                          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                            {puhBirthday.completedThemes.map((tid) => {
+                              const m = BIRTHDAY_THEMES[tid];
+                              return (
+                                <button
+                                  key={tid}
+                                  type="button"
+                                  data-birthday-open={`postcard-${tid}`}
+                                  onClick={() => onOpenBirthdayPostcard(tid)}
+                                  className="inline-flex items-center gap-1 rounded-full border-2 border-[#C98EA2] bg-[#FFFDF8] px-2.5 py-1 text-[11px] font-bold text-[#7C2C47] shadow-2xs hover:bg-[#FCEAF0]"
+                                >
+                                  <span>💌</span>
+                                  <span>
+                                    {m.icon} {m.shortTitle} листівка
+                                  </span>
+                                </button>
+                              );
+                            })}
+                            {puhBirthday.status !== 'active' &&
+                              recipeMystery.status !== 'active' &&
+                              puhBirthday.completedThemes.length < 3 && (
+                                <button
+                                  type="button"
+                                  data-birthday-open="chooser"
+                                  onClick={onOpenBirthdayChooser}
+                                  className="inline-flex items-center gap-1 rounded-full border border-[#B98E62] bg-[#FAF0DE] px-2.5 py-1 text-[11px] font-bold text-[#6F4724] hover:bg-[#F5E4C8]"
+                                >
+                                  ✨ Нова тема ({puhBirthday.completedThemes.length}/3)
+                                </button>
+                              )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   ) : (
                     <>
                   {/* Today's Live Progress Card */}
@@ -549,81 +828,6 @@ export const DayJournalModal: React.FC<DayJournalModalProps> = ({
                         }
                       )}
                     </div>
-                  </div>
-
-                  {/* Step 05 Story Chapter Card: Puff's Birthday Invitation / Live Progress / Postcard Shelf */}
-                  <div className="rounded-2xl border-2 border-[#D99BB0] bg-gradient-to-br from-[#FFF3F7] via-[#FFF9EE] to-[#F3FAF5] p-3.5 shadow-2xs space-y-2">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="font-handwriting text-xl leading-none font-bold text-[#7C2C47]">
-                        🎂 Історія: День народження Пуха
-                      </span>
-                      {puhBirthday.status === 'active' && activeBirthdayMeta && (
-                        <span className="rounded-full border border-[#C97B95] bg-[#FFFDF8] px-2 py-0.5 text-[10.5px] font-bold text-[#832C49]">
-                          День {puhBirthday.stageDay}/{BIRTHDAY_STORY_DAYS} •{' '}
-                          {activeBirthdayMeta.icon} {activeBirthdayMeta.shortTitle}
-                        </span>
-                      )}
-                    </div>
-
-                    {puhBirthday.status === 'not_started' && (
-                      <>
-                        <p className="text-xs font-semibold leading-snug text-[#6D4735]">
-                          Луна та Мія готують секретне свято для Кошеняти Пуха! Обери
-                          тему декору (полунична, космічна або лісова) на 3 ігрові дні.
-                        </p>
-                        <button
-                          type="button"
-                          data-birthday-open="chooser"
-                          onClick={onOpenBirthdayChooser}
-                          className="min-h-[38px] rounded-xl border-2 border-[#C7728F] border-b-[3px] bg-gradient-to-b from-[#FCE6EE] to-[#F4C4D5] px-3.5 py-1.5 text-xs font-bold text-[#7C2643] hover:brightness-98"
-                        >
-                          ✨ Обрати тему свята →
-                        </button>
-                      </>
-                    )}
-
-                    {puhBirthday.status === 'active' && activeBirthdayMeta && (
-                      <p className="text-xs font-semibold leading-snug text-[#6D4735]">
-                        {puhBirthday.stageDay === 1
-                          ? 'День 1/3 — прикрашаємо залу прапорцями й тестуємо перші святкові смаколики!'
-                          : puhBirthday.stageDay === 2
-                            ? 'День 2/3 — генеральна репетиція меню та святкового декору на стійці!'
-                            : 'День 3/3 — великий День народження Пуха! Іменинник завітає 5-м гостем!'}
-                      </p>
-                    )}
-
-                    {puhBirthday.completedThemes.length > 0 && (
-                      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                        {puhBirthday.completedThemes.map((tid) => {
-                          const m = BIRTHDAY_THEMES[tid];
-                          return (
-                            <button
-                              key={tid}
-                              type="button"
-                              data-birthday-open={`postcard-${tid}`}
-                              onClick={() => onOpenBirthdayPostcard(tid)}
-                              className="inline-flex items-center gap-1 rounded-full border-2 border-[#C98EA2] bg-[#FFFDF8] px-2.5 py-1 text-[11px] font-bold text-[#7C2C47] shadow-2xs hover:bg-[#FCEAF0]"
-                            >
-                              <span>💌</span>
-                              <span>
-                                {m.icon} {m.shortTitle} листівка
-                              </span>
-                            </button>
-                          );
-                        })}
-                        {puhBirthday.status !== 'active' &&
-                          puhBirthday.completedThemes.length < 3 && (
-                            <button
-                              type="button"
-                              data-birthday-open="chooser"
-                              onClick={onOpenBirthdayChooser}
-                              className="inline-flex items-center gap-1 rounded-full border border-[#B98E62] bg-[#FAF0DE] px-2.5 py-1 text-[11px] font-bold text-[#6F4724] hover:bg-[#F5E4C8]"
-                            >
-                              ✨ Нова тема ({puhBirthday.completedThemes.length}/3)
-                            </button>
-                          )}
-                      </div>
-                    )}
                   </div>
 
                   {/* Step 06 Creative Personalization Card: Child's Own Wall Painting */}

@@ -76,6 +76,21 @@ import {
   resolveCafeLightingMood,
 } from '../src/utils/atmosphere.ts';
 import {
+  MYSTERY_CLUES,
+  MYSTERY_FINALE_BONUS_COINS,
+} from '../src/data/recipeMystery.ts';
+import {
+  advanceMysteryStageOnNextMorning,
+  createInitialRecipeMysteryState,
+  getMysteryOrderRoleForSlot,
+  isGoldenCocoaUnlocked,
+  markMysteryStepServed,
+  recordMysteryDay1Choice,
+  recordMysteryDay2Choice,
+  settleRecipeMysteryAtEvening,
+  startRecipeMysteryChapter,
+} from '../src/utils/recipeMystery.ts';
+import {
   MILK_POUR_DURATION_PER_PORTION_MS,
   MILK_POUR_HOLD_THRESHOLD_MS,
   MILK_POUR_NOTCH_MS,
@@ -693,5 +708,110 @@ assert.equal(
   MARZIPAN_PURR_PHRASES[0]
 );
 assert.notEqual(getMarzipanPurrPhrase(1), getMarzipanPurrPhrase(2));
+
+// 16. Chapter 2 Detective Mystery («Таємниця загубленого рецепта» + Golden Cocoa + v7 persistence)
+assert.equal(MYSTERY_CLUES.length, 3);
+let mystery = createInitialRecipeMysteryState();
+assert.equal(isGoldenCocoaUnlocked(mystery), false);
+assert.equal(getMysteryOrderRoleForSlot(mystery, 0), null);
+
+// Start Chapter 2 -> Day 1 Marsel
+mystery = startRecipeMysteryChapter(mystery);
+assert.equal(mystery.status, 'active');
+assert.equal(mystery.stageDay, 1);
+assert.equal(getMysteryOrderRoleForSlot(mystery, 0), 'mystery_day1_marsel');
+
+// Day 1 dialogue choice remembered & adjusts drink + greeting
+mystery = recordMysteryDay1Choice(mystery, 'spiced_cozy');
+assert.equal(mystery.day1Choice, 'spiced_cozy');
+const mDay1Order = generateOrder(40, 'rainy', undefined, {
+  mysteryStory: { role: 'mystery_day1_marsel', day1Choice: mystery.day1Choice },
+});
+assert.equal(mDay1Order.guestId, 'marsel');
+assert.equal(mDay1Order.drinkId, 'cappuccino_cinnamon');
+const mDay1Res = markMysteryStepServed(mystery, 'mystery_day1_marsel');
+mystery = mDay1Res.nextStory;
+assert.equal(mDay1Res.finaleBonusCoins, 0);
+assert.deepEqual(mystery.discoveredClues, [1]);
+assert.equal(getMysteryOrderRoleForSlot(mystery, 1), null);
+const mEve1 = settleRecipeMysteryAtEvening(mystery);
+assert.ok(mEve1.eveningHighlightOverride?.includes('День 1/3'));
+
+// Day 2 -> Sofiya remembers Day 1 choice + Player picks nickname + Persyk brings Clue 3
+mystery = advanceMysteryStageOnNextMorning(mEve1.nextStory);
+assert.equal(mystery.stageDay, 2);
+assert.equal(getMysteryOrderRoleForSlot(mystery, 0), 'mystery_day2_sofiya');
+const mDay2SofiyaOrder = generateOrder(45, 'sunny', undefined, {
+  mysteryStory: { role: 'mystery_day2_sofiya' },
+});
+const sofiyaAskText = buildOrderGreeting(mDay2SofiyaOrder, 'Американо', 'sunny', {
+  day1Choice: mystery.day1Choice,
+  day2Choice: null,
+});
+assert.ok(sofiyaAskText.includes('кориці'));
+mystery = recordMysteryDay2Choice(mystery, 'golden_mur_name');
+const sofiyaReplyText = buildOrderGreeting(mDay2SofiyaOrder, 'Американо', 'sunny', {
+  day1Choice: mystery.day1Choice,
+  day2Choice: mystery.day2Choice,
+});
+assert.ok(sofiyaReplyText.includes('Золотий Мур'));
+mystery = markMysteryStepServed(mystery, 'mystery_day2_sofiya').nextStory;
+assert.deepEqual(mystery.discoveredClues, [1, 2]);
+assert.equal(getMysteryOrderRoleForSlot(mystery, 1), null);
+assert.equal(getMysteryOrderRoleForSlot(mystery, 2), 'mystery_day2_persyk');
+mystery = markMysteryStepServed(mystery, 'mystery_day2_persyk').nextStory;
+assert.deepEqual(mystery.discoveredClues, [1, 2, 3]);
+const mEve2 = settleRecipeMysteryAtEvening(mystery);
+assert.ok(mEve2.eveningHighlightOverride?.includes('День 2/3'));
+
+// Day 3 Finale -> Brew Legendary «Золоте какао «Мур-Лате»» (caffeine-free!) + idempotent +45 fish
+mystery = advanceMysteryStageOnNextMorning(mEve2.nextStory);
+assert.equal(mystery.stageDay, 3);
+assert.equal(getMysteryOrderRoleForSlot(mystery, 0), 'mystery_day3_finale');
+const mFinaleOrder = generateOrder(50, 'snowy', undefined, {
+  mysteryStory: { role: 'mystery_day3_finale' },
+});
+assert.equal(mFinaleOrder.guestId, 'marsel');
+assert.equal(mFinaleOrder.drinkId, 'golden_cocoa');
+const goldenSample = DRINK_RECIPES.golden_cocoa.sampleDrink;
+assert.equal(validateOrder(mFinaleOrder, goldenSample, null).ok, true);
+// Puff caffeine safety: Puff happily accepts Golden Cocoa too!
+assert.equal(
+  validateOrder({ ...mFinaleOrder, guestId: 'puh' }, goldenSample, null).ok,
+  true
+);
+
+const mSolved = markMysteryStepServed(mystery, 'mystery_day3_finale');
+assert.equal(mSolved.justSolvedMystery, true);
+assert.equal(mSolved.finaleBonusCoins, MYSTERY_FINALE_BONUS_COINS);
+assert.equal(mSolved.nextStory.status, 'completed');
+assert.equal(isGoldenCocoaUnlocked(mSolved.nextStory), true);
+// Idempotent reload guard: calling again awards 0 bonus!
+const mSolvedAgain = markMysteryStepServed(mSolved.nextStory, 'mystery_day3_finale');
+assert.equal(mSolvedAgain.finaleBonusCoins, 0);
+assert.equal(mSolvedAgain.justSolvedMystery, false);
+
+// v7 save export/import & v6 backward migration preserve mystery choices & unlocked state cleanly
+const v7Export = exportSaveJson({
+  ...DEFAULT_SAVE_STATE,
+  coins: 450,
+  recipeMystery: mSolved.nextStory,
+});
+const v7Import = importSaveJson(v7Export);
+assert.equal(v7Import.ok, true);
+if (v7Import.ok) {
+  assert.equal(v7Import.state.version, CURRENT_SAVE_VERSION);
+  assert.equal(v7Import.state.recipeMystery.status, 'completed');
+  assert.equal(v7Import.state.recipeMystery.day1Choice, 'spiced_cozy');
+  assert.equal(v7Import.state.recipeMystery.day2Choice, 'golden_mur_name');
+  assert.deepEqual(v7Import.state.recipeMystery.discoveredClues, [1, 2, 3]);
+}
+
+const legacyV6 = parseAndSanitizeSave({ version: 6, coins: 150, servedCount: 8 });
+assert.equal(legacyV6.ok, true);
+if (legacyV6.ok) {
+  assert.equal(legacyV6.migrated, true);
+  assert.equal(legacyV6.state.recipeMystery.status, 'not_started');
+}
 
 console.log('ALL_DOMAIN_TESTS_PASSED');

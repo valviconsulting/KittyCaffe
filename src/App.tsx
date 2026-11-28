@@ -40,9 +40,14 @@ import { RARE_STICKER_CATALOG, RARE_STICKER_ORDER } from './data/stickers';
 import { getNextWeather } from './data/weather';
 import { sound } from './services/sound';
 import type { BirthdayModalMode } from './components/modals/BirthdayStoryModal';
-import type { DayJournalMode } from './components/modals/DayJournalModal';
+import type {
+  DayJournalMode,
+  DayJournalTab,
+} from './components/modals/DayJournalModal';
+import type { RecipeMysteryModalMode } from './components/modals/RecipeMysteryModal';
 import { BIRTHDAY_THEMES } from './data/birthdayStory';
 import { DEFAULT_CAFE_LETTERS } from './data/letters';
+import { MYSTERY_FINALE_BONUS_COINS } from './data/recipeMystery';
 import {
   DEFAULT_MARZIPAN_CARE,
   DEFAULT_SAVE_STATE,
@@ -61,10 +66,13 @@ import type {
   GuestEmotion,
   HotIngredientId,
   MarzipanAccessoryId,
+  MysteryDay1ChoiceId,
+  MysteryDay2ChoiceId,
   Order,
   PreparedDrink,
   PreparedPastry,
   PuhBirthdayStoryState,
+  RecipeMysteryStoryState,
   SecretDrinkRecipe,
   StationTab,
   TakeawayDecoration,
@@ -96,6 +104,17 @@ import {
   loadLocalLettersCatalog,
 } from './utils/letters';
 import { computeGuidedHint } from './utils/guidedHints';
+import {
+  advanceMysteryStageOnNextMorning,
+  createInitialRecipeMysteryState,
+  getMysteryOrderRoleForSlot,
+  isGoldenCocoaUnlocked,
+  markMysteryStepServed,
+  recordMysteryDay1Choice,
+  recordMysteryDay2Choice,
+  settleRecipeMysteryAtEvening,
+  startRecipeMysteryChapter,
+} from './utils/recipeMystery';
 
 const INTRO_SEEN_STORAGE_KEY = 'mur_late_intro_seen_v1';
 
@@ -176,6 +195,11 @@ const HowToPlayModal = lazy(() =>
     default: m.HowToPlayModal,
   }))
 );
+const RecipeMysteryModal = lazy(() =>
+  import('./components/modals/RecipeMysteryModal').then((m) => ({
+    default: m.RecipeMysteryModal,
+  }))
+);
 
 function buildBirthdayOrderOpt(
   story: PuhBirthdayStoryState,
@@ -188,6 +212,17 @@ function buildBirthdayOrderOpt(
     dayProgress.guestsTarget
   );
   return role ? { role, theme: story.theme } : null;
+}
+
+function buildMysteryOrderOpt(
+  story: RecipeMysteryStoryState,
+  dayProgress: DayProgressState
+) {
+  const role = getMysteryOrderRoleForSlot(
+    story,
+    dayProgress.guestsServedToday.length
+  );
+  return role ? { role, day1Choice: story.day1Choice } : null;
 }
 
 export function App() {
@@ -203,11 +238,14 @@ export function App() {
     ) {
       const { nextStory, finaleBonusCoins, eveningHighlightOverride } =
         settleBirthdayChapterAtEvening(loaded.state.puhBirthday);
+      const mysteryEvening = settleRecipeMysteryAtEvening(
+        loaded.state.recipeMystery
+      );
       const { nextDay, nextHistory, bonusCoins } = completeDayIntoEvening(
         loaded.state.dayProgress,
         loaded.state.dayHistory,
         loaded.state.weather,
-        eveningHighlightOverride
+        eveningHighlightOverride ?? mysteryEvening.eveningHighlightOverride
       );
       return {
         ...loaded,
@@ -217,6 +255,7 @@ export function App() {
           dayProgress: nextDay,
           dayHistory: nextHistory,
           puhBirthday: nextStory,
+          recipeMystery: mysteryEvening.nextStory,
         },
         forceInitialPersist: true,
       };
@@ -249,6 +288,13 @@ export function App() {
           initialLoad.state.puhBirthday,
           initialLoad.state.dayProgress
         ),
+        mysteryStory: buildMysteryOrderOpt(
+          initialLoad.state.recipeMystery,
+          initialLoad.state.dayProgress
+        ),
+        goldenCocoaUnlocked: isGoldenCocoaUnlocked(
+          initialLoad.state.recipeMystery
+        ),
       }
     )
   );
@@ -257,7 +303,11 @@ export function App() {
     buildOrderGreeting(
       order,
       getOrderDrinkName(order),
-      initialLoad.state.weather
+      initialLoad.state.weather,
+      {
+        day1Choice: initialLoad.state.recipeMystery.day1Choice,
+        day2Choice: initialLoad.state.recipeMystery.day2Choice,
+      }
     )
   );
   const [lastReward, setLastReward] = useState<number | null>(null);
@@ -273,10 +323,14 @@ export function App() {
     useState<boolean>(false);
   const [isBackupOpen, setIsBackupOpen] = useState<boolean>(false);
   const [isDiaryOpen, setIsDiaryOpen] = useState<boolean>(false);
+  const [diaryInitialTab, setDiaryInitialTab] =
+    useState<DayJournalTab>('stories');
   const [birthdayModalMode, setBirthdayModalMode] =
     useState<BirthdayModalMode | null>(null);
   const [birthdayPostcardTheme, setBirthdayPostcardTheme] =
     useState<BirthdayThemeId | null>(null);
+  const [mysteryModalMode, setMysteryModalMode] =
+    useState<RecipeMysteryModalMode | null>(null);
   const [isWallArtOpen, setIsWallArtOpen] = useState<boolean>(false);
   const [isMarzipanCareOpen, setIsMarzipanCareOpen] = useState<boolean>(false);
   const [isHowToPlayOpen, setIsHowToPlayOpen] = useState<boolean>(
@@ -343,6 +397,9 @@ export function App() {
   );
   const dayProgressRef = useRef<DayProgressState>(saveState.dayProgress);
   const puhBirthdayRef = useRef<PuhBirthdayStoryState>(saveState.puhBirthday);
+  const recipeMysteryRef = useRef<RecipeMysteryStoryState>(
+    saveState.recipeMystery
+  );
   const forceNextSecretRef = useRef<boolean>(false);
   const forceNextRecipeRef = useRef<UnlockableRecipeId | null>(null);
   const isFirstSaveEffectRef = useRef<boolean>(true);
@@ -357,12 +414,14 @@ export function App() {
     unlockedRecipesRef.current = saveState.unlockedRecipes;
     dayProgressRef.current = saveState.dayProgress;
     puhBirthdayRef.current = saveState.puhBirthday;
+    recipeMysteryRef.current = saveState.recipeMystery;
   }, [
     saveState.weather,
     saveState.secretDrink,
     saveState.unlockedRecipes,
     saveState.dayProgress,
     saveState.puhBirthday,
+    saveState.recipeMystery,
   ]);
 
   // Persist saveState cleanly whenever progress changes (never clobbering unreadable saves on mount!)
@@ -451,6 +510,7 @@ export function App() {
     isBackupOpen ||
     dayJournalMode !== null ||
     birthdayModalMode !== null ||
+    mysteryModalMode !== null ||
     isWallArtOpen ||
     isMarzipanCareOpen ||
     Boolean(pendingTakeawayDrink);
@@ -470,11 +530,12 @@ export function App() {
       setSaveState((prev) => {
         const { nextStory, finaleBonusCoins, eveningHighlightOverride } =
           settleBirthdayChapterAtEvening(prev.puhBirthday);
+        const mysteryEvening = settleRecipeMysteryAtEvening(prev.recipeMystery);
         const { nextDay, nextHistory, bonusCoins } = completeDayIntoEvening(
           prev.dayProgress,
           prev.dayHistory,
           prev.weather,
-          eveningHighlightOverride
+          eveningHighlightOverride ?? mysteryEvening.eveningHighlightOverride
         );
         return {
           ...prev,
@@ -482,6 +543,7 @@ export function App() {
           dayProgress: nextDay,
           dayHistory: nextHistory,
           puhBirthday: nextStory,
+          recipeMystery: mysteryEvening.nextStory,
         };
       });
       setEmotion('waiting');
@@ -523,13 +585,21 @@ export function App() {
           puhBirthdayRef.current,
           dayProgressRef.current
         ),
+        mysteryStory: buildMysteryOrderOpt(
+          recipeMysteryRef.current,
+          dayProgressRef.current
+        ),
+        goldenCocoaUnlocked: isGoldenCocoaUnlocked(recipeMysteryRef.current),
       }
     );
     orderRef.current = next;
     servedOrderIdRef.current = null;
     setOrder(next);
     setSpeechText(
-      buildOrderGreeting(next, getOrderDrinkName(next), currentWeather)
+      buildOrderGreeting(next, getOrderDrinkName(next), currentWeather, {
+        day1Choice: recipeMysteryRef.current.day1Choice,
+        day2Choice: recipeMysteryRef.current.day2Choice,
+      })
     );
     setEmotion('waiting');
     setLastReward(null);
@@ -577,7 +647,11 @@ export function App() {
         buildOrderGreeting(
           currentOrder,
           getOrderDrinkName(currentOrder),
-          nextWeather
+          nextWeather,
+          {
+            day1Choice: recipeMysteryRef.current.day1Choice,
+            day2Choice: recipeMysteryRef.current.day2Choice,
+          }
         )
       );
     }
@@ -707,10 +781,14 @@ export function App() {
       saveState.dayProgress
     );
     const nextStory = advanceBirthdayStageOnNextMorning(saveState.puhBirthday);
+    const nextMystery = advanceMysteryStageOnNextMorning(
+      saveState.recipeMystery
+    );
     canAutoSaveRef.current = true;
     weatherRef.current = suggestedWeather;
     dayProgressRef.current = nextDay;
     puhBirthdayRef.current = nextStory;
+    recipeMysteryRef.current = nextMystery;
 
     const freshOrder = generateOrder(
       saveState.servedCount + 1,
@@ -720,6 +798,8 @@ export function App() {
         secretDrink: secretDrinkRef.current,
         unlockedRecipes: unlockedRecipesRef.current,
         birthdayStory: buildBirthdayOrderOpt(nextStory, nextDay),
+        mysteryStory: buildMysteryOrderOpt(nextMystery, nextDay),
+        goldenCocoaUnlocked: isGoldenCocoaUnlocked(nextMystery),
       }
     );
     orderRef.current = freshOrder;
@@ -733,7 +813,11 @@ export function App() {
       buildOrderGreeting(
         freshOrder,
         getOrderDrinkName(freshOrder),
-        suggestedWeather
+        suggestedWeather,
+        {
+          day1Choice: nextMystery.day1Choice,
+          day2Choice: nextMystery.day2Choice,
+        }
       )
     );
     setSaveState((prev) => ({
@@ -741,6 +825,7 @@ export function App() {
       weather: suggestedWeather,
       dayProgress: nextDay,
       puhBirthday: nextStory,
+      recipeMystery: nextMystery,
     }));
     sound.playSecretSaved();
   };
@@ -807,17 +892,151 @@ export function App() {
     sound.playPop();
   };
 
+  // --- Chapter 2: «Таємниця загубленого рецепта» Handlers (StrictMode-pure) ---
+  const handleOpenStoryHub = (tab: DayJournalTab = 'stories') => {
+    sound.playPop();
+    setDiaryInitialTab(tab);
+    setIsDiaryOpen(true);
+  };
+
+  const handleStartRecipeMystery = () => {
+    const nextMystery = startRecipeMysteryChapter(saveState.recipeMystery);
+    canAutoSaveRef.current = true;
+    recipeMysteryRef.current = nextMystery;
+    setSaveState((prev) => ({
+      ...prev,
+      recipeMystery: startRecipeMysteryChapter(prev.recipeMystery),
+    }));
+    setMysteryModalMode(null);
+    setIsDiaryOpen(false);
+    sound.playSecretSaved();
+
+    showCelebration({
+      icon: '🔍',
+      title: 'Глава 2 почалася!',
+      subtitle: 'Ведмедик Марсель приніс потертий аркуш — знайдімо всі 3 підказки!',
+      tone: 'recipe',
+    });
+
+    if (
+      emotion === 'waiting' &&
+      saveState.dayProgress.phase === 'open' &&
+      !isDayTargetReached(saveState.dayProgress)
+    ) {
+      const mysteryOrder = generateOrder(
+        orderRef.current.id,
+        weatherRef.current,
+        undefined,
+        {
+          secretDrink: secretDrinkRef.current,
+          unlockedRecipes: unlockedRecipesRef.current,
+          mysteryStory: {
+            role: 'mystery_day1_marsel',
+            day1Choice: nextMystery.day1Choice,
+          },
+        }
+      );
+      orderRef.current = mysteryOrder;
+      servedOrderIdRef.current = null;
+      setOrder(mysteryOrder);
+      setSpeechText(
+        buildOrderGreeting(
+          mysteryOrder,
+          getOrderDrinkName(mysteryOrder),
+          weatherRef.current,
+          {
+            day1Choice: nextMystery.day1Choice,
+            day2Choice: nextMystery.day2Choice,
+          }
+        )
+      );
+    }
+  };
+
+  const handleSelectMysteryDay1Choice = (choice: MysteryDay1ChoiceId) => {
+    sound.playPop();
+    canAutoSaveRef.current = true;
+    const nextMystery = recordMysteryDay1Choice(
+      recipeMysteryRef.current,
+      choice
+    );
+    recipeMysteryRef.current = nextMystery;
+    setSaveState((prev) => ({
+      ...prev,
+      recipeMystery: recordMysteryDay1Choice(prev.recipeMystery, choice),
+    }));
+
+    const updatedOrder: Order = {
+      ...orderRef.current,
+      drinkId:
+        choice === 'spiced_cozy' ? 'cappuccino_cinnamon' : 'cocoa_marshmallow',
+    };
+    orderRef.current = updatedOrder;
+    setOrder(updatedOrder);
+    setSpeechText(
+      buildOrderGreeting(
+        updatedOrder,
+        getOrderDrinkName(updatedOrder),
+        weatherRef.current,
+        {
+          day1Choice: choice,
+          day2Choice: nextMystery.day2Choice,
+        }
+      )
+    );
+  };
+
+  const handleSelectMysteryDay2Choice = (choice: MysteryDay2ChoiceId) => {
+    sound.playPop();
+    canAutoSaveRef.current = true;
+    const nextMystery = recordMysteryDay2Choice(
+      recipeMysteryRef.current,
+      choice
+    );
+    recipeMysteryRef.current = nextMystery;
+    setSaveState((prev) => ({
+      ...prev,
+      recipeMystery: recordMysteryDay2Choice(prev.recipeMystery, choice),
+    }));
+
+    setSpeechText(
+      buildOrderGreeting(
+        orderRef.current,
+        getOrderDrinkName(orderRef.current),
+        weatherRef.current,
+        {
+          day1Choice: nextMystery.day1Choice,
+          day2Choice: choice,
+        }
+      )
+    );
+  };
+
+  const handleToggleMysterySouvenir = () => {
+    canAutoSaveRef.current = true;
+    setSaveState((prev) => ({
+      ...prev,
+      recipeMystery: {
+        ...prev.recipeMystery,
+        showCounterSouvenir: !prev.recipeMystery.showCounterSouvenir,
+      },
+    }));
+    sound.playPop();
+  };
+
   const handleImportSave = (imported: CafeSaveState) => {
     canAutoSaveRef.current = true;
     setStorageWarning(null);
     setIsDiaryOpen(false);
     setBirthdayModalMode(null);
+    setMysteryModalMode(null);
     sound.setMuted(imported.muted);
     weatherRef.current = imported.weather;
     secretDrinkRef.current = imported.secretDrink;
     unlockedRecipesRef.current = imported.unlockedRecipes;
     dayProgressRef.current = imported.dayProgress;
     puhBirthdayRef.current = imported.puhBirthday;
+    recipeMysteryRef.current = imported.recipeMystery;
     setSaveState(imported);
     saveCafeProgress(imported);
 
@@ -832,6 +1051,11 @@ export function App() {
           imported.puhBirthday,
           imported.dayProgress
         ),
+        mysteryStory: buildMysteryOrderOpt(
+          imported.recipeMystery,
+          imported.dayProgress
+        ),
+        goldenCocoaUnlocked: isGoldenCocoaUnlocked(imported.recipeMystery),
       }
     );
     orderRef.current = freshOrder;
@@ -845,7 +1069,11 @@ export function App() {
       buildOrderGreeting(
         freshOrder,
         getOrderDrinkName(freshOrder),
-        imported.weather
+        imported.weather,
+        {
+          day1Choice: imported.recipeMystery.day1Choice,
+          day2Choice: imported.recipeMystery.day2Choice,
+        }
       )
     );
   };
@@ -858,6 +1086,7 @@ export function App() {
       dayProgress: createFreshDayProgress(1, 'open'),
       dayHistory: [],
       puhBirthday: createInitialBirthdayStoryState(),
+      recipeMystery: createInitialRecipeMysteryState(),
       readLetterIds: [],
       wallArt: { ...DEFAULT_WALL_ART },
       marzipanCare: { ...DEFAULT_MARZIPAN_CARE },
@@ -1408,8 +1637,9 @@ export function App() {
       return;
     }
 
-    // Regular Guests (Secret Drink, Combo, Latte Art, Take-away & Best Friend +5 🐟 tips)
+    // Regular Guests (Secret Drink, Golden Cocoa, Combo, Latte Art, Take-away & Best Friend +5 🐟 tips)
     const isSecretDrink = order.drinkId === 'secret_daily';
+    const isGoldenCocoa = order.drinkId === 'golden_cocoa';
     const hasLatteArt = Boolean(
       trayDrink?.category === 'hot' && trayDrink.latteArtDataUrl
     );
@@ -1423,11 +1653,16 @@ export function App() {
       prevFriendScore < BEST_FRIEND_THRESHOLD &&
       nextFriendScore >= BEST_FRIEND_THRESHOLD;
 
-    let reward = isSecretDrink ? 25 : 15;
+    let reward = isSecretDrink || isGoldenCocoa ? 25 : 15;
     if (order.isCombo) reward += 15;
     if (hasLatteArt) reward += order.wantsLatteArt ? 5 : 3;
     if (hasTakeawayDecor) reward += 5;
     if (alreadyBestFriend) reward += 5;
+
+    const mysteryResult = order.mysteryRole
+      ? markMysteryStepServed(recipeMysteryRef.current, order.mysteryRole)
+      : null;
+    const totalReward = reward + (mysteryResult?.finaleBonusCoins ?? 0);
 
     setEmotion('happy');
     setSpeechText(
@@ -1437,13 +1672,14 @@ export function App() {
         wishText: trayDrink?.takeaway?.wishText,
         isSecretDrink,
         isBestFriendBonus: alreadyBestFriend,
+        mysteryDay2Choice: recipeMysteryRef.current.day2Choice,
       })
     );
-    setLastReward(reward);
+    setLastReward(totalReward);
 
     const regularDayPayload = {
       guestId: order.guestId,
-      coinsEarned: reward,
+      coinsEarned: totalReward,
       hasLatteArt,
       hasTakeaway: hasTakeawayDecor,
       isTraveler: false,
@@ -1458,23 +1694,42 @@ export function App() {
         puhBirthdayRef.current
       );
     }
+    if (mysteryResult) {
+      recipeMysteryRef.current = mysteryResult.nextStory;
+    }
 
-    setSaveState((prev) => ({
-      ...prev,
-      coins: prev.coins + reward,
-      servedCount: prev.servedCount + 1,
-      weather: nextWeather,
-      friendship: {
-        ...prev.friendship,
-        [order.guestId]: (prev.friendship[order.guestId] ?? 0) + 1,
-      },
-      dayProgress: recordServedGuestInDay(prev.dayProgress, regularDayPayload),
-      puhBirthday: order.birthdayStoryRole
-        ? markBirthdayStoryOrderServed(prev.puhBirthday)
-        : prev.puhBirthday,
-    }));
+    setSaveState((prev) => {
+      const nextMysteryRes = order.mysteryRole
+        ? markMysteryStepServed(prev.recipeMystery, order.mysteryRole)
+        : null;
+      return {
+        ...prev,
+        coins: prev.coins + reward + (nextMysteryRes?.finaleBonusCoins ?? 0),
+        servedCount: prev.servedCount + 1,
+        weather: nextWeather,
+        friendship: {
+          ...prev.friendship,
+          [order.guestId]: (prev.friendship[order.guestId] ?? 0) + 1,
+        },
+        dayProgress: recordServedGuestInDay(prev.dayProgress, regularDayPayload),
+        puhBirthday: order.birthdayStoryRole
+          ? markBirthdayStoryOrderServed(prev.puhBirthday)
+          : prev.puhBirthday,
+        recipeMystery: nextMysteryRes
+          ? nextMysteryRes.nextStory
+          : prev.recipeMystery,
+      };
+    });
 
-    if (justBecameBestFriend) {
+    if (mysteryResult?.justSolvedMystery) {
+      sound.playBestFriendFanfare();
+      showCelebration({
+        icon: '⭐',
+        title: 'Таємницю розкрито: Золоте какао!',
+        subtitle: `Легендарний рецепт у книзі + Золота книга на стійці (+${MYSTERY_FINALE_BONUS_COINS} 🐟)!`,
+        tone: 'recipe',
+      });
+    } else if (justBecameBestFriend) {
       const guest = GUESTS[order.guestId];
       setHasNewBestFriend(true);
       sound.playBestFriendFanfare();
@@ -1642,6 +1897,14 @@ export function App() {
             isDayComplete={isDayTargetReached(saveState.dayProgress)}
             isWorkbenchOpen={isWorkbenchOpen}
             birthdayDecor={getActiveBirthdayDecor(saveState.puhBirthday)}
+            puhBirthday={saveState.puhBirthday}
+            recipeMystery={saveState.recipeMystery}
+            unreadLettersCount={unreadLettersCount}
+            canOfferMysteryInvite={
+              saveState.servedCount >= 2 &&
+              saveState.recipeMystery.status === 'not_started' &&
+              saveState.puhBirthday.status !== 'active'
+            }
             wallArt={saveState.wallArt}
             guidedHint={activeGuidedHint}
             hintsActive={hintsActive}
@@ -1650,6 +1913,13 @@ export function App() {
               sound.playPop();
               setIsHowToPlayOpen(true);
             }}
+            onOpenStoryHub={handleOpenStoryHub}
+            onOpenMysteryModal={(mode) => {
+              sound.playPop();
+              setMysteryModalMode(mode);
+            }}
+            onSelectMysteryDay1Choice={handleSelectMysteryDay1Choice}
+            onSelectMysteryDay2Choice={handleSelectMysteryDay2Choice}
             onPetMarzipan={handlePetMarzipan}
             onOpenMarzipanCare={() => {
               sound.playPop();
@@ -1696,16 +1966,14 @@ export function App() {
               highlightTab={activeGuidedHint?.highlightTab ?? null}
               dayProgress={saveState.dayProgress}
               puhBirthday={saveState.puhBirthday}
+              recipeMystery={saveState.recipeMystery}
               unreadLettersCount={unreadLettersCount}
               onSelectTab={handleOpenStationTab}
               onToggleOpen={() => {
                 sound.playPop();
                 setIsWorkbenchOpen((prev) => !prev);
               }}
-              onOpenDayJournal={() => {
-                sound.playPop();
-                setIsDiaryOpen(true);
-              }}
+              onOpenDayJournal={(tab) => handleOpenStoryHub(tab ?? 'stories')}
             />
 
             <AnimatePresence initial={false}>
@@ -1795,6 +2063,9 @@ export function App() {
                 initialTab={activeTab}
                 secretDrink={saveState.secretDrink}
                 unlockedRecipes={saveState.unlockedRecipes}
+                goldenCocoaUnlocked={isGoldenCocoaUnlocked(
+                  saveState.recipeMystery
+                )}
                 onClose={() => {
                   sound.playPop();
                   setIsRecipeBookOpen(false);
@@ -1898,38 +2169,63 @@ export function App() {
               />
             )}
 
-            {dayJournalMode && !birthdayModalMode && !isWallArtOpen && (
-              <DayJournalModal
+            {dayJournalMode &&
+              !birthdayModalMode &&
+              !mysteryModalMode &&
+              !isWallArtOpen && (
+                <DayJournalModal
+                  key={`${dayJournalMode}-${diaryInitialTab}`}
+                  isOpen={true}
+                  mode={dayJournalMode}
+                  initialDiaryTab={diaryInitialTab}
+                  dayProgress={saveState.dayProgress}
+                  dayHistory={saveState.dayHistory}
+                  weather={saveState.weather}
+                  puhBirthday={saveState.puhBirthday}
+                  recipeMystery={saveState.recipeMystery}
+                  unlockedLetters={unlockedLetters}
+                  readLetterIds={saveState.readLetterIds}
+                  wallArt={saveState.wallArt}
+                  onStartDay={handleStartMorningDay}
+                  onAdvanceNextDay={handleAdvanceNextDay}
+                  onOpenBirthdayChooser={() => {
+                    sound.playPop();
+                    setIsDiaryOpen(false);
+                    setBirthdayModalMode('choose_theme');
+                  }}
+                  onOpenBirthdayPostcard={(theme) => {
+                    sound.playPop();
+                    setBirthdayPostcardTheme(theme ?? null);
+                    setBirthdayModalMode('postcard');
+                  }}
+                  onOpenMysteryModal={(mode) => {
+                    sound.playPop();
+                    setIsDiaryOpen(false);
+                    setMysteryModalMode(mode);
+                  }}
+                  onMarkLetterRead={handleMarkLetterRead}
+                  onOpenWallArt={() => {
+                    sound.playPop();
+                    setIsDiaryOpen(false);
+                    setIsWallArtOpen(true);
+                  }}
+                  onClose={() => {
+                    sound.playPop();
+                    setIsDiaryOpen(false);
+                  }}
+                />
+              )}
+
+            {mysteryModalMode && (
+              <RecipeMysteryModal
                 isOpen={true}
-                mode={dayJournalMode}
-                dayProgress={saveState.dayProgress}
-                dayHistory={saveState.dayHistory}
-                weather={saveState.weather}
-                puhBirthday={saveState.puhBirthday}
-                unlockedLetters={unlockedLetters}
-                readLetterIds={saveState.readLetterIds}
-                wallArt={saveState.wallArt}
-                onStartDay={handleStartMorningDay}
-                onAdvanceNextDay={handleAdvanceNextDay}
-                onOpenBirthdayChooser={() => {
-                  sound.playPop();
-                  setIsDiaryOpen(false);
-                  setBirthdayModalMode('choose_theme');
-                }}
-                onOpenBirthdayPostcard={(theme) => {
-                  sound.playPop();
-                  setBirthdayPostcardTheme(theme ?? null);
-                  setBirthdayModalMode('postcard');
-                }}
-                onMarkLetterRead={handleMarkLetterRead}
-                onOpenWallArt={() => {
-                  sound.playPop();
-                  setIsDiaryOpen(false);
-                  setIsWallArtOpen(true);
-                }}
+                mode={mysteryModalMode}
+                story={saveState.recipeMystery}
+                onStartMystery={handleStartRecipeMystery}
+                onToggleCounterSouvenir={handleToggleMysterySouvenir}
                 onClose={() => {
                   sound.playPop();
-                  setIsDiaryOpen(false);
+                  setMysteryModalMode(null);
                 }}
               />
             )}

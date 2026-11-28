@@ -43,6 +43,16 @@ export const DEFAULT_CAFE_LETTERS: CafeLetter[] = [
     paperTint: 'mint',
   },
   {
+    id: 'letter_marsel_mystery',
+    fromName: 'Ведмедик Марсель',
+    fromEmoji: '🐻',
+    title: 'Таємнича знахідка у старій книзі',
+    body: 'Дорога бариста! Перебираючи старовинні книжки, я знайшов потертий аркуш із легендарним рецептом «Мур-Лате», але слова на ньому стерлися! Зазирни в «✨ Історії» — розгадаймо цю загадку разом!',
+    stampEmoji: '🔍',
+    unlockMinDay: 4,
+    paperTint: 'cream',
+  },
+  {
     id: 'letter_traveler_postcard',
     fromName: 'Котик-мандрівник',
     fromEmoji: '🎒',
@@ -51,6 +61,16 @@ export const DEFAULT_CAFE_LETTERS: CafeLetter[] = [
     stampEmoji: '🌟',
     unlockMinDay: 5,
     paperTint: 'cream',
+  },
+  {
+    id: 'letter_luna_stars',
+    fromName: 'Лисичка Луна',
+    fromEmoji: '🦊',
+    title: 'Сузір’я над твоєю кав’ярнею',
+    body: 'Щовечора я дивлюся на теплі віконця «Мур-Лате» і придумую нові сузір’я на честь твоїх смачних напоїв! Одного дня ми точно влаштуємо тут вечір падаючих зірок!',
+    stampEmoji: '✨',
+    unlockMinDay: 6,
+    paperTint: 'lavender',
   },
   {
     id: 'letter_warm_heart',

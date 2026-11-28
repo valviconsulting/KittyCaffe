@@ -259,6 +259,8 @@ export interface DrinkRecipe {
   funFact: string;
   specialTip?: string;
   unlockableId?: UnlockableRecipeId;
+  /** True when unlocked permanently by solving a Story Chapter (e.g. Chapter 2 Golden Cocoa) */
+  storyUnlocked?: boolean;
   sampleDrink: PreparedDrink;
 }
 
@@ -357,6 +359,41 @@ export const DRINK_RECIPES: Record<DrinkRecipeId, DrinkRecipe> = {
     sampleDrink: {
       category: 'hot',
       ingredients: { matcha: 1, warmMilk: 1, foam: 1 },
+    },
+  },
+  golden_cocoa: {
+    id: 'golden_cocoa',
+    name: 'Золоте какао «Мур-Лате»',
+    bookTab: 'hot',
+    category: 'hot',
+    hotIngredients: {
+      cocoa: 1,
+      warmMilk: 1,
+      foam: 1,
+      cinnamon: 1,
+      marshmallow: 1,
+    },
+    badges: [
+      'Тепле молоко',
+      'Какао',
+      'Пишна пінка',
+      'Кориця',
+      'Маршмелоу',
+    ],
+    specialTip:
+      'Легендарний рецепт засновника кав’ярні! Зовсім без кави — підходить навіть для Кошеняти Пуха й приносить +25 🐟!',
+    funFact:
+      'У старовинній книзі «Мур-Лате» записано: поєднання теплого какао, пухкої пінки, кориці й маршмелоу робить затишним навіть найсніжніший день!',
+    storyUnlocked: true,
+    sampleDrink: {
+      category: 'hot',
+      ingredients: {
+        cocoa: 1,
+        warmMilk: 1,
+        foam: 1,
+        cinnamon: 1,
+        marshmallow: 1,
+      },
     },
   },
   strawberry_milkshake: {

@@ -236,8 +236,12 @@ export function computeGuidedHint(input: GuidedHintInput): GuidedHintState {
     }
 
     const list = missingLabels.join(' + ');
+    const prefix =
+      order.mysteryRole === 'mystery_day3_finale'
+        ? '🔍 Підказка детектива: додай у чашку'
+        : '👉 Додай у чашку';
     return {
-      ...emptyHint(`👉 Додай у чашку: ${list}`),
+      ...emptyHint(`${prefix}: ${list}`),
       stationText: `👉 Додай: ${list}`,
       highlightHotIngredients: missingIds,
     };

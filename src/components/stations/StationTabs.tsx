@@ -4,8 +4,10 @@ import { DAY_THEMES } from '../../data/days';
 import type {
   DayProgressState,
   PuhBirthdayStoryState,
+  RecipeMysteryStoryState,
   StationTab,
 } from '../../types/game';
+import type { DayJournalTab } from '../modals/DayJournalModal';
 
 interface StationTabsProps {
   activeTab: StationTab;
@@ -14,10 +16,11 @@ interface StationTabsProps {
   highlightTab?: StationTab | null;
   dayProgress: DayProgressState;
   puhBirthday?: PuhBirthdayStoryState;
+  recipeMystery?: RecipeMysteryStoryState;
   unreadLettersCount?: number;
   onSelectTab: (tab: StationTab) => void;
   onToggleOpen: () => void;
-  onOpenDayJournal: () => void;
+  onOpenDayJournal: (tab?: DayJournalTab) => void;
 }
 
 const TABS: Array<{
@@ -57,6 +60,7 @@ export const StationTabs: React.FC<StationTabsProps> = ({
   highlightTab = null,
   dayProgress,
   puhBirthday,
+  recipeMystery,
   unreadLettersCount = 0,
   onSelectTab,
   onToggleOpen,
@@ -65,6 +69,7 @@ export const StationTabs: React.FC<StationTabsProps> = ({
   const dayTheme = DAY_THEMES[dayProgress.themeId];
   const servedToday = dayProgress.guestsServedToday.length;
   const isBirthdayActive = puhBirthday?.status === 'active';
+  const isMysteryActive = recipeMystery?.status === 'active';
 
   return (
     <nav
@@ -156,33 +161,50 @@ export const StationTabs: React.FC<StationTabsProps> = ({
           data-day-pill="true"
           whileHover={{ y: -1, scale: 1.02 }}
           whileTap={{ scale: 0.96 }}
-          onClick={onOpenDayJournal}
-          title={`День ${dayProgress.dayNumber}: ${dayTheme.title} (${servedToday}/${dayProgress.guestsTarget} гостей)${unreadLettersCount > 0 ? ` • Нових листів: ${unreadLettersCount}` : ''}. Натисни, щоб відкрити Щоденник і пошту!`}
-          aria-label={`День ${dayProgress.dayNumber}, ${dayTheme.title}, обслужено ${servedToday} з ${dayProgress.guestsTarget} гостей. Відкрити щоденник і пошту.`}
+          onClick={() =>
+            onOpenDayJournal(
+              unreadLettersCount > 0
+                ? 'letters'
+                : isMysteryActive || isBirthdayActive
+                  ? 'stories'
+                  : 'stories'
+            )
+          }
+          title={`Історії, Пошта та День ${dayProgress.dayNumber}: ${dayTheme.title} (${servedToday}/${dayProgress.guestsTarget} гостей)${unreadLettersCount > 0 ? ` • Нових листів: ${unreadLettersCount}` : ''}. Натисни, щоб відкрити Книгу Історій і пошту!`}
+          aria-label={`Книга Історій і День ${dayProgress.dayNumber}, обслужено ${servedToday} з ${dayProgress.guestsTarget} гостей. Відкрити історії, пошту та щоденник.`}
           className={`relative ${
             isOpen ? 'hidden sm:flex' : 'flex'
-          } min-h-[34px] sm:min-h-[32px] shrink-0 items-center gap-1 sm:gap-2 rounded-full border-2 px-1.5 sm:px-3 py-0.5 text-[9.5px] sm:text-[11px] font-bold shadow-xs transition-all hover:brightness-98 whitespace-nowrap`}
+          } min-h-[36px] sm:min-h-[34px] shrink-0 items-center gap-1 sm:gap-2 rounded-full border-2 border-b-[3px] px-2 sm:px-3 py-0.5 text-[9.5px] sm:text-[11px] font-bold shadow-xs transition-all hover:brightness-98 whitespace-nowrap`}
           style={{
             backgroundColor: dayTheme.pillBg,
             borderColor: dayTheme.pillBorder,
             color: dayTheme.pillText,
           }}
         >
-          {unreadLettersCount > 0 && (
+          {unreadLettersCount > 0 ? (
             <span
               aria-hidden="true"
-              className="absolute -right-0.5 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#E85C84] px-1 text-[9px] font-bold text-white ring-2 ring-[#E5CEAB] animate-pulse"
+              className="absolute -right-0.5 -top-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#E85C84] px-1 text-[9px] font-bold text-white ring-2 ring-[#E5CEAB] animate-pulse"
             >
               💌
             </span>
-          )}
+          ) : isMysteryActive ? (
+            <span
+              aria-hidden="true"
+              className="absolute -right-0.5 -top-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#D99326] px-1 text-[9px] font-bold text-white ring-2 ring-[#E5CEAB]"
+            >
+              🔍
+            </span>
+          ) : null}
           <span aria-hidden="true" className="text-xs sm:text-sm leading-none">
-            {isBirthdayActive ? '🎂' : dayTheme.icon}
+            {isMysteryActive ? '🔍' : isBirthdayActive ? '🎂' : '📖'}
           </span>
           <span className="sm:hidden tabular-nums">
             Д{dayProgress.dayNumber}·{servedToday}/{dayProgress.guestsTarget}
           </span>
-          <span className="hidden sm:inline">День {dayProgress.dayNumber}</span>
+          <span className="hidden sm:inline">
+            Історії • День {dayProgress.dayNumber}
+          </span>
           <span className="hidden lg:inline opacity-80">• {dayTheme.title}</span>
           <span
             className="hidden sm:inline-flex items-center gap-0.5"

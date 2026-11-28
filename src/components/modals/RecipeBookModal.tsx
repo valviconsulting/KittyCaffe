@@ -19,6 +19,7 @@ interface RecipeBookModalProps {
   initialTab?: StationTab;
   secretDrink: SecretDrinkRecipe | null;
   unlockedRecipes?: UnlockableRecipeId[];
+  goldenCocoaUnlocked?: boolean;
   onClose: () => void;
   onOpenSecretCreator: () => void;
 }
@@ -28,6 +29,7 @@ export const RecipeBookModal: React.FC<RecipeBookModalProps> = ({
   initialTab = 'hot',
   secretDrink,
   unlockedRecipes = [],
+  goldenCocoaUnlocked = false,
   onClose,
   onOpenSecretCreator,
 }) => {
@@ -38,6 +40,7 @@ export const RecipeBookModal: React.FC<RecipeBookModalProps> = ({
           initialTab={initialTab}
           secretDrink={secretDrink}
           unlockedRecipes={unlockedRecipes}
+          goldenCocoaUnlocked={goldenCocoaUnlocked}
           onClose={onClose}
           onOpenSecretCreator={onOpenSecretCreator}
         />
@@ -50,9 +53,17 @@ const RecipeBookModalInner: React.FC<{
   initialTab: StationTab;
   secretDrink: SecretDrinkRecipe | null;
   unlockedRecipes: UnlockableRecipeId[];
+  goldenCocoaUnlocked: boolean;
   onClose: () => void;
   onOpenSecretCreator: () => void;
-}> = ({ initialTab, secretDrink, unlockedRecipes, onClose, onOpenSecretCreator }) => {
+}> = ({
+  initialTab,
+  secretDrink,
+  unlockedRecipes,
+  goldenCocoaUnlocked,
+  onClose,
+  onOpenSecretCreator,
+}) => {
   const [tab, setTab] = useState<StationTab>(initialTab);
 
   useEffect(() => {
@@ -66,7 +77,8 @@ const RecipeBookModalInner: React.FC<{
   const hotRecipes = Object.values(DRINK_RECIPES).filter(
     (r) =>
       r.bookTab === 'hot' &&
-      (!r.unlockableId || unlockedRecipes.includes(r.unlockableId))
+      (!r.unlockableId || unlockedRecipes.includes(r.unlockableId)) &&
+      (!r.storyUnlocked || (r.id === 'golden_cocoa' && goldenCocoaUnlocked))
   );
   const coldRecipes = Object.values(DRINK_RECIPES).filter(
     (r) => r.bookTab === 'cold'
@@ -234,15 +246,26 @@ const RecipeBookModalInner: React.FC<{
               {hotRecipes.map((recipe) => (
                 <div
                   key={recipe.id}
-                  className="watercolor-card flex gap-3 rounded-3xl border-2 border-[#E5CEB4] p-3.5"
+                  className={`watercolor-card flex gap-3 rounded-3xl border-2 p-3.5 ${
+                    recipe.storyUnlocked
+                      ? 'border-[#D9A143] bg-gradient-to-br from-[#FFF9E4] to-[#FDF2DC]'
+                      : 'border-[#E5CEB4]'
+                  }`}
                 >
                   <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-[#FAF2E4]">
                     <DrinkPreviewSvg drink={recipe.sampleDrink} className="h-18 w-18" />
                   </div>
                   <div className="flex flex-1 flex-col justify-between gap-1.5 min-w-0">
-                    <h3 className="font-handwriting text-xl leading-none font-bold text-[#5A3E32]">
-                      {recipe.name}
-                    </h3>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <h3 className="font-handwriting text-xl leading-none font-bold text-[#5A3E32]">
+                        {recipe.name}
+                      </h3>
+                      {recipe.storyUnlocked && (
+                        <span className="rounded-full border border-[#D4972C] bg-[#FFF0B8] px-2 py-0.2 text-[9.5px] font-bold text-[#613807]">
+                          🔍 Легенда
+                        </span>
+                      )}
+                    </div>
 
                     <div className="flex flex-wrap gap-1">
                       {recipe.badges.map((badge) => (

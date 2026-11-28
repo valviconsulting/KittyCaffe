@@ -5,6 +5,11 @@ import {
   MAX_DAY_HISTORY,
   getThemeForDayNumber,
 } from '../data/days.ts';
+import {
+  VALID_DAY1_CHOICES,
+  VALID_DAY2_CHOICES,
+  VALID_MYSTERY_ROLES,
+} from '../data/recipeMystery.ts';
 import type {
   BirthdayStoryStatus,
   BirthdayThemeId,
@@ -23,8 +28,12 @@ import type {
   MarzipanEyesAccessoryId,
   MarzipanHeadAccessoryId,
   MarzipanNeckAccessoryId,
+  MysteryDay1ChoiceId,
+  MysteryDay2ChoiceId,
   PuhBirthdayStoryState,
   RareStickerId,
+  RecipeMysteryStatus,
+  RecipeMysteryStoryState,
   RegularGuestId,
   SecretDrinkRecipe,
   TallGlassIngredientId,
@@ -35,8 +44,9 @@ import type {
 } from '../types/game';
 import { createInitialBirthdayStoryState } from '../utils/birthdayStory.ts';
 import { createFreshDayProgress } from '../utils/dayDirector.ts';
+import { createInitialRecipeMysteryState } from '../utils/recipeMystery.ts';
 
-export const CURRENT_SAVE_VERSION = 6;
+export const CURRENT_SAVE_VERSION = 7;
 export const STORAGE_KEY = 'mur_late_save_v1';
 export const STORAGE_BACKUP_KEY = 'mur_late_save_v1_backup';
 export const MAX_WALL_ART_DATA_URL_LENGTH = 65_000;
@@ -48,6 +58,11 @@ const VALID_FRAME_STYLES: WallFrameStyle[] = [
   'golden_stars',
 ];
 const VALID_BIRTHDAY_STATUSES: BirthdayStoryStatus[] = [
+  'not_started',
+  'active',
+  'completed',
+];
+const VALID_MYSTERY_STATUSES: RecipeMysteryStatus[] = [
   'not_started',
   'active',
   'completed',
@@ -150,6 +165,7 @@ export const DEFAULT_SAVE_STATE: CafeSaveState = {
   dayProgress: createFreshDayProgress(1, 'open'),
   dayHistory: [],
   puhBirthday: createInitialBirthdayStoryState(),
+  recipeMystery: createInitialRecipeMysteryState(),
   readLetterIds: [],
   wallArt: { ...DEFAULT_WALL_ART },
   marzipanCare: { ...DEFAULT_MARZIPAN_CARE },
@@ -401,6 +417,58 @@ function sanitizeBirthdayStory(raw: unknown): PuhBirthdayStoryState {
   };
 }
 
+function sanitizeRecipeMystery(raw: unknown): RecipeMysteryStoryState {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return createInitialRecipeMysteryState();
+  }
+  const c = raw as Partial<RecipeMysteryStoryState>;
+  const status: RecipeMysteryStatus =
+    c.status && VALID_MYSTERY_STATUSES.includes(c.status)
+      ? c.status
+      : 'not_started';
+  const stageDay: 1 | 2 | 3 =
+    c.stageDay === 1 || c.stageDay === 2 || c.stageDay === 3 ? c.stageDay : 1;
+  const discoveredSet = new Set<number>();
+  if (Array.isArray(c.discoveredClues)) {
+    for (const item of c.discoveredClues) {
+      if (item === 1 || item === 2 || item === 3) {
+        discoveredSet.add(item);
+      }
+    }
+  }
+  if (status === 'completed') {
+    discoveredSet.add(1);
+    discoveredSet.add(2);
+    discoveredSet.add(3);
+  }
+  const servedStepsToday = sanitizeStringArray(
+    c.servedStepsToday,
+    VALID_MYSTERY_ROLES
+  );
+  const day1Choice: MysteryDay1ChoiceId | null =
+    c.day1Choice && VALID_DAY1_CHOICES.includes(c.day1Choice)
+      ? c.day1Choice
+      : null;
+  const day2Choice: MysteryDay2ChoiceId | null =
+    c.day2Choice && VALID_DAY2_CHOICES.includes(c.day2Choice)
+      ? c.day2Choice
+      : null;
+
+  return {
+    status,
+    stageDay,
+    discoveredClues: Array.from(discoveredSet).sort((a, b) => a - b),
+    servedStepsToday,
+    day1Choice,
+    day2Choice,
+    finaleRewardClaimed: Boolean(c.finaleRewardClaimed),
+    showCounterSouvenir:
+      typeof c.showCounterSouvenir === 'boolean'
+        ? c.showCounterSouvenir
+        : true,
+  };
+}
+
 function sanitizeReadLetterIds(raw: unknown): string[] {
   if (!Array.isArray(raw)) return [];
   const unique = new Set<string>();
@@ -621,6 +689,7 @@ export function parseAndSanitizeSave(rawObj: unknown): ParseSaveResult {
   const dayProgress = sanitizeDayProgress(parsed.dayProgress, fallbackDayNumber);
   const dayHistory = sanitizeDayHistory(parsed.dayHistory);
   const puhBirthday = sanitizeBirthdayStory(parsed.puhBirthday);
+  const recipeMystery = sanitizeRecipeMystery(parsed.recipeMystery);
   const readLetterIds = sanitizeReadLetterIds(parsed.readLetterIds);
   const wallArt = sanitizeWallArt(parsed.wallArt);
   const marzipanCare = sanitizeMarzipanCare(parsed.marzipanCare);
@@ -648,6 +717,7 @@ export function parseAndSanitizeSave(rawObj: unknown): ParseSaveResult {
       dayProgress,
       dayHistory,
       puhBirthday,
+      recipeMystery,
       readLetterIds,
       wallArt,
       marzipanCare,

@@ -346,3 +346,91 @@ export const SouvenirSvg: React.FC<{
       );
   }
 };
+
+/** Chapter 2 Detective Souvenir: Open Golden Recipe Book + Brass Magnifier on the Counter */
+export const GoldenRecipeBookCounterSvg: React.FC<{ className?: string }> = ({
+  className = 'w-12 h-10',
+}) => (
+  <svg
+    viewBox="0 0 68 54"
+    className={className}
+    aria-label="Золота книга рецептів і лупа детектива"
+  >
+    <defs>
+      <linearGradient id="grb-cover" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stopColor="#F8D87C" />
+        <stop offset="55%" stopColor="#DFA442" />
+        <stop offset="100%" stopColor="#B87A24" />
+      </linearGradient>
+      <linearGradient id="grb-lens" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stopColor="#FFFDF8" stopOpacity="0.92" />
+        <stop offset="65%" stopColor="#D6EEF7" stopOpacity="0.68" />
+        <stop offset="100%" stopColor="#9BCBE0" stopOpacity="0.55" />
+      </linearGradient>
+    </defs>
+    {/* Warm contact shadow on honey oak counter */}
+    <ellipse cx="34" cy="48" rx="28" ry="4.5" fill="#4A2B14" opacity="0.28" />
+    {/* Open golden leather cover */}
+    <path
+      d="M6 39 Q20 35 34 40 Q48 35 62 39 L59 45 Q46 42 34 45 Q22 42 9 45 Z"
+      fill="url(#grb-cover)"
+      stroke={INK}
+      strokeWidth="2"
+      strokeLinejoin="round"
+    />
+    {/* Left & right open cream parchment pages */}
+    <path
+      d="M10 38 L14 21 Q24 19 34 24 L34 41 Q23 36 10 38 Z"
+      fill="#FFF9EC"
+      stroke={INK}
+      strokeWidth="1.9"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M58 38 L54 21 Q44 19 34 24 L34 41 Q45 36 58 38 Z"
+      fill="#FAF0D8"
+      stroke={INK}
+      strokeWidth="1.9"
+      strokeLinejoin="round"
+    />
+    {/* Tiny handwritten lines & golden star emblem on pages */}
+    <path
+      d="M17 27 L29 28 M16 31 L28 32 M39 28 L50 27 M40 32 L51 31"
+      stroke="#A87E52"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+    />
+    <path
+      d="M34 9 L35.8 13.3 L40.5 13.7 L36.9 16.7 L38 21.2 L34 18.8 L30 21.2 L31.1 16.7 L27.5 13.7 L32.2 13.3 Z"
+      fill="#FFE280"
+      stroke="#A86E1C"
+      strokeWidth="1.3"
+      strokeLinejoin="round"
+    />
+    {/* Brass detective magnifying glass resting across right corner */}
+    <line
+      x1="50"
+      y1="32"
+      x2="59"
+      y2="41"
+      stroke="#8A5628"
+      strokeWidth="4.2"
+      strokeLinecap="round"
+    />
+    <circle
+      cx="45"
+      cy="27"
+      r="7.5"
+      fill="url(#grb-lens)"
+      stroke="#C6892C"
+      strokeWidth="2.4"
+    />
+    <path
+      d="M41.5 24.5 Q44 22.5 47 23.5"
+      fill="none"
+      stroke="#FFFFFF"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+  </svg>
+);

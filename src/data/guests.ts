@@ -2,12 +2,19 @@ import {
   BIRTHDAY_THEMES,
   resolveBirthdayPastry,
 } from './birthdayStory.ts';
+import {
+  getMysteryGreeting,
+  getMysteryPraise,
+} from './recipeMystery.ts';
 import type {
   BirthdayThemeId,
   DrinkRecipeId,
   GuestId,
+  MysteryDay1ChoiceId,
+  MysteryDay2ChoiceId,
   Order,
   PastryRecipeId,
+  RecipeMysteryRole,
   RegularGuestId,
   SecretDrinkRecipe,
   ServiceMode,
@@ -30,6 +37,7 @@ const LATTE_ART_ELIGIBLE_DRINKS = new Set<DrinkRecipeId>([
   'babyccino',
   'latte',
   'matcha_latte',
+  'golden_cocoa',
 ]);
 
 export interface GuestProfile {
@@ -297,6 +305,11 @@ export interface GenerateOrderOptions {
     role: 'prep_day1' | 'prep_day2' | 'finale_party';
     theme: BirthdayThemeId;
   } | null;
+  mysteryStory?: {
+    role: RecipeMysteryRole;
+    day1Choice?: MysteryDay1ChoiceId | null;
+  } | null;
+  goldenCocoaUnlocked?: boolean;
 }
 
 /**
@@ -321,6 +334,8 @@ export function generateOrder(
     forceTraveler,
     forceUnlockedRecipe,
     birthdayStory,
+    mysteryStory,
+    goldenCocoaUnlocked = false,
   } = options;
 
   const hasMatcha = unlockedRecipes.includes('matcha_latte');
@@ -375,6 +390,56 @@ export function generateOrder(
       wantsLatteArt: themeMeta.finaleWantsLatteArt,
       birthdayStoryRole: 'finale_party',
       birthdayTheme: birthdayStory.theme,
+    };
+  }
+
+  // 0b. Scripted Chapter 2 Detective Story («Таємниця загубленого рецепта»)
+  if (mysteryStory) {
+    if (mysteryStory.role === 'mystery_day1_marsel') {
+      return {
+        id: orderNumber,
+        guestId: 'marsel',
+        drinkId:
+          mysteryStory.day1Choice === 'spiced_cozy'
+            ? 'cappuccino_cinnamon'
+            : 'cocoa_marshmallow',
+        isCombo: false,
+        weatherAtArrival: weather,
+        serviceMode: 'dine-in',
+        mysteryRole: 'mystery_day1_marsel',
+      };
+    }
+    if (mysteryStory.role === 'mystery_day2_sofiya') {
+      return {
+        id: orderNumber,
+        guestId: 'sofiya',
+        drinkId: 'americano',
+        isCombo: false,
+        weatherAtArrival: weather,
+        serviceMode: 'dine-in',
+        mysteryRole: 'mystery_day2_sofiya',
+      };
+    }
+    if (mysteryStory.role === 'mystery_day2_persyk') {
+      return {
+        id: orderNumber,
+        guestId: 'persyk',
+        drinkId: 'cappuccino',
+        pastryId: 'warm_croissant',
+        isCombo: true,
+        weatherAtArrival: weather,
+        serviceMode: 'dine-in',
+        mysteryRole: 'mystery_day2_persyk',
+      };
+    }
+    return {
+      id: orderNumber,
+      guestId: 'marsel',
+      drinkId: 'golden_cocoa',
+      isCombo: false,
+      weatherAtArrival: weather,
+      serviceMode: 'dine-in',
+      mysteryRole: 'mystery_day3_finale',
     };
   }
 
@@ -582,10 +647,13 @@ export function generateOrder(
 
   const guest = GUESTS[guestId];
 
-  const availableDrinks: DrinkRecipeId[] =
-    hasMatcha && MATCHA_LOVING_GUESTS.includes(guestId)
-      ? [...guest.favoriteDrinks, 'matcha_latte']
-      : guest.favoriteDrinks;
+  const availableDrinks: DrinkRecipeId[] = [
+    ...guest.favoriteDrinks,
+    ...(hasMatcha && MATCHA_LOVING_GUESTS.includes(guestId)
+      ? (['matcha_latte'] as DrinkRecipeId[])
+      : []),
+    ...(goldenCocoaUnlocked ? (['golden_cocoa'] as DrinkRecipeId[]) : []),
+  ];
 
   const coldDrinks = availableDrinks.filter((d) => COLD_DRINK_IDS.has(d));
   const hotDrinks = availableDrinks.filter((d) => !COLD_DRINK_IDS.has(d));
@@ -639,8 +707,21 @@ export function generateOrder(
 export function buildOrderGreeting(
   order: Order,
   drinkName: string,
-  weather: WeatherType
+  weather: WeatherType,
+  mysteryContext?: {
+    day1Choice?: MysteryDay1ChoiceId | null;
+    day2Choice?: MysteryDay2ChoiceId | null;
+  }
 ): string {
+  // Chapter 2: Detective Story scripted dialogues with remembered choices
+  if (order.mysteryRole) {
+    return getMysteryGreeting(
+      order.mysteryRole,
+      mysteryContext?.day1Choice ?? null,
+      mysteryContext?.day2Choice ?? null
+    );
+  }
+
   // Step 05: Puff's Birthday Story Chapter scripted dialogues
   if (order.birthdayStoryRole && order.birthdayTheme) {
     const themeMeta = BIRTHDAY_THEMES[order.birthdayTheme];
@@ -678,7 +759,14 @@ export function buildOrderGreeting(
     return `Ой, дуже поспішаю! Зроби, будь ласка, мені «${drinkName}» із собою — і наклей гарний стікер на стаканчик!`;
   }
 
-  // Newly unlocked Matcha-Latte or Carrot Cake dedicated greetings so text ALWAYS matches order pill!
+  // Newly unlocked Matcha-Latte, Golden Cocoa, or Carrot Cake dedicated greetings so text ALWAYS matches order pill!
+  if (order.drinkId === 'golden_cocoa') {
+    const baseGolden =
+      'Усі в містечку говорять про розгадане «Золоте какао «Мур-Лате»»! Приготуєш мені чашечку цієї легенди?';
+    return order.wantsLatteArt
+      ? `${baseGolden} І намалюй, будь ласка, щось чарівне на пінці!`
+      : baseGolden;
+  }
   if (order.drinkId === 'matcha_latte') {
     const baseMatcha =
       'Ой, у вас у меню з’явився ніжний «Матча-Лате»! Приготуєш мені його?';
@@ -720,8 +808,15 @@ export function buildOrderPraise(
     isBestFriendBonus?: boolean;
     travelerGiftLabel?: string;
     travelerAllCollected?: boolean;
+    mysteryDay2Choice?: MysteryDay2ChoiceId | null;
   }
 ): string {
+  if (order.mysteryRole) {
+    return getMysteryPraise(
+      order.mysteryRole,
+      options.mysteryDay2Choice ?? null
+    );
+  }
   if (order.birthdayStoryRole === 'finale_party' && order.birthdayTheme) {
     return BIRTHDAY_THEMES[order.birthdayTheme].finalePraise;
   }
@@ -746,6 +841,9 @@ export function buildOrderPraise(
 
   if (options.isSecretDrink) {
     return `Вау!! Секретний «${order.secretDrink?.name}» — просто магія! Ось +25 рибок!${friendNote}`;
+  }
+  if (order.drinkId === 'golden_cocoa') {
+    return `Ммм!! Легендарне «Золоте какао «Мур-Лате»» — найзатишніший смак у світі! Ось +25 🐟!${friendNote}`;
   }
   if (options.hasTakeawayDecor) {
     const wishNote = options.wishText ? ` І дякую за «${options.wishText}»!` : '';
