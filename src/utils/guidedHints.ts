@@ -239,7 +239,9 @@ export function computeGuidedHint(input: GuidedHintInput): GuidedHintState {
     const prefix =
       order.mysteryRole === 'mystery_day3_finale'
         ? '🔍 Підказка детектива: додай у чашку'
-        : '👉 Додай у чашку';
+        : order.isMoodRiddle
+          ? '🤔 Розгадка настрою: додай у чашку'
+          : '👉 Додай у чашку';
     return {
       ...emptyHint(`${prefix}: ${list}`),
       stationText: `👉 Додай: ${list}`,
@@ -333,8 +335,11 @@ export function computeGuidedHint(input: GuidedHintInput): GuidedHintState {
     const list = missingCocktail
       .map((id) => TALL_INGREDIENT_LABELS[id])
       .join(' + ');
+    const cocktailPrefix = order.isMoodRiddle
+      ? '🤔 Розгадка настрою: додай у келих'
+      : '👉 Додай у келих';
     return {
-      ...emptyHint(`👉 Додай у келих: ${list}`),
+      ...emptyHint(`${cocktailPrefix}: ${list}`),
       stationText: `👉 У келих: ${list}`,
       highlightCocktailIngredients: missingCocktail,
     };

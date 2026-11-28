@@ -76,6 +76,19 @@ import {
   resolveCafeLightingMood,
 } from '../src/utils/atmosphere.ts';
 import {
+  FRIENDSHIP_MOMENTS,
+  FRIENDSHIP_MOMENT_ORDER,
+  MOOD_RIDDLES,
+  buildAmbientObservation,
+} from '../src/data/livingFriendship.ts';
+import {
+  completeReceivedFriendGift,
+  createInitialLivingFriendshipState,
+  recordSentFriendGift,
+  recordSolvedMoodRiddle,
+  resolveNextLivingEvent,
+} from '../src/utils/livingFriendship.ts';
+import {
   MYSTERY_CLUES,
   MYSTERY_FINALE_BONUS_COINS,
 } from '../src/data/recipeMystery.ts';
@@ -812,6 +825,137 @@ assert.equal(legacyV6.ok, true);
 if (legacyV6.ok) {
   assert.equal(legacyV6.migrated, true);
   assert.equal(legacyV6.state.recipeMystery.status, 'not_started');
+  assert.equal(legacyV6.state.livingFriendship.pendingGift, null);
+  assert.deepEqual(legacyV6.state.livingFriendship.completedMoments, []);
+}
+
+// 17. Living Friendship: Cross-guest secret gifts, wish quoting, mood riddles, ambient observations & v8 persistence
+assert.equal(FRIENDSHIP_MOMENT_ORDER.length, 4);
+assert.equal(MOOD_RIDDLES.length, 6);
+let living = createInitialLivingFriendshipState();
+
+// Order #7 triggers a cross-guest send_gift take-away combo
+const sendOrder7 = generateOrder(7, 'rainy', 'marsel', {
+  livingFriendship: living,
+});
+assert.equal(sendOrder7.friendGiftRole, 'send');
+assert.ok(sendOrder7.friendGiftMomentId);
+assert.equal(sendOrder7.serviceMode, 'takeaway');
+assert.equal(sendOrder7.isCombo, true);
+assert.ok(
+  validateOrder(
+    sendOrder7,
+    {
+      ...DRINK_RECIPES[sendOrder7.drinkId as keyof typeof DRINK_RECIPES]
+        .sampleDrink,
+      takeaway: { stickers: [], wishText: 'Обіймаю!' },
+    },
+    PASTRY_RECIPES[sendOrder7.pastryId!].expected
+  ).ok
+);
+
+// Sending the gift schedules the partner recipient for the VERY NEXT visit & preserves wishText!
+living = recordSentFriendGift(living, sendOrder7.friendGiftMomentId!, 'Обіймаю!');
+assert.equal(living.pendingGift?.momentId, sendOrder7.friendGiftMomentId);
+assert.equal(living.pendingGift?.wishText, 'Обіймаю!');
+
+const receiveOrder = generateOrder(9, 'rainy', sendOrder7.guestId, {
+  livingFriendship: living,
+});
+assert.equal(receiveOrder.friendGiftRole, 'receive');
+assert.equal(
+  receiveOrder.guestId,
+  FRIENDSHIP_MOMENTS[sendOrder7.friendGiftMomentId!].toGuestId
+);
+const receiveGreeting = buildOrderGreeting(receiveOrder, '', 'rainy');
+assert.ok(receiveGreeting.includes('Обіймаю!'));
+
+// Completing recipient visit unlocks the keepsake moment in Friendship Album & clears pendingGift
+const doneMoment = completeReceivedFriendGift(
+  living,
+  receiveOrder.friendGiftMomentId!
+);
+assert.equal(doneMoment.isFirstTimeMoment, true);
+assert.equal(doneMoment.nextState.pendingGift, null);
+assert.ok(
+  doneMoment.nextState.completedMoments.includes(
+    receiveOrder.friendGiftMomentId!
+  )
+);
+living = doneMoment.nextState;
+
+// Order #9 (when no pendingGift) triggers a cozy flavor mood riddle (and Puff's riddle stays 100% caffeine-free!)
+const riddleDirective = resolveNextLivingEvent(living, 9, 'marsel');
+assert.equal(riddleDirective?.type, 'mood_riddle');
+const riddleOrder = generateOrder(9, 'sunny', 'marsel', {
+  livingFriendship: living,
+});
+assert.equal(riddleOrder.isMoodRiddle, true);
+assert.ok(riddleOrder.moodRiddlePrompt);
+assert.equal(
+  validateOrder(
+    riddleOrder,
+    DRINK_RECIPES[riddleOrder.drinkId as keyof typeof DRINK_RECIPES].sampleDrink,
+    null
+  ).ok,
+  true
+);
+const puhRiddle = MOOD_RIDDLES.find((r) => r.guestId === 'puh')!;
+const puhRiddleSample = DRINK_RECIPES[puhRiddle.drinkId].sampleDrink;
+if (puhRiddleSample.category === 'hot') {
+  assert.equal(puhRiddleSample.ingredients.espresso ?? 0, 0);
+  assert.equal(puhRiddleSample.ingredients.matcha ?? 0, 0);
+}
+living = recordSolvedMoodRiddle(living);
+assert.equal(living.moodRiddlesSolved, 1);
+
+// Ambient observations compliment child's wall art & Marzipan's outfit cleanly
+const wallObs = buildAmbientObservation({
+  orderId: 10,
+  guestId: 'persyk',
+  wallArt: {
+    dataUrl: 'data:image/webp;base64,AAA',
+    title: 'Котик на місяці',
+    frameStyle: 'blush_ribbon',
+    visible: true,
+  },
+  equippedAccessories: { head: 'chef_hat', eyes: null, neck: null },
+  enabledDecor: ['daisy_vase'],
+  musicBoxPlaying: false,
+  muted: false,
+  goldenBookVisible: true,
+});
+assert.ok(wallObs && wallObs.length > 10);
+
+// v8 export/import round-trip preserves pendingGift, completedMoments & moodRiddlesSolved
+const v8Export = exportSaveJson({
+  ...DEFAULT_SAVE_STATE,
+  coins: 520,
+  livingFriendship: {
+    ...living,
+    pendingGift: {
+      momentId: 'miya_to_puh',
+      fromGuestId: 'miya',
+      toGuestId: 'puh',
+      wishText: 'Усміхнись!',
+    },
+  },
+});
+const v8Import = importSaveJson(v8Export);
+assert.equal(v8Import.ok, true);
+if (v8Import.ok) {
+  assert.equal(v8Import.state.version, CURRENT_SAVE_VERSION);
+  assert.equal(v8Import.state.livingFriendship.moodRiddlesSolved, 1);
+  assert.equal(v8Import.state.livingFriendship.pendingGift?.momentId, 'miya_to_puh');
+  assert.equal(
+    v8Import.state.livingFriendship.pendingGift?.wishText,
+    'Усміхнись!'
+  );
+  assert.ok(
+    v8Import.state.livingFriendship.completedMoments.includes(
+      sendOrder7.friendGiftMomentId!
+    )
+  );
 }
 
 console.log('ALL_DOMAIN_TESTS_PASSED');

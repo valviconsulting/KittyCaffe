@@ -90,7 +90,7 @@ export const StationTabs: React.FC<StationTabsProps> = ({
               aria-expanded={isActive}
               whileTap={{ scale: 0.97 }}
               onClick={() => onSelectTab(tab.id)}
-              className={`relative flex min-h-[38px] sm:min-h-[38px] flex-1 sm:flex-none items-center justify-center gap-1 sm:gap-1.5 px-1 sm:px-4 md:px-5 py-1.5 text-[10px] sm:text-xs md:text-[13px] font-bold transition-all whitespace-nowrap ${
+              className={`relative flex min-h-[38px] sm:min-h-[38px] min-w-0 flex-1 sm:flex-none items-center justify-center gap-0.5 sm:gap-1.5 px-0.5 sm:px-4 md:px-5 py-1.5 text-[9.5px] min-[400px]:text-[10px] sm:text-xs md:text-[13px] font-bold transition-all whitespace-nowrap ${
                 isOpen
                   ? isActive
                     ? 'z-10 -mb-[2px] rounded-t-2xl border-2 border-b-0 border-[#8C6248] bg-gradient-to-b from-[#FBF2E2] via-[#F2E2C9] to-[#EAD7BE] pb-2 text-[#4A2E1D] shadow-[0_-3px_10px_rgba(90,56,32,0.12),inset_0_1px_0_rgba(255,252,245,0.9)]'
@@ -174,7 +174,7 @@ export const StationTabs: React.FC<StationTabsProps> = ({
           aria-label={`Книга Історій і День ${dayProgress.dayNumber}, обслужено ${servedToday} з ${dayProgress.guestsTarget} гостей. Відкрити історії, пошту та щоденник.`}
           className={`relative ${
             isOpen ? 'hidden sm:flex' : 'flex'
-          } min-h-[36px] sm:min-h-[34px] shrink-0 items-center gap-1 sm:gap-2 rounded-full border-2 border-b-[3px] px-2 sm:px-3 py-0.5 text-[9.5px] sm:text-[11px] font-bold shadow-xs transition-all hover:brightness-98 whitespace-nowrap`}
+          } min-h-[36px] sm:min-h-[34px] shrink-0 items-center gap-0.5 sm:gap-2 rounded-full border-2 border-b-[3px] px-1.5 sm:px-3 py-0.5 text-[9px] min-[400px]:text-[9.5px] sm:text-[11px] font-bold shadow-xs transition-all hover:brightness-98 whitespace-nowrap`}
           style={{
             backgroundColor: dayTheme.pillBg,
             borderColor: dayTheme.pillBorder,

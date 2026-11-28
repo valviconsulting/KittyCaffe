@@ -223,6 +223,28 @@ export interface RecipeMysteryStoryState {
   showCounterSouvenir: boolean;
 }
 
+export type FriendshipMomentId =
+  | 'persyk_to_sofiya'
+  | 'miya_to_puh'
+  | 'luna_to_marsel'
+  | 'sofiya_to_miya';
+
+export interface PendingFriendGift {
+  momentId: FriendshipMomentId;
+  fromGuestId: RegularGuestId;
+  toGuestId: RegularGuestId;
+  wishText?: string;
+}
+
+export interface LivingFriendshipState {
+  /** Active gift waiting to be received by the partner friend on the very next visit! */
+  pendingGift: PendingFriendGift | null;
+  /** Unique cross-guest friendship stories experienced so far (for Friendship Album) */
+  completedMoments: FriendshipMomentId[];
+  /** Total cozy flavor-mood riddles solved by the player */
+  moodRiddlesSolved: number;
+}
+
 export type WallFrameStyle = 'honey_wood' | 'blush_ribbon' | 'golden_stars';
 
 export interface WallArtState {
@@ -316,6 +338,14 @@ export interface Order {
   birthdayTheme?: BirthdayThemeId;
   /** Chapter 2: Present when this guest's visit is part of «Таємниця загубленого рецепта» */
   mysteryRole?: RecipeMysteryRole;
+  /** Living Friendship: 2-step cross-guest gift exchange */
+  friendGiftRole?: 'send' | 'receive';
+  friendGiftMomentId?: FriendshipMomentId;
+  friendGiftPartnerId?: RegularGuestId;
+  friendGiftWishText?: string;
+  /** Living Friendship: Cozy mood-description flavor riddle */
+  isMoodRiddle?: boolean;
+  moodRiddlePrompt?: string;
 }
 
 export interface ValidationResult {
@@ -358,6 +388,8 @@ export interface CafeSaveState {
   puhBirthday: PuhBirthdayStoryState;
   /** Chapter 2: Detective Story — «Таємниця загубленого рецепта» (3 days + choices + Golden Cocoa) */
   recipeMystery: RecipeMysteryStoryState;
+  /** Living Friendship: Cross-guest secret gifts & mood riddles progress */
+  livingFriendship: LivingFriendshipState;
   /** Step 06: Personalization — read letter IDs, child's framed wall art & Marzipan care */
   readLetterIds: string[];
   wallArt: WallArtState;

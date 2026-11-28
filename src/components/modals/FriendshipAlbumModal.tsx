@@ -6,8 +6,16 @@ import {
   GUESTS,
   REGULAR_GUEST_IDS,
 } from '../../data/guests';
+import {
+  FRIENDSHIP_MOMENTS,
+  FRIENDSHIP_MOMENT_ORDER,
+} from '../../data/livingFriendship';
 import { RARE_STICKER_CATALOG } from '../../data/stickers';
-import type { GuestId, RareStickerId } from '../../types/game';
+import type {
+  GuestId,
+  LivingFriendshipState,
+  RareStickerId,
+} from '../../types/game';
 import { AssetIllustration } from '../common/AssetIllustration';
 import { SouvenirSvg } from '../svg/CafeDecorAndSouvenirsSvg';
 import { GuestCharacterSvg } from '../svg/GuestCharacterSvg';
@@ -18,6 +26,7 @@ interface FriendshipAlbumModalProps {
   friendship: Partial<Record<GuestId, number>>;
   unlockedRareStickers: RareStickerId[];
   travelerVisits: number;
+  livingFriendship?: LivingFriendshipState;
   onClose: () => void;
 }
 
@@ -26,6 +35,7 @@ export const FriendshipAlbumModal: React.FC<FriendshipAlbumModalProps> = ({
   friendship,
   unlockedRareStickers,
   travelerVisits,
+  livingFriendship,
   onClose,
 }) => {
   return (
@@ -35,6 +45,7 @@ export const FriendshipAlbumModal: React.FC<FriendshipAlbumModalProps> = ({
           friendship={friendship}
           unlockedRareStickers={unlockedRareStickers}
           travelerVisits={travelerVisits}
+          livingFriendship={livingFriendship}
           onClose={onClose}
         />
       )}
@@ -46,8 +57,15 @@ const FriendshipAlbumInner: React.FC<{
   friendship: Partial<Record<GuestId, number>>;
   unlockedRareStickers: RareStickerId[];
   travelerVisits: number;
+  livingFriendship?: LivingFriendshipState;
   onClose: () => void;
-}> = ({ friendship, unlockedRareStickers, travelerVisits, onClose }) => {
+}> = ({
+  friendship,
+  unlockedRareStickers,
+  travelerVisits,
+  livingFriendship,
+  onClose,
+}) => {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -320,6 +338,64 @@ const FriendshipAlbumInner: React.FC<{
               </div>
             </div>
           </div>
+          {/* Living Friendship Moments Strip: Cross-Guest Secret Surprises & Mood Riddles */}
+          {livingFriendship && (
+            <div
+              data-living-friendship-section="true"
+              className="mt-4 rounded-3xl border-2 border-[#DFA7BB] bg-gradient-to-br from-[#FFF4F8] via-[#FFFDF8] to-[#F3FAF5] p-4 shadow-sm space-y-3"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h3 className="font-handwriting text-2xl leading-none font-bold text-[#7C2B47]">
+                    💌 Теплі моменти між друзями (
+                    {livingFriendship.completedMoments.length} /{' '}
+                    {FRIENDSHIP_MOMENT_ORDER.length})
+                  </h3>
+                  <p className="text-[11px] font-semibold text-[#7A5448] mt-0.5">
+                    Друзі інколи передають сюрпризи одне одному через твою кав’ярню та загадують загадки настрою!
+                  </p>
+                </div>
+                <span className="rounded-full border border-[#B597DC] bg-[#F5EEFC] px-3 py-0.5 text-[11px] font-bold text-[#4D2E75]">
+                  🤔 Загадок розгадано: {livingFriendship.moodRiddlesSolved}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {FRIENDSHIP_MOMENT_ORDER.map((momentId) => {
+                  const meta = FRIENDSHIP_MOMENTS[momentId];
+                  const unlocked =
+                    livingFriendship.completedMoments.includes(momentId);
+                  return (
+                    <div
+                      key={momentId}
+                      data-friendship-moment={momentId}
+                      data-moment-unlocked={unlocked ? 'true' : 'false'}
+                      className={`rounded-2xl border-2 p-3 transition-all ${
+                        unlocked
+                          ? 'border-[#DF9EB4] bg-[#FFFDF9] shadow-2xs'
+                          : 'border-dashed border-[#D8BFA8] bg-[#FAF2E7]/75 opacity-80'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-bold text-[#5A3E32]">
+                          {unlocked ? `${meta.emoji} ${meta.title}` : '🔒 Таємний сюрприз друзів'}
+                        </span>
+                        <span className="rounded-full bg-[#F9ECF0] px-2 py-0.5 text-[9.5px] font-bold text-[#883854]">
+                          {GUESTS[meta.fromGuestId].name.split(' ')[1]} →{' '}
+                          {GUESTS[meta.toGuestId].name.split(' ')[1]}
+                        </span>
+                      </div>
+                      <p className="mt-1.5 text-[11px] font-semibold leading-snug text-[#6E4D3A]">
+                        {unlocked
+                          ? meta.albumMemory
+                          : 'Грай далі — незабаром ці друзі передадуть теплий сюрприз одне одному через твою стійку!'}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </motion.div>
     </motion.div>

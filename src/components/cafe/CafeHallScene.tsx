@@ -88,6 +88,7 @@ interface CafeHallSceneProps {
   birthdayDecor?: { theme: BirthdayThemeId; level: 1 | 2 | 3 } | null;
   puhBirthday?: PuhBirthdayStoryState;
   recipeMystery?: RecipeMysteryStoryState;
+  ambientObservation?: string | null;
   unreadLettersCount?: number;
   canOfferMysteryInvite?: boolean;
   wallArt?: WallArtState;
@@ -140,6 +141,7 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = React.memo(({
   birthdayDecor = null,
   puhBirthday,
   recipeMystery,
+  ambientObservation = null,
   unreadLettersCount = 0,
   canOfferMysteryInvite = false,
   wallArt,
@@ -229,6 +231,15 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = React.memo(({
                 : 'border-[#DFC2A0]'
         }`}
       />
+
+      {!isHappy && ambientObservation && (
+        <div
+          data-ambient-observation="true"
+          className="relative z-10 mb-1 inline-flex max-w-full items-center gap-1 rounded-xl border border-[#E4C9A1] bg-[#FFF8EB] px-2 py-0.5 text-[10px] font-bold leading-snug text-[#7A512D]"
+        >
+          <span>{ambientObservation}</span>
+        </div>
+      )}
 
       <p className="relative z-10 text-[11px] sm:text-xs font-bold leading-snug text-[#5A3E32]">
         {speechText}
@@ -331,6 +342,35 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = React.memo(({
                   </button>
                 )}
 
+                {order.friendGiftRole === 'send' && order.friendGiftPartnerId && (
+                  <span
+                    data-friend-gift-badge="send"
+                    className="inline-flex items-center gap-1 rounded-xl border border-[#DF9BB1] bg-[#FCEEF3] px-2 py-0.5 text-[10px] sm:text-[11px] font-bold text-[#832C49]"
+                  >
+                    🎁 Сюрприз для: {GUESTS[order.friendGiftPartnerId].name}
+                  </span>
+                )}
+
+                {order.friendGiftRole === 'receive' &&
+                  order.friendGiftPartnerId && (
+                    <span
+                      data-friend-gift-badge="receive"
+                      className="inline-flex items-center gap-1 rounded-xl border border-[#88BC98] bg-[#EAF7EE] px-2 py-0.5 text-[10px] sm:text-[11px] font-bold text-[#1E5933]"
+                    >
+                      💌 Подарунок від: {GUESTS[order.friendGiftPartnerId].name}{' '}
+                      (+10 🐟)
+                    </span>
+                  )}
+
+                {order.isMoodRiddle && (
+                  <span
+                    data-mood-riddle-badge="true"
+                    className="inline-flex items-center gap-1 rounded-xl border border-[#A584CC] bg-[#F5EEFC] px-2 py-0.5 text-[10px] sm:text-[11px] font-bold text-[#4C2E73]"
+                  >
+                    🤔 Загадка настрою (+10 🐟)
+                  </span>
+                )}
+
                 <button
                   type="button"
                   onClick={() => onOpenStationForOrder?.(drinkTab)}
@@ -338,26 +378,32 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = React.memo(({
                   className={`inline-flex items-center gap-1 rounded-xl border px-2 py-0.5 sm:px-2.5 sm:py-0.5 text-[10.5px] sm:text-[11px] font-bold transition-transform hover:scale-[1.03] active:scale-[0.97] ${
                     order.mysteryRole === 'mystery_day3_finale'
                       ? 'border-[#C6892C] bg-[#FFF0BE] text-[#5C3406]'
-                      : isSecretOrder || order.drinkId === 'golden_cocoa'
-                        ? 'border-[#D9A143] bg-[#FFF4D6] text-[#6C420C]'
-                        : 'border-[#DFBE97] bg-[#FBF0DE] text-[#664128]'
+                      : order.isMoodRiddle
+                        ? 'border-[#9B7AC4] bg-[#F3EAFB] text-[#4A2B72]'
+                        : isSecretOrder || order.drinkId === 'golden_cocoa'
+                          ? 'border-[#D9A143] bg-[#FFF4D6] text-[#6C420C]'
+                          : 'border-[#DFBE97] bg-[#FBF0DE] text-[#664128]'
                   }`}
                 >
                   <span aria-hidden="true">
                     {order.mysteryRole === 'mystery_day3_finale'
                       ? '🔍'
-                      : isSecretOrder
-                        ? (order.secretDrink?.icon ?? '⭐')
-                        : order.drinkId === 'golden_cocoa'
-                          ? '⭐'
-                          : drinkTab === 'hot'
-                            ? '☕'
-                            : '🍹'}
+                      : order.isMoodRiddle
+                        ? '✨'
+                        : isSecretOrder
+                          ? (order.secretDrink?.icon ?? '⭐')
+                          : order.drinkId === 'golden_cocoa'
+                            ? '⭐'
+                            : drinkTab === 'hot'
+                              ? '☕'
+                              : '🍹'}
                   </span>
                   <span>
                     {order.mysteryRole === 'mystery_day3_finale'
                       ? 'Відновити «Золоте какао»'
-                      : drinkName}
+                      : order.isMoodRiddle
+                        ? 'Вгадай напій!'
+                        : drinkName}
                   </span>
                 </button>
 
@@ -452,6 +498,10 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = React.memo(({
                         : 'Замовлення (+15 🐟)'}
                   {order.serviceMode === 'takeaway' ? ' • +5 🐟 за стікер' : ''}
                   {order.wantsLatteArt ? ' • +5 🐟 за лате-арт' : ''}
+                  {order.friendGiftRole === 'receive'
+                    ? ' • +10 🐟 за теплу дружбу 💌'
+                    : ''}
+                  {order.isMoodRiddle ? ' • +10 🐟 за загадку 🤔' : ''}
                   {guestIsBestFriend ? ' • +5 🐟 від друга 💖' : ''}
                 </span>
               )}

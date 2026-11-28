@@ -6,6 +6,10 @@ import {
   getThemeForDayNumber,
 } from '../data/days.ts';
 import {
+  FRIENDSHIP_MOMENTS,
+  FRIENDSHIP_MOMENT_ORDER,
+} from '../data/livingFriendship.ts';
+import {
   VALID_DAY1_CHOICES,
   VALID_DAY2_CHOICES,
   VALID_MYSTERY_ROLES,
@@ -20,8 +24,10 @@ import type {
   DayPhase,
   DayProgressState,
   DayThemeId,
+  FriendshipMomentId,
   GuestId,
   HotIngredientId,
+  LivingFriendshipState,
   MarzipanAccessoryId,
   MarzipanCareState,
   MarzipanEquipped,
@@ -30,6 +36,7 @@ import type {
   MarzipanNeckAccessoryId,
   MysteryDay1ChoiceId,
   MysteryDay2ChoiceId,
+  PendingFriendGift,
   PuhBirthdayStoryState,
   RareStickerId,
   RecipeMysteryStatus,
@@ -44,9 +51,10 @@ import type {
 } from '../types/game';
 import { createInitialBirthdayStoryState } from '../utils/birthdayStory.ts';
 import { createFreshDayProgress } from '../utils/dayDirector.ts';
+import { createInitialLivingFriendshipState } from '../utils/livingFriendship.ts';
 import { createInitialRecipeMysteryState } from '../utils/recipeMystery.ts';
 
-export const CURRENT_SAVE_VERSION = 7;
+export const CURRENT_SAVE_VERSION = 8;
 export const STORAGE_KEY = 'mur_late_save_v1';
 export const STORAGE_BACKUP_KEY = 'mur_late_save_v1_backup';
 export const MAX_WALL_ART_DATA_URL_LENGTH = 65_000;
@@ -166,6 +174,7 @@ export const DEFAULT_SAVE_STATE: CafeSaveState = {
   dayHistory: [],
   puhBirthday: createInitialBirthdayStoryState(),
   recipeMystery: createInitialRecipeMysteryState(),
+  livingFriendship: createInitialLivingFriendshipState(),
   readLetterIds: [],
   wallArt: { ...DEFAULT_WALL_ART },
   marzipanCare: { ...DEFAULT_MARZIPAN_CARE },
@@ -469,6 +478,53 @@ function sanitizeRecipeMystery(raw: unknown): RecipeMysteryStoryState {
   };
 }
 
+function sanitizeLivingFriendship(raw: unknown): LivingFriendshipState {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return createInitialLivingFriendshipState();
+  }
+  const c = raw as Partial<LivingFriendshipState>;
+  const completedMoments = sanitizeStringArray(
+    c.completedMoments,
+    FRIENDSHIP_MOMENT_ORDER
+  );
+  const moodRiddlesSolved =
+    typeof c.moodRiddlesSolved === 'number' &&
+    Number.isFinite(c.moodRiddlesSolved) &&
+    c.moodRiddlesSolved >= 0
+      ? Math.floor(c.moodRiddlesSolved)
+      : 0;
+
+  let pendingGift: PendingFriendGift | null = null;
+  if (
+    c.pendingGift &&
+    typeof c.pendingGift === 'object' &&
+    !Array.isArray(c.pendingGift)
+  ) {
+    const pg = c.pendingGift as Partial<PendingFriendGift>;
+    if (
+      pg.momentId &&
+      FRIENDSHIP_MOMENT_ORDER.includes(pg.momentId as FriendshipMomentId)
+    ) {
+      const meta = FRIENDSHIP_MOMENTS[pg.momentId as FriendshipMomentId];
+      pendingGift = {
+        momentId: meta.id,
+        fromGuestId: meta.fromGuestId,
+        toGuestId: meta.toGuestId,
+        wishText:
+          typeof pg.wishText === 'string' && pg.wishText.trim()
+            ? pg.wishText.trim().slice(0, 48)
+            : undefined,
+      };
+    }
+  }
+
+  return {
+    pendingGift,
+    completedMoments,
+    moodRiddlesSolved,
+  };
+}
+
 function sanitizeReadLetterIds(raw: unknown): string[] {
   if (!Array.isArray(raw)) return [];
   const unique = new Set<string>();
@@ -690,6 +746,7 @@ export function parseAndSanitizeSave(rawObj: unknown): ParseSaveResult {
   const dayHistory = sanitizeDayHistory(parsed.dayHistory);
   const puhBirthday = sanitizeBirthdayStory(parsed.puhBirthday);
   const recipeMystery = sanitizeRecipeMystery(parsed.recipeMystery);
+  const livingFriendship = sanitizeLivingFriendship(parsed.livingFriendship);
   const readLetterIds = sanitizeReadLetterIds(parsed.readLetterIds);
   const wallArt = sanitizeWallArt(parsed.wallArt);
   const marzipanCare = sanitizeMarzipanCare(parsed.marzipanCare);
@@ -718,6 +775,7 @@ export function parseAndSanitizeSave(rawObj: unknown): ParseSaveResult {
       dayHistory,
       puhBirthday,
       recipeMystery,
+      livingFriendship,
       readLetterIds,
       wallArt,
       marzipanCare,

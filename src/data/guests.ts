@@ -2,6 +2,7 @@ import {
   BIRTHDAY_THEMES,
   resolveBirthdayPastry,
 } from './birthdayStory.ts';
+import { FRIENDSHIP_MOMENTS } from './livingFriendship.ts';
 import {
   getMysteryGreeting,
   getMysteryPraise,
@@ -10,6 +11,7 @@ import type {
   BirthdayThemeId,
   DrinkRecipeId,
   GuestId,
+  LivingFriendshipState,
   MysteryDay1ChoiceId,
   MysteryDay2ChoiceId,
   Order,
@@ -22,6 +24,7 @@ import type {
   UnlockableRecipeId,
   WeatherType,
 } from '../types/game';
+import { resolveNextLivingEvent } from '../utils/livingFriendship.ts';
 
 export const BEST_FRIEND_THRESHOLD = 3;
 
@@ -310,6 +313,7 @@ export interface GenerateOrderOptions {
     day1Choice?: MysteryDay1ChoiceId | null;
   } | null;
   goldenCocoaUnlocked?: boolean;
+  livingFriendship?: LivingFriendshipState | null;
 }
 
 /**
@@ -336,6 +340,7 @@ export function generateOrder(
     birthdayStory,
     mysteryStory,
     goldenCocoaUnlocked = false,
+    livingFriendship = null,
   } = options;
 
   const hasMatcha = unlockedRecipes.includes('matcha_latte');
@@ -591,6 +596,57 @@ export function generateOrder(
     };
   }
 
+  // 3b. Living Friendship Events (Cross-guest secret gifts & cozy mood riddles!)
+  if (livingFriendship) {
+    const livingEvent = resolveNextLivingEvent(
+      livingFriendship,
+      orderNumber,
+      previousGuestId
+    );
+    if (livingEvent?.type === 'receive_gift') {
+      const meta = FRIENDSHIP_MOMENTS[livingEvent.momentId];
+      return {
+        id: orderNumber,
+        guestId: meta.toGuestId,
+        drinkId: meta.receiveDrinkId,
+        isCombo: false,
+        weatherAtArrival: weather,
+        serviceMode: 'dine-in',
+        friendGiftRole: 'receive',
+        friendGiftMomentId: meta.id,
+        friendGiftPartnerId: meta.fromGuestId,
+        friendGiftWishText: livingEvent.wishText,
+      };
+    }
+    if (livingEvent?.type === 'send_gift') {
+      const meta = FRIENDSHIP_MOMENTS[livingEvent.momentId];
+      return {
+        id: orderNumber,
+        guestId: meta.fromGuestId,
+        drinkId: meta.sendDrinkId,
+        pastryId: meta.sendPastryId,
+        isCombo: true,
+        weatherAtArrival: weather,
+        serviceMode: 'takeaway',
+        friendGiftRole: 'send',
+        friendGiftMomentId: meta.id,
+        friendGiftPartnerId: meta.toGuestId,
+      };
+    }
+    if (livingEvent?.type === 'mood_riddle') {
+      return {
+        id: orderNumber,
+        guestId: livingEvent.riddle.guestId,
+        drinkId: livingEvent.riddle.drinkId,
+        isCombo: false,
+        weatherAtArrival: weather,
+        serviceMode: 'dine-in',
+        isMoodRiddle: true,
+        moodRiddlePrompt: livingEvent.riddle.prompt,
+      };
+    }
+  }
+
   // Orders 7+: Alternate combo & single, weather-aware + Secret Drink + Unlocked Recipes!
   const isCombo = orderNumber % 2 === 1;
 
@@ -734,6 +790,21 @@ export function buildOrderGreeting(
     return themeMeta.finaleGreeting;
   }
 
+  // Living Friendship: Cross-guest surprise gift & mood riddles
+  if (order.friendGiftRole && order.friendGiftMomentId) {
+    const meta = FRIENDSHIP_MOMENTS[order.friendGiftMomentId];
+    if (order.friendGiftRole === 'send') {
+      return meta.sendGreeting;
+    }
+    const wishQuote = order.friendGiftWishText
+      ? ` І яке миле побажання на стаканчику: «${order.friendGiftWishText}»!`
+      : '';
+    return `${meta.receiveGreeting}${wishQuote}`;
+  }
+  if (order.isMoodRiddle && order.moodRiddlePrompt) {
+    return order.moodRiddlePrompt;
+  }
+
   // Special Traveler Cat greeting
   if (order.isTravelerGuest) {
     const feeling = weather === 'sunny' ? 'втомився' : 'змерз';
@@ -823,6 +894,15 @@ export function buildOrderPraise(
   if (order.birthdayStoryRole && order.birthdayTheme) {
     const themeTitle = BIRTHDAY_THEMES[order.birthdayTheme].title;
     return `Смакота! «${themeTitle}» для Пуха буде просто чарівною — тримай бонус!`;
+  }
+  if (order.friendGiftRole && order.friendGiftMomentId) {
+    const meta = FRIENDSHIP_MOMENTS[order.friendGiftMomentId];
+    return order.friendGiftRole === 'send'
+      ? meta.sendPraise
+      : meta.receivePraise;
+  }
+  if (order.isMoodRiddle) {
+    return 'Вау!! Ти розгадала мій настрій — саме те, чого хотілося! Ось бонус +10 🐟 за кмітливість!';
   }
 
   if (order.isTravelerGuest) {

@@ -47,6 +47,12 @@ import type {
 import type { RecipeMysteryModalMode } from './components/modals/RecipeMysteryModal';
 import { BIRTHDAY_THEMES } from './data/birthdayStory';
 import { DEFAULT_CAFE_LETTERS } from './data/letters';
+import {
+  FRIEND_GIFT_BONUS_COINS,
+  FRIENDSHIP_MOMENTS,
+  MOOD_RIDDLE_BONUS_COINS,
+  buildAmbientObservation,
+} from './data/livingFriendship';
 import { MYSTERY_FINALE_BONUS_COINS } from './data/recipeMystery';
 import {
   DEFAULT_MARZIPAN_CARE,
@@ -65,6 +71,7 @@ import type {
   DonutGlaze,
   GuestEmotion,
   HotIngredientId,
+  LivingFriendshipState,
   MarzipanAccessoryId,
   MysteryDay1ChoiceId,
   MysteryDay2ChoiceId,
@@ -104,6 +111,12 @@ import {
   loadLocalLettersCatalog,
 } from './utils/letters';
 import { computeGuidedHint } from './utils/guidedHints';
+import {
+  completeReceivedFriendGift,
+  createInitialLivingFriendshipState,
+  recordSentFriendGift,
+  recordSolvedMoodRiddle,
+} from './utils/livingFriendship';
 import {
   advanceMysteryStageOnNextMorning,
   createInitialRecipeMysteryState,
@@ -295,6 +308,7 @@ export function App() {
         goldenCocoaUnlocked: isGoldenCocoaUnlocked(
           initialLoad.state.recipeMystery
         ),
+        livingFriendship: initialLoad.state.livingFriendship,
       }
     )
   );
@@ -400,6 +414,9 @@ export function App() {
   const recipeMysteryRef = useRef<RecipeMysteryStoryState>(
     saveState.recipeMystery
   );
+  const livingFriendshipRef = useRef<LivingFriendshipState>(
+    saveState.livingFriendship
+  );
   const forceNextSecretRef = useRef<boolean>(false);
   const forceNextRecipeRef = useRef<UnlockableRecipeId | null>(null);
   const isFirstSaveEffectRef = useRef<boolean>(true);
@@ -415,6 +432,7 @@ export function App() {
     dayProgressRef.current = saveState.dayProgress;
     puhBirthdayRef.current = saveState.puhBirthday;
     recipeMysteryRef.current = saveState.recipeMystery;
+    livingFriendshipRef.current = saveState.livingFriendship;
   }, [
     saveState.weather,
     saveState.secretDrink,
@@ -422,6 +440,7 @@ export function App() {
     saveState.dayProgress,
     saveState.puhBirthday,
     saveState.recipeMystery,
+    saveState.livingFriendship,
   ]);
 
   // Persist saveState cleanly whenever progress changes (never clobbering unreadable saves on mount!)
@@ -590,6 +609,7 @@ export function App() {
           dayProgressRef.current
         ),
         goldenCocoaUnlocked: isGoldenCocoaUnlocked(recipeMysteryRef.current),
+        livingFriendship: livingFriendshipRef.current,
       }
     );
     orderRef.current = next;
@@ -800,6 +820,7 @@ export function App() {
         birthdayStory: buildBirthdayOrderOpt(nextStory, nextDay),
         mysteryStory: buildMysteryOrderOpt(nextMystery, nextDay),
         goldenCocoaUnlocked: isGoldenCocoaUnlocked(nextMystery),
+        livingFriendship: livingFriendshipRef.current,
       }
     );
     orderRef.current = freshOrder;
@@ -1037,6 +1058,7 @@ export function App() {
     dayProgressRef.current = imported.dayProgress;
     puhBirthdayRef.current = imported.puhBirthday;
     recipeMysteryRef.current = imported.recipeMystery;
+    livingFriendshipRef.current = imported.livingFriendship;
     setSaveState(imported);
     saveCafeProgress(imported);
 
@@ -1056,6 +1078,7 @@ export function App() {
           imported.dayProgress
         ),
         goldenCocoaUnlocked: isGoldenCocoaUnlocked(imported.recipeMystery),
+        livingFriendship: imported.livingFriendship,
       }
     );
     orderRef.current = freshOrder;
@@ -1087,6 +1110,7 @@ export function App() {
       dayHistory: [],
       puhBirthday: createInitialBirthdayStoryState(),
       recipeMystery: createInitialRecipeMysteryState(),
+      livingFriendship: createInitialLivingFriendshipState(),
       readLetterIds: [],
       wallArt: { ...DEFAULT_WALL_ART },
       marzipanCare: { ...DEFAULT_MARZIPAN_CARE },
@@ -1658,11 +1682,34 @@ export function App() {
     if (hasLatteArt) reward += order.wantsLatteArt ? 5 : 3;
     if (hasTakeawayDecor) reward += 5;
     if (alreadyBestFriend) reward += 5;
+    if (order.friendGiftRole === 'receive') reward += FRIEND_GIFT_BONUS_COINS;
+    if (order.isMoodRiddle) reward += MOOD_RIDDLE_BONUS_COINS;
 
     const mysteryResult = order.mysteryRole
       ? markMysteryStepServed(recipeMysteryRef.current, order.mysteryRole)
       : null;
     const totalReward = reward + (mysteryResult?.finaleBonusCoins ?? 0);
+
+    // Update Living Friendship state atomically via ref so next guest immediately sees pendingGift!
+    let nextLivingFriendship = livingFriendshipRef.current;
+    let receivedMomentFirstTime = false;
+    if (order.friendGiftRole === 'send' && order.friendGiftMomentId) {
+      nextLivingFriendship = recordSentFriendGift(
+        nextLivingFriendship,
+        order.friendGiftMomentId,
+        trayDrink?.takeaway?.wishText
+      );
+    } else if (order.friendGiftRole === 'receive' && order.friendGiftMomentId) {
+      const done = completeReceivedFriendGift(
+        nextLivingFriendship,
+        order.friendGiftMomentId
+      );
+      nextLivingFriendship = done.nextState;
+      receivedMomentFirstTime = done.isFirstTimeMoment;
+    } else if (order.isMoodRiddle) {
+      nextLivingFriendship = recordSolvedMoodRiddle(nextLivingFriendship);
+    }
+    livingFriendshipRef.current = nextLivingFriendship;
 
     setEmotion('happy');
     setSpeechText(
@@ -1702,6 +1749,24 @@ export function App() {
       const nextMysteryRes = order.mysteryRole
         ? markMysteryStepServed(prev.recipeMystery, order.mysteryRole)
         : null;
+      let prevLiving = prev.livingFriendship;
+      if (order.friendGiftRole === 'send' && order.friendGiftMomentId) {
+        prevLiving = recordSentFriendGift(
+          prevLiving,
+          order.friendGiftMomentId,
+          trayDrink?.takeaway?.wishText
+        );
+      } else if (
+        order.friendGiftRole === 'receive' &&
+        order.friendGiftMomentId
+      ) {
+        prevLiving = completeReceivedFriendGift(
+          prevLiving,
+          order.friendGiftMomentId
+        ).nextState;
+      } else if (order.isMoodRiddle) {
+        prevLiving = recordSolvedMoodRiddle(prevLiving);
+      }
       return {
         ...prev,
         coins: prev.coins + reward + (nextMysteryRes?.finaleBonusCoins ?? 0),
@@ -1718,6 +1783,7 @@ export function App() {
         recipeMystery: nextMysteryRes
           ? nextMysteryRes.nextStory
           : prev.recipeMystery,
+        livingFriendship: prevLiving,
       };
     });
 
@@ -1738,6 +1804,25 @@ export function App() {
         title: `Новий найкращий друг: ${guest.name}!`,
         subtitle: `Подарунок ${guest.souvenirEmoji} «${guest.souvenirName}» на поличці + назавжди +5 🐟 чайових!`,
         tone: 'friend',
+      });
+    } else if (order.friendGiftRole === 'receive' && order.friendGiftMomentId) {
+      const momentMeta = FRIENDSHIP_MOMENTS[order.friendGiftMomentId];
+      sound.playBestFriendFanfare();
+      showCelebration({
+        icon: momentMeta.emoji,
+        title: `Тепла дружба: ${momentMeta.title}!`,
+        subtitle: receivedMomentFirstTime
+          ? 'Новий момент збережено в Альбомі дружби +10 🐟!'
+          : 'Друзі в захваті від твоєї доброти • +10 🐟!',
+        tone: 'friend',
+      });
+    } else if (order.isMoodRiddle) {
+      sound.playSuccess();
+      showCelebration({
+        icon: '🤔',
+        title: 'Загадку настрою розгадано!',
+        subtitle: 'Ти чудово розумієш друзів • бонус +10 🐟!',
+        tone: 'recipe',
       });
     } else {
       sound.playSuccess();
@@ -1802,6 +1887,26 @@ export function App() {
         selectedPastry,
       })
     : null;
+
+  const ambientObservation =
+    order.guestId !== 'mandrivnyk' &&
+    !order.birthdayStoryRole &&
+    !order.mysteryRole &&
+    !order.friendGiftRole &&
+    !order.isMoodRiddle
+      ? buildAmbientObservation({
+          orderId: order.id,
+          guestId: order.guestId,
+          wallArt: saveState.wallArt,
+          equippedAccessories: saveState.equippedAccessories,
+          enabledDecor: saveState.enabledDecor,
+          musicBoxPlaying: saveState.musicBoxPlaying,
+          muted: saveState.muted,
+          goldenBookVisible:
+            saveState.recipeMystery.status === 'completed' &&
+            saveState.recipeMystery.showCounterSouvenir,
+        })
+      : null;
 
   const handleToggleHints = () => {
     sound.playPop();
@@ -1899,6 +2004,7 @@ export function App() {
             birthdayDecor={getActiveBirthdayDecor(saveState.puhBirthday)}
             puhBirthday={saveState.puhBirthday}
             recipeMystery={saveState.recipeMystery}
+            ambientObservation={ambientObservation}
             unreadLettersCount={unreadLettersCount}
             canOfferMysteryInvite={
               saveState.servedCount >= 2 &&
@@ -2148,6 +2254,7 @@ export function App() {
                 friendship={saveState.friendship}
                 unlockedRareStickers={saveState.unlockedRareStickers}
                 travelerVisits={saveState.travelerVisits}
+                livingFriendship={saveState.livingFriendship}
                 onClose={() => {
                   sound.playPop();
                   setIsFriendshipAlbumOpen(false);
