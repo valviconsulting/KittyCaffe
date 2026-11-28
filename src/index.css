@@ -357,10 +357,49 @@
 
 @keyframes marzipan-breathe {
   0%, 100% {
-    transform: scaleY(1) scaleX(1);
+    transform: scaleY(1) scaleX(1) rotate(0deg);
+  }
+  24% {
+    transform: scaleY(1.036) scaleX(0.987) rotate(0deg);
+  }
+  48% {
+    transform: scaleY(1) scaleX(1) rotate(0deg);
+  }
+  56% {
+    transform: scaleY(1.022) scaleX(0.992) rotate(-0.85deg);
+  }
+  64% {
+    transform: scaleY(1.036) scaleX(0.987) rotate(0.35deg);
+  }
+  82% {
+    transform: scaleY(1.014) scaleX(0.995) rotate(0deg);
+  }
+}
+
+@keyframes marzipan-cozy-stretch {
+  0% {
+    transform: scaleX(1) scaleY(1) rotate(0deg);
+  }
+  22% {
+    transform: scaleX(1.06) scaleY(0.95) rotate(-2.5deg);
+  }
+  52% {
+    transform: scaleX(0.97) scaleY(1.06) rotate(2.4deg);
+  }
+  78% {
+    transform: scaleX(1.03) scaleY(0.99) rotate(-1deg);
+  }
+  100% {
+    transform: scaleX(1) scaleY(1) rotate(0deg);
+  }
+}
+
+@keyframes lamp-filament-pulse {
+  0%, 100% {
+    opacity: 0.72;
   }
   50% {
-    transform: scaleY(1.038) scaleX(0.986);
+    opacity: 1;
   }
 }
 
@@ -387,8 +426,15 @@
   will-change: transform;
 }
 .animate-marzipan-breathe {
-  animation: marzipan-breathe 3.6s ease-in-out infinite;
+  animation: marzipan-breathe 7.2s ease-in-out infinite;
   will-change: transform;
+}
+.animate-marzipan-stretch {
+  animation: marzipan-cozy-stretch 0.72s ease-in-out 1;
+  will-change: transform;
+}
+.animate-lamp-pulse {
+  animation: lamp-filament-pulse 4.4s ease-in-out infinite;
 }
 .animate-heart-rise {
   animation: heart-rise 1.45s ease-out infinite;
@@ -399,6 +445,8 @@
   .animate-guest-breathe,
   .animate-guest-happy,
   .animate-marzipan-breathe,
+  .animate-marzipan-stretch,
+  .animate-lamp-pulse,
   .animate-heart-rise,
   .animate-sun-shimmer,
   .animate-mote,

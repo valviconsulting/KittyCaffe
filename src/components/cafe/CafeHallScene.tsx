@@ -60,6 +60,7 @@ interface CafeHallSceneProps {
   trayDrink: PreparedDrink | null;
   trayPastry: PreparedPastry | null;
   marzipanPurring: boolean;
+  marzipanPetsCount?: number;
   equippedAccessories: MarzipanEquipped;
   enabledDecor: CafeDecorId[];
   musicBoxPlaying: boolean;
@@ -69,6 +70,8 @@ interface CafeHallSceneProps {
   secretDrink: SecretDrinkRecipe | null;
   lastReward: number | null;
   celebration: CelebrationBanner | null;
+  servedTodayCount?: number;
+  guestsTarget?: number;
   isLateAfternoon?: boolean;
   isDayComplete?: boolean;
   isWorkbenchOpen?: boolean;
@@ -101,6 +104,7 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = React.memo(({
   trayDrink,
   trayPastry,
   marzipanPurring,
+  marzipanPetsCount = 0,
   equippedAccessories,
   enabledDecor,
   musicBoxPlaying,
@@ -110,6 +114,8 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = React.memo(({
   secretDrink,
   lastReward,
   celebration,
+  servedTodayCount = 0,
+  guestsTarget = 5,
   isLateAfternoon = false,
   isDayComplete = false,
   isWorkbenchOpen = false,
@@ -394,8 +400,14 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = React.memo(({
           fallback={<CafeBackgroundSvg weather={weather} />}
         />
 
-        {/* Warm amber lamp glow + live weather effects over central window */}
-        <WindowWeatherOverlay weather={weather} isLateAfternoon={isLateAfternoon} />
+        {/* Warm 5-mood lighting halos, fairy glints & live weather effects over central window */}
+        <WindowWeatherOverlay
+          weather={weather}
+          servedToday={servedTodayCount}
+          guestsTarget={guestsTarget}
+          isLateAfternoon={isLateAfternoon}
+          isDayComplete={isDayComplete}
+        />
 
         {/* Seamless top plaster fade on portrait phones so upper speech-bubble area melts gently into the café wall */}
         {isMobileOpenCafe && (
@@ -622,6 +634,10 @@ export const CafeHallScene: React.FC<CafeHallSceneProps> = React.memo(({
         >
           <MarzipanHelper
             isPurring={marzipanPurring}
+            petsCount={marzipanPetsCount}
+            guestHappy={isHappy}
+            weather={weather}
+            isWarmLampMode={isLateAfternoon || isDayComplete}
             equippedAccessories={equippedAccessories}
             largeMobile={isMobileOpenCafe}
             onPet={onPetMarzipan}

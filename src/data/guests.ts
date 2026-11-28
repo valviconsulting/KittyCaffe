@@ -668,9 +668,9 @@ export function buildOrderGreeting(
   // Secret drink greeting
   if (order.drinkId === 'secret_daily' && order.secretDrink) {
     if (order.serviceMode === 'takeaway') {
-      return `Ой, поспішаю, але чула про ваш секретний «${drinkName}»! Зроби, будь ласка, із собою та зі стікером!`;
+      return `Ой, поспішаю, але вже знаю про ваш секретний «${drinkName}»! Зроби, будь ласка, із собою та зі стікером!`;
     }
-    return `Я чула про ваш секретний «${drinkName}»! Приготуєш мені його?`;
+    return `Я вже знаю про ваш секретний «${drinkName}»! Приготуєш мені його?`;
   }
 
   // Take-away greeting

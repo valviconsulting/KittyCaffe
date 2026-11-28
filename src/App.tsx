@@ -1626,6 +1626,7 @@ export function App() {
             trayDrink={trayDrink}
             trayPastry={trayPastry}
             marzipanPurring={marzipanPurring}
+            marzipanPetsCount={saveState.marzipanCare.petsCount}
             equippedAccessories={saveState.equippedAccessories}
             enabledDecor={saveState.enabledDecor}
             musicBoxPlaying={saveState.musicBoxPlaying}
@@ -1635,6 +1636,8 @@ export function App() {
             secretDrink={saveState.secretDrink}
             lastReward={lastReward}
             celebration={celebration}
+            servedTodayCount={saveState.dayProgress.guestsServedToday.length}
+            guestsTarget={saveState.dayProgress.guestsTarget}
             isLateAfternoon={isLateAfternoon(saveState.dayProgress)}
             isDayComplete={isDayTargetReached(saveState.dayProgress)}
             isWorkbenchOpen={isWorkbenchOpen}

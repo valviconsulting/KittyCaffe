@@ -1,13 +1,18 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import React, { useId } from 'react';
 import { CAFE_ASSETS } from '../../config/assets';
-import type { MarzipanEquipped } from '../../types/game';
+import type { MarzipanEquipped, WeatherType } from '../../types/game';
+import { getMarzipanPurrPhrase } from '../../utils/atmosphere';
 import { AssetIllustration } from '../common/AssetIllustration';
 import { MarzipanAccessoriesOverlaySvg } from '../svg/MarzipanAccessoriesSvg';
 import { MarzipanCatSvg } from '../svg/MarzipanCatSvg';
 
 interface MarzipanHelperProps {
   isPurring: boolean;
+  petsCount?: number;
+  guestHappy?: boolean;
+  weather?: WeatherType;
+  isWarmLampMode?: boolean;
   equippedAccessories?: MarzipanEquipped;
   /** Larger scale on portrait mobile when workbench is collapsed */
   largeMobile?: boolean;
@@ -23,12 +28,18 @@ const EMPTY_EQUIPPED: MarzipanEquipped = {
 
 export const MarzipanHelper: React.FC<MarzipanHelperProps> = ({
   isPurring,
+  petsCount = 0,
+  guestHappy = false,
+  weather = 'sunny',
+  isWarmLampMode = false,
   equippedAccessories = EMPTY_EQUIPPED,
   largeMobile = false,
   onPet,
   onOpenCare,
 }) => {
   const uid = useId().replace(/:/g, '');
+  const purrPhrase = getMarzipanPurrPhrase(petsCount);
+  const isCozyIndoorWeather = weather !== 'sunny' || isWarmLampMode;
 
   return (
     <div className="relative flex flex-col items-center">
@@ -41,17 +52,18 @@ export const MarzipanHelper: React.FC<MarzipanHelperProps> = ({
         aria-label="Кіт-помічник Марципан. Натисни, щоб погладити!"
         className="group relative flex min-h-[44px] min-w-[44px] flex-col items-center focus:outline-none"
       >
-        {/* Floating handwritten «Муррр~ ♥» and rising watercolor hearts */}
+        {/* Floating rotating handwritten purr phrases & rising hearts when petted */}
         <AnimatePresence>
           {isPurring && (
             <motion.div
+              key={`purr-${petsCount}`}
               initial={{ opacity: 0, y: 6, scale: 0.8 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -12, scale: 0.85 }}
               className="pointer-events-none absolute -top-12 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center"
             >
               <span className="font-handwriting rounded-full border-2 border-[#E9A8BA] bg-[#FDF1F5] px-2.5 py-0.2 text-sm sm:text-base font-bold text-[#9C425E] shadow-sm whitespace-nowrap">
-                Муррр~ ♥
+                {purrPhrase}
               </span>
               <div className="relative h-7 w-14">
                 {[
@@ -75,8 +87,24 @@ export const MarzipanHelper: React.FC<MarzipanHelperProps> = ({
           )}
         </AnimatePresence>
 
-        {/* Sleepy floating zZz when resting */}
-        {!isPurring && (
+        {/* Warm sympathetic musical purr when a guest is happily served! */}
+        <AnimatePresence>
+          {!isPurring && guestHappy && (
+            <motion.div
+              initial={{ opacity: 0, y: 6, scale: 0.7 }}
+              animate={{ opacity: 1, y: -4, scale: 1 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.35 }}
+              className="pointer-events-none absolute -top-5 right-0 sm:right-1 z-20 flex items-center gap-0.5 text-xs sm:text-sm font-bold text-[#DE7492]"
+            >
+              <span aria-hidden="true">♪</span>
+              <span aria-hidden="true">♥</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Sleepy floating zZz when resting calmly */}
+        {!isPurring && !guestHappy && (
           <div className="pointer-events-none absolute -top-2 right-0 sm:right-1 z-20 font-handwriting font-bold text-[#7A563E]">
             <span className="animate-zzz-1 inline-block text-xs sm:text-sm">z</span>
             <span className="animate-zzz-2 inline-block text-sm sm:text-lg ml-0.5">Z</span>
@@ -91,7 +119,7 @@ export const MarzipanHelper: React.FC<MarzipanHelperProps> = ({
         >
           <defs>
             <linearGradient id={`mz-pill-${uid}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#D7E8D8" />
+              <stop offset="0%" stopColor={isCozyIndoorWeather ? '#DCEADB' : '#D7E8D8'} />
               <stop offset="55%" stopColor="#B3CFB8" />
               <stop offset="100%" stopColor="#89AE92" />
             </linearGradient>
@@ -101,8 +129,12 @@ export const MarzipanHelper: React.FC<MarzipanHelperProps> = ({
               <stop offset="100%" stopColor="#E4AEBD" />
             </linearGradient>
           </defs>
-          {/* Soft warm radial-feel oval shadow on honey-oak bar (zero CSS blur filter) */}
+          {/* Soft warm oval shadow on honey-oak bar (zero CSS blur filter) */}
           <ellipse cx="90" cy="45" rx="82" ry="9" fill="#4A2710" opacity="0.34" />
+          {/* Gentle warm amber pillow highlight during rainy/snowy/evening lamp glow */}
+          {isCozyIndoorWeather && (
+            <ellipse cx="90" cy="30" rx="78" ry="18" fill="#FFD98E" opacity="0.18" />
+          )}
           {/* Plump quilted pillow base */}
           <path
             d="M14 33 C12 20 34 12 90 12 C146 12 168 20 166 33 C165 44 140 48 90 48 C40 48 15 44 14 33 Z"
@@ -133,21 +165,20 @@ export const MarzipanHelper: React.FC<MarzipanHelperProps> = ({
           <ellipse cx="90" cy="27" rx="58" ry="11" fill="#6D8E75" opacity="0.38" />
         </svg>
 
-        {/* Breathing (GPU CSS) / purr wiggle (one-shot spring) with EXACT 8:7 aspect lock so wardrobe accessories NEVER drift */}
-        <motion.div
-          animate={
-            isPurring
-              ? { rotate: [-4, 4, -3, 3, 0], scale: [1, 1.06, 1.04, 1] }
-              : { rotate: 0, scale: 1 }
-          }
-          transition={{ duration: 0.65, ease: 'easeInOut' }}
+        {/* Organic 7.2s GPU CSS breathing + sleepy nestle micro-shift, or happy cozy stretch on pet/serve */}
+        <div
+          key={isPurring ? `stretch-${petsCount}` : 'resting'}
           style={{ transformOrigin: 'bottom center' }}
           className={`relative z-10 aspect-[8/7] ${
             largeMobile
               ? 'h-[84px] [@media(min-height:760px)]:h-[96px]'
               : 'h-[64px]'
           } sm:h-[78px] md:h-[88px] lg:h-[104px] xl:h-[118px] transition-[height] duration-200 ${
-            isPurring ? '' : 'animate-marzipan-breathe'
+            isPurring
+              ? 'animate-marzipan-stretch'
+              : guestHappy
+                ? 'animate-marzipan-stretch'
+                : 'animate-marzipan-breathe'
           }`}
         >
           <AssetIllustration
@@ -158,7 +189,7 @@ export const MarzipanHelper: React.FC<MarzipanHelperProps> = ({
             fallback={<MarzipanCatSvg isPurring={isPurring} className="h-full w-full" />}
           />
           <MarzipanAccessoriesOverlaySvg equipped={equippedAccessories} />
-        </motion.div>
+        </div>
       </motion.button>
 
       <div className="relative z-20 -mt-1 flex items-center gap-1">

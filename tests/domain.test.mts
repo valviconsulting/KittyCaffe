@@ -71,6 +71,11 @@ import {
 } from '../src/utils/letters.ts';
 import { computeGuidedHint } from '../src/utils/guidedHints.ts';
 import {
+  MARZIPAN_PURR_PHRASES,
+  getMarzipanPurrPhrase,
+  resolveCafeLightingMood,
+} from '../src/utils/atmosphere.ts';
+import {
   MILK_POUR_DURATION_PER_PORTION_MS,
   MILK_POUR_HOLD_THRESHOLD_MS,
   MILK_POUR_NOTCH_MS,
@@ -635,5 +640,58 @@ const hintServeNow = computeGuidedHint({
   selectedPastry: null,
 });
 assert.equal(hintServeNow.highlightServe, true);
+
+// 15. Wave C Atmosphere & Lighting Scenarios + Marzipan Purr Rotation
+const morningLight = resolveCafeLightingMood({
+  weather: 'sunny',
+  servedToday: 0,
+  guestsTarget: 5,
+});
+assert.equal(morningLight.mood, 'morning_fresh');
+assert.ok(morningLight.sunbeamOpacity > 0);
+
+const afternoonLight = resolveCafeLightingMood({
+  weather: 'sunny',
+  servedToday: 2,
+  guestsTarget: 5,
+});
+assert.equal(afternoonLight.mood, 'afternoon_golden');
+assert.ok(afternoonLight.pendantGlow > morningLight.pendantGlow);
+
+const eveningLight = resolveCafeLightingMood({
+  weather: 'sunny',
+  servedToday: 4,
+  guestsTarget: 5,
+  isLateAfternoon: true,
+});
+assert.equal(eveningLight.mood, 'evening_amber');
+assert.ok(eveningLight.pendantGlow > afternoonLight.pendantGlow);
+assert.ok(eveningLight.windowSunsetOpacity > 0.15);
+assert.ok(eveningLight.fairyTwinkleOpacity > 0.7);
+
+const rainyLight = resolveCafeLightingMood({
+  weather: 'rainy',
+  servedToday: 1,
+  guestsTarget: 5,
+});
+assert.equal(rainyLight.mood, 'rainy_sanctuary');
+assert.equal(rainyLight.sunbeamOpacity, 0);
+assert.ok(rainyLight.pendantGlow > morningLight.pendantGlow);
+
+const snowyLight = resolveCafeLightingMood({
+  weather: 'snowy',
+  servedToday: 1,
+  guestsTarget: 5,
+});
+assert.equal(snowyLight.mood, 'snowy_hearth');
+assert.equal(snowyLight.sunbeamOpacity, 0);
+assert.ok(snowyLight.fairyTwinkleOpacity >= 0.8);
+
+assert.equal(getMarzipanPurrPhrase(0), MARZIPAN_PURR_PHRASES[0]);
+assert.equal(
+  getMarzipanPurrPhrase(MARZIPAN_PURR_PHRASES.length),
+  MARZIPAN_PURR_PHRASES[0]
+);
+assert.notEqual(getMarzipanPurrPhrase(1), getMarzipanPurrPhrase(2));
 
 console.log('ALL_DOMAIN_TESTS_PASSED');
